@@ -2,54 +2,72 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.hilt.android) // Added for Hilt
-    alias(libs.plugins.ksp)          // Added for KSP
-    alias(libs.plugins.kotlin.serialization) // Added for Kotlinx Serialization
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
     namespace = "com.virtualsblog.project"
-    compileSdk = 35 // Using Android 15 Preview. Ensure your AGP/Kotlin/Studio supports this.
-    // Consider `compileSdkPreview = "VanillaIceCream"` with appropriate AGP.
-    // Or use 34 for the latest stable Android.
+    compileSdk = 35 // Required by androidx.compose.ui:ui-test-junit4-android:1.8.2
 
     defaultConfig {
         applicationId = "com.virtualsblog.project"
         minSdk = 24
-        targetSdk = 35 // Matches compileSdk
+        targetSdk = 35 // Should match compileSdk
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "com.virtualsblog.project.CustomTestRunner" // For Hilt UI tests (see note below)
-        // or for basic tests: "androidx.test.runner.AndroidJUnitRunner"
-        // If using Hilt for UI tests, you'll need a custom runner or HiltTestApplication.
+        // Ensure this CustomTestRunner exists or use the default AndroidJUnitRunner
+        // e.g., testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // If CustomTestRunner is for Hilt, it should be "com.virtualsblog.project.HiltTestRunner"
+        // and you'd need to create that HiltTestRunner class.
+        testInstrumentationRunner = "com.virtualsblog.project.CustomTestRunner"
+        // vectorDrawables {
+        //    useSupportLibrary = true
+        // }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false // Consider true for release builds
+            isMinifyEnabled = false // Consider enabling for release builds (isMinifyEnabled = true)
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+        // You might want a debug build type as well, though it's often implicit.
+        // debug {
+        //     applicationIdSuffix = ".debug" // Example
+        //     isMinifyEnabled = false
+        // }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11 // Consider JavaVersion.VERSION_17 for modern projects
-        targetCompatibility = JavaVersion.VERSION_11 // Consider JavaVersion.VERSION_17 for modern projects
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11" // Consider "17" if you update compileOptions
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
+        // viewBinding = true // If you were using ViewBinding
+        // dataBinding = true // If you were using DataBinding
     }
-    // It's good practice to define composeOptions if you are using Compose,
-    // especially if you need to specify a particular Kotlin Compiler Extension version.
-    // However, the BOM often handles this. If you face issues, you might need:
-    // composeOptions {
-    //     kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get() // Define composeCompiler in libs.versions.toml
-    // }
+    composeOptions {
+        // This line is usually not needed when the Kotlin Compose plugin version is aligned with your Kotlin version.
+        // The plugin (version 2.1.20 here) will use a compatible compiler by default.
+        // kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
+    }
+    packaging {
+        // resources {
+        //    excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // }
+    }
+    // Lint options from your original file
+    lint {
+        disable.add("NullSafeMutableLiveData")
+    }
 }
 
 dependencies {
@@ -58,70 +76,70 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
-    // Compose
+    // Compose - BOM (Bill of Materials) manages versions for Compose libraries
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.ui.graphics) // Corrected alias will be used from libs.versions.toml
+    implementation(libs.androidx.ui.tooling.preview) // For @Preview annotations
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.compose.navigation) // Added for Navigation Compose
-    implementation(libs.androidx.lifecycle.viewmodel.compose) // For ViewModel with Compose
+    implementation(libs.androidx.compose.navigation)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.material.icons.extended) // Extended Material Icons for Compose
 
-    // Hilt (Dependency Injection)
+    // Hilt - Dependency Injection
     implementation(libs.hilt.android)
-    implementation(libs.androidx.runner)
-    implementation(libs.hilt.android.testing)
-    implementation(libs.androidx.ui.test.junit4.android)
-    ksp(libs.hilt.compiler)
-    implementation(libs.hilt.navigation.compose) // Hilt integration with Navigation Compose
+    ksp(libs.hilt.compiler) // Hilt's KSP compiler
+    implementation(libs.hilt.navigation.compose) // Hilt integration with Jetpack Navigation Compose
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
-    // Room (Database) - Example usage with KSP
+    // Room - Local Database
     implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
+    implementation(libs.room.ktx) // Kotlin Extensions for Room
+    ksp(libs.room.compiler) // Room's KSP compiler
 
-    // Kotlinx Serialization (JSON)
+    // Kotlinx Serialization
     implementation(libs.kotlinx.serialization.json)
 
-    // DataStore
+    // DataStore - Preferences
     implementation(libs.datastore.preferences)
 
-    // Image Loading
+    // Image Loading - Coil
     implementation(libs.coil.compose)
 
-    // Networking (Example)
+    // Networking - Retrofit & OkHttp
     implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.gson)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging.interceptor) // Useful for debugging
+    implementation(libs.retrofit.converter.gson) // Gson converter for Retrofit
+    implementation(libs.okhttp) // OkHttp client
+    implementation(libs.okhttp.logging.interceptor) // OkHttp logging interceptor
 
-    // Unit Tests
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.truth) // For fluent assertions
-    testImplementation(libs.mockito.core)
-    testImplementation(libs.mockito.kotlin)
-    testImplementation(libs.arch.core.testing) // <-- CORRECTED LINE: For testing LiveData/ViewModels
+    // Unit Tests (run on local JVM)
+    testImplementation(libs.junit) // Standard JUnit4
+    testImplementation(libs.kotlinx.coroutines.test) // For testing coroutines
+    testImplementation(libs.truth) // Google's Truth assertion library
+    testImplementation(libs.mockito.core) // Mockito for mocking
+    testImplementation(libs.mockito.kotlin) // Mockito-Kotlin integration
+    testImplementation(libs.arch.core.testing) // For testing Architecture Components (LiveData, etc.)
+    // testImplementation(libs.robolectric) // If using Robolectric
 
-    // Android Instrumented Tests (Espresso for Views & Compose UI Tests)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core) // For View-based UI tests
-    //androidTestImplementation(libs.androidx.espresso.contrib) // If you need RecyclerView actions etc.
-    //androidTestImplementation(libs.androidx.espresso.intents) // For testing intents
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4) // For Compose UI tests
-    androidTestImplementation(libs.kotlinx.coroutines.test)
-    implementation(libs.androidx.material.icons.extended)
+    // Android Instrumented Tests (run on an Android device or emulator)
+    androidTestImplementation(libs.androidx.junit) // androidx.test.ext:junit (uses junitVersion from libs.versions.toml)
+    // androidTestImplementation(libs.androidx.junit.ktx) // If you have androidx-junit-ktx alias
+    androidTestImplementation(libs.androidx.espresso.core) // Espresso for UI testing (uses espressoCore from libs.versions.toml)
+    androidTestImplementation(platform(libs.androidx.compose.bom)) // Align Compose test versions with BOM
+    androidTestImplementation(libs.androidx.ui.test.junit4) // Base Compose UI testing
+    androidTestImplementation(libs.androidx.ui.test.junit4.android) // Android specific Compose UI testing (uses uiTestJunit4Android)
+    androidTestImplementation(libs.kotlinx.coroutines.test) // For testing coroutines in instrumented tests
+    androidTestImplementation(libs.androidx.runner) // AndroidX Test Runner
 
-    // Hilt Testing
+    // Hilt Testing (for instrumented tests)
     androidTestImplementation(libs.hilt.android.testing)
-    kspAndroidTest(libs.hilt.compiler) // Hilt compiler for AndroidTest
+    kspAndroidTest(libs.hilt.compiler) // Hilt KSP compiler for AndroidTest
 
-    // Debugging
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
-    debugImplementation(libs.chucker) // HTTP inspector
+    // Debugging - Only included in debug builds
+    debugImplementation(libs.androidx.ui.tooling) // Compose UI tooling for Layout Inspector, etc.
+    debugImplementation(libs.androidx.ui.test.manifest) // Compose test manifest
+    debugImplementation(libs.chucker) // Chucker for HTTP inspection
+    // releaseImplementation(libs.chucker.no.op) // No-op version of Chucker for release builds
 }
