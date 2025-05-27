@@ -8,19 +8,19 @@ plugins {
 }
 
 android {
-    namespace = "com.virtualsblog.Project"
+    namespace = "com.virtualsblog.project"
     compileSdk = 35 // Using Android 15 Preview. Ensure your AGP/Kotlin/Studio supports this.
     // Consider `compileSdkPreview = "VanillaIceCream"` with appropriate AGP.
     // Or use 34 for the latest stable Android.
 
     defaultConfig {
-        applicationId = "com.virtualsblog.Project"
+        applicationId = "com.virtualsblog.project"
         minSdk = 24
         targetSdk = 35 // Matches compileSdk
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "com.virtualsblog.Project.CustomTestRunner" // For Hilt UI tests (see note below)
+        testInstrumentationRunner = "com.virtualsblog.project.CustomTestRunner" // For Hilt UI tests (see note below)
         // or for basic tests: "androidx.test.runner.AndroidJUnitRunner"
         // If using Hilt for UI tests, you'll need a custom runner or HiltTestApplication.
     }
