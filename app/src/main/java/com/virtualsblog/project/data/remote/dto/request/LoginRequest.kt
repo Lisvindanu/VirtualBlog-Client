@@ -1,4 +1,6 @@
 package com.virtualsblog.project.data.remote.dto.request
 
-class LoginRequest {
-}
+data class LoginRequest(
+    val username: String,
+    val password: String
+)

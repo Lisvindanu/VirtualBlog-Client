@@ -22,7 +22,8 @@ android {
         // e.g., testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // If CustomTestRunner is for Hilt, it should be "com.virtualsblog.project.HiltTestRunner"
         // and you'd need to create that HiltTestRunner class.
-        testInstrumentationRunner = "com.virtualsblog.project.CustomTestRunner"
+//        testInstrumentationRunner = "com.virtualsblog.project.CustomTestRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // vectorDrawables {
         //    useSupportLibrary = true
         // }
@@ -88,6 +89,7 @@ dependencies {
 
     // Hilt - Dependency Injection
     implementation(libs.hilt.android)
+    implementation(libs.androidx.runner)
     ksp(libs.hilt.compiler) // Hilt's KSP compiler
     implementation(libs.hilt.navigation.compose) // Hilt integration with Jetpack Navigation Compose
 

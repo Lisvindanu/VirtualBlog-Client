@@ -1,4 +1,7 @@
 package com.virtualsblog.project.domain.model
 
-class AuthState {
-}
+data class AuthState(
+    val isLoggedIn: Boolean = false,
+    val user: User? = null,
+    val accessToken: String? = null
+)
