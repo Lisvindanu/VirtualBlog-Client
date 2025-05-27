@@ -26,9 +26,12 @@ truth = "1.4.4"
 robolectric = "4.13"
 archCoreTesting = "2.2.0"
 chucker = "4.1.0"
+runner = "1.6.2"
+uiTestJunit4Android = "1.8.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -93,6 +96,8 @@ arch-core-testing = { group = "androidx.arch.core", name = "core-testing", versi
 
 # Debug
 chucker = { group = "com.github.chuckerteam.chucker", name = "library", version.ref = "chucker" }
+androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
+androidx-ui-test-junit4-android = { group = "androidx.compose.ui", name = "ui-test-junit4-android", version.ref = "uiTestJunit4Android" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

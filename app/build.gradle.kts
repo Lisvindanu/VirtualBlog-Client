@@ -69,6 +69,9 @@ dependencies {
 
     // Hilt (Dependency Injection)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.runner)
+    implementation(libs.hilt.android.testing)
+    implementation(libs.androidx.ui.test.junit4.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose) // Hilt integration with Navigation Compose
 
@@ -111,6 +114,7 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4) // For Compose UI tests
     androidTestImplementation(libs.kotlinx.coroutines.test)
+    implementation(libs.androidx.material.icons.extended)
 
     // Hilt Testing
     androidTestImplementation(libs.hilt.android.testing)
