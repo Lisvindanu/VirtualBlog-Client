@@ -14,10 +14,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.virtualsblog.project.presentation.ui.theme.VirtualblogTheme
 
 class MainActivity : ComponentActivity() {
+    // MainActivity.kt
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
+        setContent { // <--- Pemanggilan pertama
             VirtualblogTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(

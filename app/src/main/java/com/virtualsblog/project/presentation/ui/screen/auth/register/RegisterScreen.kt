@@ -261,7 +261,7 @@ fun RegisterScreen(
             Button(
                 onClick = {
                     if (password == confirmPassword && agreedToTerms) {
-                        viewModel.register(name, email, password)
+                        viewModel.register(name, email, password, confirmPassword)
                     }
                 },
                 modifier = Modifier

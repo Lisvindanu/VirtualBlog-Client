@@ -3,6 +3,7 @@
 
 [versions]
 agp = "8.10.0" # Android Gradle Plugin version
+coreKtxVersion = "1.6.1"
 kotlin = "2.1.20" # Kotlin version
 ksp = "2.1.20-2.0.0" # KSP version
 coreKtx = "1.16.0"
@@ -40,6 +41,7 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" } # No version needed if using BOM for Compose
 
 # JUnit for local unit tests
+core-ktx = { module = "androidx.test:core-ktx", version.ref = "coreKtxVersion" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 # AndroidX Test libraries for instrumented tests

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:name="dagger.hilt.android.testing.HiltTestApplication"
+        android:usesCleartextTraffic="true"
+        android:label="VirtualsBlog Tests">
+        <activity
+            android:name="com.virtualsblog.project.HiltTestActivity"
+            android:exported="true"/>
+    </application>
+</manifest>
