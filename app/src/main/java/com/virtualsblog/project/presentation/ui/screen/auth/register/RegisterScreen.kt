@@ -32,15 +32,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun RegisterScreen(
-    onNavigateToLogin: () -> Unit,
-    onNavigateToHome: () -> Unit,
+    onNavigateToLogin: () -> Unit, // Untuk link "Already have an account?"
+    onNavigateToLoginAfterRegister: () -> Unit, // Navigasi setelah registrasi sukses
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
 
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -61,37 +60,31 @@ fun RegisterScreen(
         ) {
             Spacer(modifier = Modifier.height(60.dp))
 
-            // Logo/Brand Section
             Text(
                 text = "VirtualsBlog",
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = "Create Account",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
-
             Text(
                 text = "Join our community of writers",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
             )
-
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Name Field
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Full Name") },
-                placeholder = { Text("Enter your full name") },
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
+                placeholder = { Text("Enter your username") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -107,44 +100,15 @@ fun RegisterScreen(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Email Field
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                placeholder = { Text("Enter your email") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.small,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                )
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Password Field
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password") },
                 placeholder = { Text("Create a password") },
                 singleLine = true,
-                visualTransformation = if (passwordVisible)
-                    VisualTransformation.None
-                else
-                    PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Next
@@ -155,14 +119,8 @@ fun RegisterScreen(
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            imageVector = if (passwordVisible)
-                                Icons.Default.Visibility
-                            else
-                                Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible)
-                                "Hide password"
-                            else
-                                "Show password"
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide password" else "Show password"
                         )
                     }
                 },
@@ -173,40 +131,27 @@ fun RegisterScreen(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Confirm Password Field
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
                 label = { Text("Confirm Password") },
                 placeholder = { Text("Re-enter your password") },
                 singleLine = true,
-                visualTransformation = if (confirmPasswordVisible)
-                    VisualTransformation.None
-                else
-                    PasswordVisualTransformation(),
+                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
-                    onDone = {
-                        focusManager.clearFocus()
-                    }
+                    onDone = { focusManager.clearFocus() }
                 ),
                 trailingIcon = {
                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                         Icon(
-                            imageVector = if (confirmPasswordVisible)
-                                Icons.Default.Visibility
-                            else
-                                Icons.Default.VisibilityOff,
-                            contentDescription = if (confirmPasswordVisible)
-                                "Hide password"
-                            else
-                                "Show password"
+                            imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (confirmPasswordVisible) "Hide password" else "Show password"
                         )
                     }
                 },
@@ -227,10 +172,8 @@ fun RegisterScreen(
                     errorBorderColor = MaterialTheme.colorScheme.error
                 )
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Terms and Conditions
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -254,27 +197,23 @@ fun RegisterScreen(
                     modifier = Modifier.clickable { /* TODO: Show terms */ }
                 )
             }
-
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Register Button
             Button(
                 onClick = {
+                    // Memanggil viewModel.register dengan parameter yang sudah disesuaikan (username, password, confirmPassword)
                     if (password == confirmPassword && agreedToTerms) {
-                        viewModel.register(name, email, password, confirmPassword)
+                        viewModel.register(username, password, confirmPassword)
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = MaterialTheme.shapes.small,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
                 ),
                 enabled = !uiState.isLoading && agreedToTerms &&
                         password == confirmPassword &&
-                        name.isNotBlank() &&
-                        email.isNotBlank() &&
+                        username.isNotBlank() &&
                         password.isNotBlank()
             ) {
                 if (uiState.isLoading) {
@@ -292,16 +231,13 @@ fun RegisterScreen(
                 }
             }
 
-            // Error Message
             AnimatedVisibility(
                 visible = uiState.error != null,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
@@ -316,33 +252,21 @@ fun RegisterScreen(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Divider with OR
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outline
-                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
                 Text(
                     text = "OR",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outline
-                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
             }
-
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Sign In Link
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -357,17 +281,16 @@ fun RegisterScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { onNavigateToLogin() }
+                    modifier = Modifier.clickable { onNavigateToLogin() } // Ini navigasi ke login jika sudah punya akun
                 )
             }
-
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        // Success handling
         LaunchedEffect(uiState.isSuccess) {
             if (uiState.isSuccess) {
-                onNavigateToHome()
+                // Panggil lambda untuk navigasi ke Login setelah registrasi sukses
+                onNavigateToLoginAfterRegister()
             }
         }
     }

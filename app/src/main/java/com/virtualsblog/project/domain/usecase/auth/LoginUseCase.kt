@@ -9,13 +9,14 @@ import javax.inject.Inject
 class LoginUseCase @Inject constructor(
     private val repository: AuthRepository
 ) {
-    suspend operator fun invoke(username: String, password: String): Resource<Pair<User, String>> {
-        // Validate input
+    suspend operator fun invoke(
+        username: String, // Sekarang ini adalah username tradisional
+        password: String
+    ): Resource<Pair<User, String>> {
         val validation = ValidationUtil.validateLoginForm(username.trim(), password)
         if (!validation.isValid) {
             return Resource.Error(validation.errorMessage ?: "Data tidak valid")
         }
-
         return repository.login(username.trim(), password)
     }
 }
