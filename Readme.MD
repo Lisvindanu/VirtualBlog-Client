@@ -596,12 +596,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Backend Developer** - API development untuk data management
 - **UI/UX Designer** - Interface design dan user experience
 
-## 📞 Support
-
-Untuk pertanyaan atau support, silakan hubungi:
-- Email: support@virtualsblog.com
-- GitHub Issues: [Project Issues](https://github.com/yourusername/virtualsblog-android/issues)
-
 ---
 
-**Built with ❤️ for Praktikum Mobile Programming**
+**Built with ❤️ for Praktikum Mobile**
