@@ -20,11 +20,10 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    // Ubah parameter 'email' menjadi 'usernameFromUi'
-    fun login(usernameFromUi: String, password: String) {
-        if (usernameFromUi.isBlank() || password.isBlank()) {
+    fun login(username: String, password: String) {
+        if (username.isBlank() || password.isBlank()) {
             _uiState.value = _uiState.value.copy(
-                error = "Username dan password tidak boleh kosong",
+                error = Constants.ERROR_REQUIRED_FIELDS,
                 isLoading = false
             )
             return
@@ -32,8 +31,8 @@ class LoginViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            // Kirim usernameFromUi sebagai argumen pertama ke use case
-            when (val result = loginUseCase(usernameFromUi, password)) {
+
+            when (val result = loginUseCase(username, password)) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -44,7 +43,7 @@ class LoginViewModel @Inject constructor(
                 is Resource.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = result.message ?: Constants.ERROR_UNKNOWN,
+                        error = result.message ?: Constants.ERROR_LOGIN_FAILED,
                         isSuccess = false
                     )
                 }

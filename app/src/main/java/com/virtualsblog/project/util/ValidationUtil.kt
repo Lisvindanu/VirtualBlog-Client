@@ -1,7 +1,5 @@
 package com.virtualsblog.project.util
 
-// import android.util.Patterns; // Tidak lagi diperlukan untuk validasi username ini
-
 object ValidationUtil {
 
     data class ValidationResult(
@@ -9,41 +7,36 @@ object ValidationUtil {
         val errorMessage: String? = null
     )
 
-    // Fungsi ini sekarang akan memvalidasi username tradisional sesuai aturan API
     fun validateApiUsername(username: String): ValidationResult {
         return when {
-            username.isBlank() -> ValidationResult(false, "Username tidak boleh kosong")
-            // Validasi panjang minimal sesuai API
+            username.isBlank() -> ValidationResult(false, Constants.VALIDATION_USERNAME_REQUIRED)
             username.length < Constants.MIN_USERNAME_LENGTH ->
-                ValidationResult(false, "Username minimal ${Constants.MIN_USERNAME_LENGTH} karakter")
-            // Regex untuk memastikan username hanya mengandung huruf, angka, dan underscore
-            // Sesuaikan regex ini jika API memperbolehkan karakter lain atau memiliki aturan berbeda
+                ValidationResult(false, Constants.VALIDATION_USERNAME_MIN_LENGTH)
             !username.matches(Regex("^[a-zA-Z0-9_]+$")) ->
-                ValidationResult(false, "Username hanya boleh mengandung huruf, angka, dan underscore")
+                ValidationResult(false, Constants.VALIDATION_USERNAME_INVALID_CHARS)
             else -> ValidationResult(true)
         }
     }
 
     fun validatePassword(password: String): ValidationResult {
         return when {
-            password.isBlank() -> ValidationResult(false, "Password tidak boleh kosong")
+            password.isBlank() -> ValidationResult(false, Constants.VALIDATION_PASSWORD_REQUIRED)
             password.length < Constants.MIN_PASSWORD_LENGTH ->
-                ValidationResult(false, "Password minimal ${Constants.MIN_PASSWORD_LENGTH} karakter")
+                ValidationResult(false, Constants.VALIDATION_PASSWORD_MIN_LENGTH)
             else -> ValidationResult(true)
         }
     }
 
     fun validateConfirmPassword(password: String, confirmPassword: String): ValidationResult {
         return when {
-            confirmPassword.isBlank() -> ValidationResult(false, "Konfirmasi password tidak boleh kosong")
-            password != confirmPassword -> ValidationResult(false, "Password dan konfirmasi password tidak sama")
+            confirmPassword.isBlank() -> ValidationResult(false, Constants.VALIDATION_CONFIRM_PASSWORD_REQUIRED)
+            password != confirmPassword -> ValidationResult(false, Constants.VALIDATION_CONFIRM_PASSWORD_MISMATCH)
             else -> ValidationResult(true)
         }
     }
 
-    // 'usernameFromUi' adalah username yang diinput pengguna
-    fun validateLoginForm(usernameFromUi: String, password: String): ValidationResult {
-        val usernameValidation = validateApiUsername(usernameFromUi)
+    fun validateLoginForm(username: String, password: String): ValidationResult {
+        val usernameValidation = validateApiUsername(username)
         if (!usernameValidation.isValid) return usernameValidation
 
         val passwordValidation = validatePassword(password)
@@ -52,13 +45,12 @@ object ValidationUtil {
         return ValidationResult(true)
     }
 
-    // 'usernameFromUi' adalah username yang diinput pengguna
     fun validateRegisterForm(
-        usernameFromUi: String,
+        username: String,
         password: String,
         confirmPassword: String
     ): ValidationResult {
-        val usernameValidation = validateApiUsername(usernameFromUi)
+        val usernameValidation = validateApiUsername(username)
         if (!usernameValidation.isValid) return usernameValidation
 
         val passwordValidation = validatePassword(password)

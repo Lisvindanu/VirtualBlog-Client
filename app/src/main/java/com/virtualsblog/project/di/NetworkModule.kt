@@ -44,6 +44,7 @@ object NetworkModule {
             val requestBuilder = originalRequest.newBuilder()
                 .header("X-API-KEY", Constants.API_KEY)
                 .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
 
             chain.proceed(requestBuilder.build())
         }
@@ -56,11 +57,12 @@ object NetworkModule {
         apiKeyInterceptor: Interceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(apiKeyInterceptor)
-            .addInterceptor(loggingInterceptor)
+            .addInterceptor(apiKeyInterceptor) // API Key interceptor first
+            .addInterceptor(loggingInterceptor) // Logging interceptor second
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .build()
     }
 
