@@ -48,7 +48,7 @@ class PostDetailViewModel @Inject constructor(
                 
                 Selamat belajar dan semoga sukses dalam perjalanan Android development Anda!
             """.trimIndent(),
-            author = "Ahmad Rizki",
+            author = "Anaphygon",
             createdAt = "2024-01-15T10:30:00Z",
             updatedAt = "2024-01-15T10:30:00Z",
             category = "Technology",

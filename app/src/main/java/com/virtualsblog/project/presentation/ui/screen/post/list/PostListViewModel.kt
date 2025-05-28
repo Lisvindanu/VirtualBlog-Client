@@ -22,7 +22,7 @@ class PostListViewModel @Inject constructor() : ViewModel() {
             id = "1",
             title = "Memulai Perjalanan Android Development",
             content = "Android development adalah skill yang sangat berharga di era digital ini. Dalam artikel ini, saya akan berbagi pengalaman bagaimana memulai belajar Android development dari nol hingga bisa membuat aplikasi pertama.",
-            author = "Ahmad Rizki",
+            author = "Anaphygon",
             createdAt = "2024-01-15T10:30:00Z",
             updatedAt = "2024-01-15T10:30:00Z",
             category = "Technology",
