@@ -39,7 +39,8 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
 
-    var email by remember { mutableStateOf("") }
+    // Ganti 'email' menjadi 'username'
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -56,41 +57,35 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(80.dp))
-
-            // Logo/Brand Section
             Text(
                 text = "VirtualsBlog",
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = "Welcome back!",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
-
             Text(
                 text = "Sign in to continue your journey",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
             )
-
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Email Field
+            // Ganti Email Field menjadi Username Field
             OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                placeholder = { Text("Enter your email") },
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") }, // Label diubah
+                placeholder = { Text("Enter your username") }, // Placeholder diubah
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
+                    keyboardType = KeyboardType.Text, // Tipe keyboard bisa tetap Text
                     imeAction = ImeAction.Next
                 ),
                 keyboardActions = KeyboardActions(
@@ -103,20 +98,16 @@ fun LoginScreen(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password Field
+            // Password Field (Tetap sama)
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password") },
                 placeholder = { Text("Enter your password") },
                 singleLine = true,
-                visualTransformation = if (passwordVisible)
-                    VisualTransformation.None
-                else
-                    PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
@@ -124,20 +115,14 @@ fun LoginScreen(
                 keyboardActions = KeyboardActions(
                     onDone = {
                         focusManager.clearFocus()
-                        viewModel.login(email, password)
+                        viewModel.login(username, password) // Kirim username
                     }
                 ),
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            imageVector = if (passwordVisible)
-                                Icons.Default.Visibility
-                            else
-                                Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible)
-                                "Hide password"
-                            else
-                                "Show password"
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide password" else "Show password"
                         )
                     }
                 },
@@ -148,10 +133,7 @@ fun LoginScreen(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-
-            // Forgot Password
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.CenterEnd
@@ -165,17 +147,13 @@ fun LoginScreen(
                         .padding(vertical = 8.dp)
                 )
             }
-
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Login Button
             Button(
                 onClick = {
-                    viewModel.login(email, password)
+                    viewModel.login(username, password) // Kirim username
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = MaterialTheme.shapes.small,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
@@ -197,16 +175,13 @@ fun LoginScreen(
                 }
             }
 
-            // Error Message
             AnimatedVisibility(
                 visible = uiState.error != null,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
@@ -221,33 +196,21 @@ fun LoginScreen(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Divider with OR
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outline
-                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
                 Text(
                     text = "OR",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outline
-                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
             }
-
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Sign Up Link
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -265,11 +228,9 @@ fun LoginScreen(
                     modifier = Modifier.clickable { onNavigateToRegister() }
                 )
             }
-
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        // Success handling
         LaunchedEffect(uiState.isSuccess) {
             if (uiState.isSuccess) {
                 onNavigateToHome()

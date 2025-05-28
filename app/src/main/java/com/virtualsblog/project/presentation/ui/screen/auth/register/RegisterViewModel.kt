@@ -20,29 +20,29 @@ class RegisterViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
-    fun register(name: String, email: String, password: String, confirmPassword: String) {
-        if (name.isBlank() || email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+    // Ubah parameter: hilangkan 'name', 'email' diganti 'usernameFromUi'
+    fun register(usernameFromUi: String, password: String, confirmPassword: String) {
+        if (usernameFromUi.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
             _uiState.value = _uiState.value.copy(
-                error = "Semua field harus diisi"
+                error = "Username, password, dan konfirmasi password harus diisi",
+                isLoading = false
             )
             return
         }
 
+        // Validasi kesamaan password bisa juga dilakukan di sini atau di UI
         if (password != confirmPassword) {
             _uiState.value = _uiState.value.copy(
-                error = "Password dan konfirmasi password tidak sama"
+                error = "Password dan konfirmasi password tidak sama",
+                isLoading = false
             )
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = true,
-                error = null
-            )
-
-            // Menggunakan email sebagai username sesuai dengan API
-            when (val result = registerUseCase(email, password, confirmPassword)) {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            // Kirim usernameFromUi sebagai argumen pertama ke use case
+            when (val result = registerUseCase(usernameFromUi, password, confirmPassword)) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -58,9 +58,7 @@ class RegisterViewModel @Inject constructor(
                     )
                 }
                 is Resource.Loading -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = true
-                    )
+                    _uiState.value = _uiState.value.copy(isLoading = true)
                 }
             }
         }

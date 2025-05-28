@@ -1,5 +1,7 @@
 package com.virtualsblog.project.util
 
+// import android.util.Patterns; // Tidak lagi diperlukan untuk validasi username ini
+
 object ValidationUtil {
 
     data class ValidationResult(
@@ -7,11 +9,15 @@ object ValidationUtil {
         val errorMessage: String? = null
     )
 
-    fun validateUsername(username: String): ValidationResult {
+    // Fungsi ini sekarang akan memvalidasi username tradisional sesuai aturan API
+    fun validateApiUsername(username: String): ValidationResult {
         return when {
             username.isBlank() -> ValidationResult(false, "Username tidak boleh kosong")
+            // Validasi panjang minimal sesuai API
             username.length < Constants.MIN_USERNAME_LENGTH ->
                 ValidationResult(false, "Username minimal ${Constants.MIN_USERNAME_LENGTH} karakter")
+            // Regex untuk memastikan username hanya mengandung huruf, angka, dan underscore
+            // Sesuaikan regex ini jika API memperbolehkan karakter lain atau memiliki aturan berbeda
             !username.matches(Regex("^[a-zA-Z0-9_]+$")) ->
                 ValidationResult(false, "Username hanya boleh mengandung huruf, angka, dan underscore")
             else -> ValidationResult(true)
@@ -35,8 +41,9 @@ object ValidationUtil {
         }
     }
 
-    fun validateLoginForm(username: String, password: String): ValidationResult {
-        val usernameValidation = validateUsername(username)
+    // 'usernameFromUi' adalah username yang diinput pengguna
+    fun validateLoginForm(usernameFromUi: String, password: String): ValidationResult {
+        val usernameValidation = validateApiUsername(usernameFromUi)
         if (!usernameValidation.isValid) return usernameValidation
 
         val passwordValidation = validatePassword(password)
@@ -45,12 +52,13 @@ object ValidationUtil {
         return ValidationResult(true)
     }
 
+    // 'usernameFromUi' adalah username yang diinput pengguna
     fun validateRegisterForm(
-        username: String,
+        usernameFromUi: String,
         password: String,
         confirmPassword: String
     ): ValidationResult {
-        val usernameValidation = validateUsername(username)
+        val usernameValidation = validateApiUsername(usernameFromUi)
         if (!usernameValidation.isValid) return usernameValidation
 
         val passwordValidation = validatePassword(password)

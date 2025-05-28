@@ -10,11 +10,10 @@ class RegisterUseCase @Inject constructor(
     private val repository: AuthRepository
 ) {
     suspend operator fun invoke(
-        username: String,
+        username: String, // Sekarang ini adalah username tradisional
         password: String,
         confirmPassword: String
     ): Resource<User> {
-        // Validate input
         val validation = ValidationUtil.validateRegisterForm(
             username.trim(),
             password,
@@ -23,7 +22,6 @@ class RegisterUseCase @Inject constructor(
         if (!validation.isValid) {
             return Resource.Error(validation.errorMessage ?: "Data tidak valid")
         }
-
         return repository.register(username.trim(), password, confirmPassword)
     }
 }
