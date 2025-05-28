@@ -15,9 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.virtualsblog.project.R
 import com.virtualsblog.project.domain.model.Post
 import java.text.SimpleDateFormat
 import java.util.*
@@ -28,6 +31,8 @@ fun PostCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     Card(
         modifier = modifier
             .clickable { onClick() },
@@ -55,7 +60,7 @@ fun PostCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
-                        contentDescription = "Author Avatar",
+                        contentDescription = stringResource(R.string.author_avatar),
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -95,7 +100,7 @@ fun PostCard(
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(
-                            text = post.category,
+                            text = getCategoryDisplayName(post.category),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -147,7 +152,7 @@ fun PostCard(
                     ) {
                         Icon(
                             imageVector = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Like",
+                            contentDescription = stringResource(R.string.like),
                             modifier = Modifier.size(18.dp),
                             tint = if (post.isLiked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -166,7 +171,7 @@ fun PostCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.ModeComment,
-                            contentDescription = "Comment",
+                            contentDescription = stringResource(R.string.comment),
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -185,13 +190,29 @@ fun PostCard(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Baca Selengkapnya",
+                        text = stringResource(R.string.read_more),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun getCategoryDisplayName(category: String): String {
+    return when (category) {
+        "Technology" -> stringResource(R.string.category_technology)
+        "Lifestyle" -> stringResource(R.string.category_lifestyle)
+        "Food & Drink" -> stringResource(R.string.category_food_drink)
+        "Travel" -> stringResource(R.string.category_travel)
+        "Finance" -> stringResource(R.string.category_finance)
+        "Health" -> stringResource(R.string.category_health)
+        "Education" -> stringResource(R.string.category_education)
+        "Entertainment" -> stringResource(R.string.category_entertainment)
+        "Sports" -> stringResource(R.string.category_sports)
+        else -> stringResource(R.string.category_other)
     }
 }
 

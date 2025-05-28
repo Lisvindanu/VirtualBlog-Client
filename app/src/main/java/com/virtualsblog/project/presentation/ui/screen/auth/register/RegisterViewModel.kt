@@ -20,20 +20,18 @@ class RegisterViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
-    // Ubah parameter: hilangkan 'name', 'email' diganti 'usernameFromUi'
-    fun register(usernameFromUi: String, password: String, confirmPassword: String) {
-        if (usernameFromUi.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+    fun register(username: String, password: String, confirmPassword: String) {
+        if (username.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
             _uiState.value = _uiState.value.copy(
-                error = "Username, password, dan konfirmasi password harus diisi",
+                error = Constants.ERROR_REQUIRED_FIELDS,
                 isLoading = false
             )
             return
         }
 
-        // Validasi kesamaan password bisa juga dilakukan di sini atau di UI
         if (password != confirmPassword) {
             _uiState.value = _uiState.value.copy(
-                error = "Password dan konfirmasi password tidak sama",
+                error = Constants.ERROR_PASSWORD_MISMATCH,
                 isLoading = false
             )
             return
@@ -41,8 +39,8 @@ class RegisterViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            // Kirim usernameFromUi sebagai argumen pertama ke use case
-            when (val result = registerUseCase(usernameFromUi, password, confirmPassword)) {
+
+            when (val result = registerUseCase(username, password, confirmPassword)) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -53,7 +51,7 @@ class RegisterViewModel @Inject constructor(
                 is Resource.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = result.message ?: Constants.ERROR_UNKNOWN,
+                        error = result.message ?: Constants.ERROR_REGISTER_FAILED,
                         isSuccess = false
                     )
                 }

@@ -29,11 +29,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.virtualsblog.project.util.Constants
 
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
-    onNavigateToHome: () -> Unit, // Ubah nama parameter untuk konsistensi
+    onNavigateToHome: () -> Unit,
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -61,30 +62,31 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(60.dp))
 
             Text(
-                text = "VirtualsBlog",
+                text = Constants.APP_NAME,
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Create Account",
+                text = "Buat Akun Baru",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "Join our community of writers",
+                text = "Bergabung dengan komunitas penulis kami",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
             )
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Username Field
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
                 label = { Text("Username") },
-                placeholder = { Text("Enter your username") },
+                placeholder = { Text("Masukkan username Anda") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -102,11 +104,12 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Password Field
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password") },
-                placeholder = { Text("Create a password") },
+                placeholder = { Text("Buat password") },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -120,7 +123,7 @@ fun RegisterScreen(
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                            contentDescription = if (passwordVisible) "Sembunyikan password" else "Tampilkan password"
                         )
                     }
                 },
@@ -133,11 +136,12 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Confirm Password Field
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
-                label = { Text("Confirm Password") },
-                placeholder = { Text("Re-enter your password") },
+                label = { Text("Konfirmasi Password") },
+                placeholder = { Text("Masukkan ulang password Anda") },
                 singleLine = true,
                 visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -151,7 +155,7 @@ fun RegisterScreen(
                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                         Icon(
                             imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (confirmPasswordVisible) "Hide password" else "Show password"
+                            contentDescription = if (confirmPasswordVisible) "Sembunyikan password" else "Tampilkan password"
                         )
                     }
                 },
@@ -159,7 +163,7 @@ fun RegisterScreen(
                 supportingText = {
                     if (confirmPassword.isNotEmpty() && password != confirmPassword) {
                         Text(
-                            text = "Passwords do not match",
+                            text = "Password tidak sama",
                             color = MaterialTheme.colorScheme.error
                         )
                     }
@@ -174,6 +178,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Terms Agreement
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -186,12 +191,12 @@ fun RegisterScreen(
                     )
                 )
                 Text(
-                    text = "I agree to the ",
+                    text = "Saya setuju dengan ",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Terms and Conditions",
+                    text = "Syarat dan Ketentuan",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { /* TODO: Show terms */ }
@@ -199,6 +204,7 @@ fun RegisterScreen(
             }
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Register Button
             Button(
                 onClick = {
                     if (password == confirmPassword && agreedToTerms) {
@@ -223,13 +229,14 @@ fun RegisterScreen(
                     )
                 } else {
                     Text(
-                        text = "Create Account",
+                        text = "Buat Akun",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
 
+            // Error Message
             AnimatedVisibility(
                 visible = uiState.error != null,
                 enter = fadeIn() + expandVertically(),
@@ -258,7 +265,7 @@ fun RegisterScreen(
             ) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
                 Text(
-                    text = "OR",
+                    text = "ATAU",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp)
@@ -271,12 +278,12 @@ fun RegisterScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Already have an account? ",
+                    text = "Sudah punya akun? ",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Sign In",
+                    text = "Masuk",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium,
@@ -288,7 +295,6 @@ fun RegisterScreen(
 
         LaunchedEffect(uiState.isSuccess) {
             if (uiState.isSuccess) {
-                // Setelah registrasi sukses, navigasi ke login
                 onNavigateToLogin()
             }
         }

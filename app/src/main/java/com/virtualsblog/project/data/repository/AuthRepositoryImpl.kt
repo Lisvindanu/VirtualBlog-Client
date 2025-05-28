@@ -27,7 +27,10 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun login(username: String, password: String): Resource<Pair<User, String>> {
         return try {
-            val response = api.login(LoginRequest(username, password))
+            val response = api.login(
+                apiKey = Constants.API_KEY,
+                request = LoginRequest(username, password)
+            )
 
             if (response.isSuccessful && response.body() != null) {
                 val authResponse = response.body()!!
@@ -69,7 +72,8 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun register(username: String, password: String, confirmPassword: String): Resource<User> {
         return try {
             val response = api.register(
-                RegisterRequest(username, password, confirmPassword)
+                apiKey = Constants.API_KEY,
+                request = RegisterRequest(username, password, confirmPassword)
             )
 
             if (response.isSuccessful && response.body() != null) {
@@ -106,7 +110,10 @@ class AuthRepositoryImpl @Inject constructor(
                 return Resource.Error(Constants.ERROR_UNAUTHORIZED)
             }
 
-            val response = api.getProfile("Bearer $token")
+            val response = api.getProfile(
+                apiKey = Constants.API_KEY,
+                token = "Bearer $token"
+            )
 
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
@@ -148,7 +155,11 @@ class AuthRepositoryImpl @Inject constructor(
             }
 
             val requestBody = mapOf("username" to username)
-            val response = api.updateProfile("Bearer $token", requestBody)
+            val response = api.updateProfile(
+                apiKey = Constants.API_KEY,
+                token = "Bearer $token",
+                request = requestBody
+            )
 
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
@@ -215,14 +226,20 @@ class AuthRepositoryImpl @Inject constructor(
         return when (code) {
             401 -> Resource.Error(Constants.ERROR_UNAUTHORIZED)
             422 -> {
-                // Parse validation errors
+                // Parse validation errors sesuai API spec
                 if (!errorBody.isNullOrEmpty()) {
                     try {
                         val errorType = object : TypeToken<com.virtualsblog.project.data.remote.dto.response.ApiResponse<List<ValidationError>>>() {}.type
                         val errorResponse: com.virtualsblog.project.data.remote.dto.response.ApiResponse<List<ValidationError>> = gson.fromJson(errorBody, errorType)
 
                         val firstError = errorResponse.data.firstOrNull()
-                        val message = firstError?.msg ?: Constants.ERROR_VALIDATION
+                        val message = when (firstError?.msg) {
+                            "Username already exists" -> Constants.ERROR_USERNAME_EXISTS
+                            "Invalid value" -> Constants.ERROR_USERNAME_INVALID
+                            "Username is required" -> Constants.VALIDATION_USERNAME_REQUIRED
+                            "Password is required" -> Constants.VALIDATION_PASSWORD_REQUIRED
+                            else -> firstError?.msg ?: Constants.ERROR_VALIDATION
+                        }
                         Resource.Error(message)
                     } catch (e: Exception) {
                         Resource.Error(Constants.ERROR_VALIDATION)
@@ -232,12 +249,20 @@ class AuthRepositoryImpl @Inject constructor(
                 }
             }
             500 -> {
-                // Parse server error message
+                // Parse server error message sesuai API spec
                 if (!errorBody.isNullOrEmpty()) {
                     try {
                         val errorType = object : TypeToken<com.virtualsblog.project.data.remote.dto.response.ApiResponse<String>>() {}.type
                         val errorResponse: com.virtualsblog.project.data.remote.dto.response.ApiResponse<String> = gson.fromJson(errorBody, errorType)
-                        Resource.Error(errorResponse.message)
+
+                        val message = when {
+                            errorResponse.data.contains("Username or password is incorrect", ignoreCase = true) ->
+                                Constants.ERROR_LOGIN_FAILED
+                            errorResponse.data.contains("Database", ignoreCase = true) ->
+                                "Terjadi kesalahan pada database"
+                            else -> errorResponse.message
+                        }
+                        Resource.Error(message)
                     } catch (e: Exception) {
                         Resource.Error("Terjadi kesalahan pada server")
                     }
