@@ -32,8 +32,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun RegisterScreen(
-    onNavigateToLogin: () -> Unit, // Untuk link "Already have an account?"
-    onNavigateToLoginAfterRegister: () -> Unit, // Navigasi setelah registrasi sukses
+    onNavigateToLogin: () -> Unit,
+    onNavigateToHome: () -> Unit, // Ubah nama parameter untuk konsistensi
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -201,7 +201,6 @@ fun RegisterScreen(
 
             Button(
                 onClick = {
-                    // Memanggil viewModel.register dengan parameter yang sudah disesuaikan (username, password, confirmPassword)
                     if (password == confirmPassword && agreedToTerms) {
                         viewModel.register(username, password, confirmPassword)
                     }
@@ -281,7 +280,7 @@ fun RegisterScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { onNavigateToLogin() } // Ini navigasi ke login jika sudah punya akun
+                    modifier = Modifier.clickable { onNavigateToLogin() }
                 )
             }
             Spacer(modifier = Modifier.height(32.dp))
@@ -289,8 +288,8 @@ fun RegisterScreen(
 
         LaunchedEffect(uiState.isSuccess) {
             if (uiState.isSuccess) {
-                // Panggil lambda untuk navigasi ke Login setelah registrasi sukses
-                onNavigateToLoginAfterRegister()
+                // Setelah registrasi sukses, navigasi ke login
+                onNavigateToLogin()
             }
         }
     }

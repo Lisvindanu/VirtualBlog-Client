@@ -1,9 +1,6 @@
 package com.virtualsblog.project.presentation.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,13 +14,11 @@ import com.virtualsblog.project.presentation.ui.screen.splash.SplashScreen
 import com.virtualsblog.project.presentation.ui.screen.post.create.CreatePostScreen
 import com.virtualsblog.project.presentation.ui.screen.post.detail.PostDetailScreen
 import com.virtualsblog.project.presentation.ui.screen.post.list.PostListScreen
-import com.virtualsblog.project.domain.usecase.auth.GetCurrentUserUseCase
 
 @Composable
 fun BlogNavGraph(
     navController: NavHostController
 ) {
-
     NavHost(
         navController = navController,
         startDestination = BlogDestinations.SPLASH_ROUTE
@@ -64,7 +59,7 @@ fun BlogNavGraph(
                     navController.popBackStack()
                 },
                 onNavigateToHome = {
-                    navController.navigate(BlogDestinations.HOME_ROUTE) {
+                    navController.navigate(BlogDestinations.LOGIN_ROUTE) {
                         popUpTo(BlogDestinations.REGISTER_ROUTE) { inclusive = true }
                     }
                 }
@@ -104,6 +99,7 @@ fun BlogNavGraph(
             )
         }
 
+        // Create Post Screen (tanpa parameter)
         composable(BlogDestinations.CREATE_POST_ROUTE) {
             CreatePostScreen(
                 onNavigateBack = {
@@ -143,5 +139,19 @@ fun BlogNavGraph(
                 }
             )
         }
+
+        // Edit Post Screen - untuk saat ini disable dulu karena masih bermasalah
+        // Nanti bisa ditambahkan lagi ketika sudah siap
+        /*
+        composable(
+            route = BlogDestinations.EDIT_POST_WITH_ID,
+            arguments = listOf(
+                navArgument("postId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val postId = backStackEntry.arguments?.getString("postId") ?: ""
+            // TODO: Implement EditPostScreen
+        }
+        */
     }
 }
