@@ -2,6 +2,7 @@
 # It helps in managing dependencies centrally.
 
 [versions]
+activityComposeVersion = "1.8.2"
 agp = "8.10.0" # Android Gradle Plugin version
 coreKtxVersion = "1.6.1"
 kotlin = "2.1.20" # Kotlin version
@@ -37,6 +38,7 @@ runner = "1.6.2" # androidx.test:runner
 uiTestJunit4Android = "1.8.2" # androidx.compose.ui:ui-test-junit4-android (Requires compileSdk 35)
 
 [libraries]
+androidx-activity-compose-v182 = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" } # No version needed if using BOM for Compose
 
