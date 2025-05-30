@@ -117,6 +117,9 @@ dependencies {
     implementation(libs.okhttp) // OkHttp client
     implementation(libs.okhttp.logging.interceptor) // OkHttp logging interceptor
 
+    // Add image picker and upload functionality
+    implementation(libs.androidx.activity.compose.v182)
+
     // Unit Tests (run on local JVM)
     testImplementation(libs.junit) // Standard JUnit4
     testImplementation(libs.kotlinx.coroutines.test) // For testing coroutines
