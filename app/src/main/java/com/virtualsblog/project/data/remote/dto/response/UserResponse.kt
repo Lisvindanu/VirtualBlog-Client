@@ -5,7 +5,7 @@ data class UserResponse(
     val username: String,
     val fullname: String,
     val email: String,
-    val image: String? = null,
+    val image: String = "",
     val createdAt: String,
     val updatedAt: String
 )
@@ -14,3 +14,4 @@ data class LoginData(
     val user: UserResponse,
     val accessToken: String
 )
+

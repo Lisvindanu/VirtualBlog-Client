@@ -1,3 +1,4 @@
+// AuthRepository.kt
 package com.virtualsblog.project.domain.repository
 
 import com.virtualsblog.project.domain.model.User
