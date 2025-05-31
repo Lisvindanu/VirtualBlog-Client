@@ -1,6 +1,6 @@
-package com.virtualsblog.project.domain.model
+package com.virtualsblog.project.data.remote.dto.response
 
-data class User(
+data class UserResponse(
     val id: String,
     val username: String,
     val fullname: String,
@@ -8,4 +8,9 @@ data class User(
     val image: String? = null,
     val createdAt: String,
     val updatedAt: String
+)
+
+data class LoginData(
+    val user: UserResponse,
+    val accessToken: String
 )

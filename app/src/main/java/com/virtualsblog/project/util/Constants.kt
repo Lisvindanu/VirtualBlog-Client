@@ -9,8 +9,11 @@ object Constants {
     const val PREF_ACCESS_TOKEN = "access_token"
     const val PREF_USER_ID = "user_id"
     const val PREF_USERNAME = "username"
+    const val PREF_FULLNAME = "fullname"
+    const val PREF_EMAIL = "email"
 
     // Validation
+    const val MIN_FULLNAME_LENGTH = 3
     const val MIN_USERNAME_LENGTH = 6
     const val MIN_PASSWORD_LENGTH = 6
 
@@ -20,6 +23,7 @@ object Constants {
     const val ERROR_VALIDATION = "Data yang dimasukkan tidak valid"
     const val ERROR_UNAUTHORIZED = "Sesi Anda telah berakhir, silakan masuk kembali"
     const val ERROR_USERNAME_EXISTS = "Username sudah digunakan"
+    const val ERROR_EMAIL_EXISTS = "Email sudah digunakan"
     const val ERROR_USERNAME_INVALID = "Username tidak valid"
     const val ERROR_PASSWORD_MISMATCH = "Password dan konfirmasi password tidak sama"
     const val ERROR_LOGIN_FAILED = "Username atau password salah"
@@ -34,6 +38,10 @@ object Constants {
     const val SUCCESS_LOGOUT = "Berhasil keluar"
 
     // Form Validation Messages - Bahasa Indonesia
+    const val VALIDATION_FULLNAME_REQUIRED = "Nama lengkap harus diisi"
+    const val VALIDATION_FULLNAME_MIN_LENGTH = "Nama lengkap minimal $MIN_FULLNAME_LENGTH karakter"
+    const val VALIDATION_EMAIL_REQUIRED = "Email harus diisi"
+    const val VALIDATION_EMAIL_INVALID = "Format email tidak valid"
     const val VALIDATION_USERNAME_REQUIRED = "Username harus diisi"
     const val VALIDATION_USERNAME_MIN_LENGTH = "Username minimal $MIN_USERNAME_LENGTH karakter"
     const val VALIDATION_USERNAME_INVALID_CHARS = "Username hanya boleh mengandung huruf, angka, dan garis bawah"

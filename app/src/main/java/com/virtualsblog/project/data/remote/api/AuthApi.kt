@@ -1,10 +1,7 @@
 package com.virtualsblog.project.data.remote.api
 
-import com.virtualsblog.project.data.remote.dto.request.LoginRequest
-import com.virtualsblog.project.data.remote.dto.request.RegisterRequest
-import com.virtualsblog.project.data.remote.dto.response.ApiResponse
-import com.virtualsblog.project.data.remote.dto.response.AuthResponse
-import com.virtualsblog.project.data.remote.dto.response.UserResponse
+import com.virtualsblog.project.data.remote.dto.request.*
+import com.virtualsblog.project.data.remote.dto.response.*
 import com.virtualsblog.project.util.Constants
 import retrofit2.Response
 import retrofit2.http.*
@@ -33,6 +30,31 @@ interface AuthApi {
     suspend fun updateProfile(
         @Header("X-API-KEY") apiKey: String = Constants.API_KEY,
         @Header("Authorization") token: String,
-        @Body request: Map<String, String>
+        @Body request: UpdateProfileRequest
+    ): Response<ApiResponse<UserResponse>>
+
+    @PUT("profile/change-password")
+    suspend fun changePassword(
+        @Header("X-API-KEY") apiKey: String = Constants.API_KEY,
+        @Header("Authorization") token: String,
+        @Body request: ChangePasswordRequest
+    ): Response<ApiResponse<UserResponse>>
+
+    @POST("forget-password")
+    suspend fun forgetPassword(
+        @Header("X-API-KEY") apiKey: String = Constants.API_KEY,
+        @Body request: ForgetPasswordRequest
+    ): Response<ApiResponse<Any>>
+
+    @POST("verify-otp")
+    suspend fun verifyOtp(
+        @Header("X-API-KEY") apiKey: String = Constants.API_KEY,
+        @Body request: VerifyOtpRequest
+    ): Response<ApiResponse<VerifyOtpResponse>>
+
+    @POST("reset-password")
+    suspend fun resetPassword(
+        @Header("X-API-KEY") apiKey: String = Constants.API_KEY,
+        @Body request: ResetPasswordRequest
     ): Response<ApiResponse<UserResponse>>
 }
