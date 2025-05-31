@@ -11,6 +11,7 @@ import com.virtualsblog.project.presentation.ui.screen.auth.register.RegisterScr
 import com.virtualsblog.project.presentation.ui.screen.auth.forgotpassword.ForgotPasswordScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.verifyotp.VerifyOtpScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.resetpassword.ResetPasswordScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.terms.TermsAndConditionsScreen
 
 /**
  * Navigation graph untuk layar terkait autentikasi
@@ -50,6 +51,18 @@ fun AuthNavGraph(
                     navController.navigate(BlogDestinations.Auth.LOGIN) {
                         popUpTo(BlogDestinations.Auth.REGISTER) { inclusive = true }
                     }
+                },
+                onNavigateToTerms = {
+                    navController.navigate(BlogDestinations.Auth.TERMS_AND_CONDITIONS)
+                }
+            )
+        }
+
+        // Layar Syarat dan Ketentuan
+        composable(BlogDestinations.Auth.TERMS_AND_CONDITIONS) {
+            TermsAndConditionsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
