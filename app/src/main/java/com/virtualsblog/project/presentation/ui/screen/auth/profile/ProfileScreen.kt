@@ -39,12 +39,10 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.virtualsblog.project.presentation.ui.component.UserAvatar
-import com.virtualsblog.project.presentation.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +89,7 @@ fun ProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Background)
+            .background(color = MaterialTheme.colorScheme.background)
     ) {
         // Main content with scroll
         Column(
@@ -105,8 +103,8 @@ fun ProfileScreen(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Primary,
-                                PrimaryVariant.copy(alpha = 0.9f)
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
                             ),
                             startY = 0f,
                             endY = 300f
@@ -118,7 +116,7 @@ fun ProfileScreen(
                         Text(
                             text = "Profil Saya",
                             fontWeight = FontWeight.Bold,
-                            color = OnPrimary,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontSize = 22.sp
                         )
                     },
@@ -127,7 +125,7 @@ fun ProfileScreen(
                             Icon(
                                 imageVector = Icons.Default.ArrowBack,
                                 contentDescription = "Kembali",
-                                tint = OnPrimary
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     },
@@ -144,7 +142,7 @@ fun ProfileScreen(
                                 Icon(
                                     imageVector = Icons.Default.Edit,
                                     contentDescription = "Edit Profil",
-                                    tint = OnPrimary
+                                    tint = MaterialTheme.colorScheme.onPrimary
                                 )
                             }
                         }
@@ -154,7 +152,7 @@ fun ProfileScreen(
                     )
                 )
             }
-            
+
             // Profile content with scroll
             Column(
                 modifier = Modifier
@@ -179,16 +177,16 @@ fun ProfileScreen(
                                 .background(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
-                                            Primary.copy(alpha = 0.7f),
-                                            Primary.copy(alpha = 0.4f),
-                                            Primary.copy(alpha = 0.1f)
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                         ),
                                         radius = 300f
                                     ),
                                     shape = CircleShape
                                 )
                         )
-                        
+
                         // Avatar with shadow and border
                         Card(
                             shape = CircleShape,
@@ -197,7 +195,7 @@ fun ProfileScreen(
                                 .size(138.dp)
                                 .align(Alignment.Center),
                             colors = CardDefaults.cardColors(
-                                containerColor = CardBackground
+                                containerColor = MaterialTheme.colorScheme.surface
                             )
                         ) {
                             UserAvatar(
@@ -205,7 +203,7 @@ fun ProfileScreen(
                                 imageUrl = uiState.user?.image,
                                 size = 138.dp,
                                 showBorder = true,
-                                borderColor = Primary,
+                                borderColor = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.clickable {
                                     if (!isEditing) {
                                         imagePickerLauncher.launch("image/*")
@@ -213,7 +211,7 @@ fun ProfileScreen(
                                 }
                             )
                         }
-                        
+
                         // Camera icon button with blue background
                         FloatingActionButton(
                             onClick = { imagePickerLauncher.launch("image/*") },
@@ -221,7 +219,7 @@ fun ProfileScreen(
                                 .size(46.dp)
                                 .align(Alignment.BottomEnd)
                                 .offset(x = 8.dp, y = 8.dp),
-                            containerColor = Primary, 
+                            containerColor = MaterialTheme.colorScheme.primary,
                             shape = CircleShape,
                             elevation = FloatingActionButtonDefaults.elevation(
                                 defaultElevation = 6.dp,
@@ -231,7 +229,7 @@ fun ProfileScreen(
                             Icon(
                                 imageVector = Icons.Default.CameraAlt,
                                 contentDescription = "Ubah Foto Profil",
-                                tint = OnPrimary,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -243,7 +241,7 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Surface
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
@@ -258,8 +256,8 @@ fun ProfileScreen(
                                 .background(
                                     brush = Brush.horizontalGradient(
                                         colors = listOf(
-                                            Primary.copy(alpha = 0.15f),
-                                            Primary.copy(alpha = 0.05f)
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
                                         )
                                     )
                                 )
@@ -271,7 +269,7 @@ fun ProfileScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.Person,
                                     contentDescription = null,
-                                    tint = Primary,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -279,26 +277,26 @@ fun ProfileScreen(
                                     text = "Informasi Akun",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = Primary,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontSize = 18.sp
                                 )
                             }
                         }
-                        
+
                         Spacer(modifier = Modifier.height(20.dp))
 
                         if (isEditing) {
                             // Redesigned editing fields with blue accents
-                            
+
                             // Full Name Field with enhanced styling
                             OutlinedTextField(
                                 value = editedFullname,
                                 onValueChange = { editedFullname = it },
-                                label = { 
+                                label = {
                                     Text(
                                         "Nama Lengkap",
-                                        color = Primary.copy(alpha = 0.8f)
-                                    ) 
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                    )
                                 },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(
@@ -313,18 +311,18 @@ fun ProfileScreen(
                                     .padding(bottom = 16.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Primary,
-                                    unfocusedBorderColor = Primary.copy(alpha = 0.5f),
-                                    focusedLabelColor = Primary,
-                                    cursorColor = Primary,
-                                    focusedContainerColor = Primary.copy(alpha = 0.05f),
-                                    unfocusedContainerColor = SurfaceVariant.copy(alpha = 0.5f)
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 ),
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Outlined.Person,
                                         contentDescription = null,
-                                        tint = Primary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             )
@@ -333,11 +331,11 @@ fun ProfileScreen(
                             OutlinedTextField(
                                 value = editedEmail,
                                 onValueChange = { editedEmail = it },
-                                label = { 
+                                label = {
                                     Text(
                                         "Email",
-                                        color = Primary.copy(alpha = 0.8f)
-                                    ) 
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                    )
                                 },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(
@@ -352,18 +350,18 @@ fun ProfileScreen(
                                     .padding(bottom = 16.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Primary,
-                                    unfocusedBorderColor = Primary.copy(alpha = 0.5f),
-                                    focusedLabelColor = Primary,
-                                    cursorColor = Primary,
-                                    focusedContainerColor = Primary.copy(alpha = 0.05f),
-                                    unfocusedContainerColor = SurfaceVariant.copy(alpha = 0.5f)
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 ),
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Filled.Email,
                                         contentDescription = null,
-                                        tint = Primary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             )
@@ -371,11 +369,11 @@ fun ProfileScreen(
                             OutlinedTextField(
                                 value = editedUsername,
                                 onValueChange = { editedUsername = it },
-                                label = { 
+                                label = {
                                     Text(
                                         "Nama Pengguna",
-                                        color = Primary.copy(alpha = 0.8f)
-                                    ) 
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                    )
                                 },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(
@@ -389,18 +387,18 @@ fun ProfileScreen(
                                     .fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Primary,
-                                    unfocusedBorderColor = Primary.copy(alpha = 0.5f),
-                                    focusedLabelColor = Primary,
-                                    cursorColor = Primary,
-                                    focusedContainerColor = Primary.copy(alpha = 0.05f),
-                                    unfocusedContainerColor = SurfaceVariant.copy(alpha = 0.5f)
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 ),
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Filled.Person,
                                         contentDescription = null,
-                                        tint = Primary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             )
@@ -461,14 +459,19 @@ fun ProfileScreen(
                             shape = RoundedCornerShape(12.dp),
                             border = ButtonDefaults.outlinedButtonBorder.copy(
                                 width = 1.5.dp,
-                                brush = Brush.horizontalGradient(listOf(Primary.copy(alpha = 0.5f), Primary.copy(alpha = 0.5f)))
+                                brush = Brush.horizontalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                    )
+                                )
                             ),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Primary
+                                contentColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
                             Text(
-                                "Batal", 
+                                "Batal",
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 16.sp
                             )
@@ -487,9 +490,9 @@ fun ProfileScreen(
                                     editedEmail.isNotBlank() &&
                                     editedUsername.isNotBlank(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Primary,
-                                contentColor = OnPrimary,
-                                disabledContainerColor = Primary.copy(alpha = 0.6f)
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                             ),
                             elevation = ButtonDefaults.buttonElevation(
                                 defaultElevation = 4.dp,
@@ -499,7 +502,7 @@ fun ProfileScreen(
                             if (uiState.isLoading && !uiState.updateSuccess && isEditing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
-                                    color = OnPrimary,
+                                    color = MaterialTheme.colorScheme.onPrimary,
                                     strokeWidth = 2.5.dp
                                 )
                             } else {
@@ -510,7 +513,7 @@ fun ProfileScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "Simpan", 
+                                    "Simpan",
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 16.sp
                                 )
@@ -518,7 +521,7 @@ fun ProfileScreen(
                         }
                     }
                 } else {
-                    // Change Password Button - changed to blue
+                    // Change Password Button
                     Button(
                         onClick = onNavigateToChangePassword,
                         modifier = Modifier
@@ -526,8 +529,8 @@ fun ProfileScreen(
                             .height(54.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Primary, // Changed from Secondary (green) to Primary (blue)
-                            contentColor = OnPrimary
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         enabled = !uiState.isLoading,
                         elevation = ButtonDefaults.buttonElevation(
@@ -542,7 +545,7 @@ fun ProfileScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            "Ubah Kata Sandi", 
+                            "Ubah Kata Sandi",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp
                         )
@@ -551,15 +554,15 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Logout Button with hover effect
+                // Logout Button
                 Button(
                     onClick = { viewModel.logout() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Error,
-                        contentColor = OnPrimary
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
                     ),
                     shape = RoundedCornerShape(12.dp),
                     enabled = !uiState.isLoading,
@@ -592,7 +595,7 @@ fun ProfileScreen(
                             .fillMaxWidth()
                             .padding(top = 20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Error.copy(alpha = 0.15f)
+                            containerColor = MaterialTheme.colorScheme.errorContainer
                         ),
                         shape = RoundedCornerShape(12.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -602,16 +605,16 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Filled.ExitToApp,
+                                imageVector = Icons.Default.ExitToApp,
                                 contentDescription = null,
-                                tint = Error,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = uiState.error ?: "",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Error,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.weight(1f),
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 15.sp
@@ -631,7 +634,7 @@ fun ProfileScreen(
                             .fillMaxWidth()
                             .padding(top = 20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Success.copy(alpha = 0.15f)
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
                         ),
                         shape = RoundedCornerShape(12.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -641,16 +644,16 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Filled.Edit,
+                                imageVector = Icons.Default.Edit,
                                 contentDescription = null,
-                                tint = Success,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = "Profil berhasil diperbarui!",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Success,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.weight(1f),
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 15.sp
@@ -675,7 +678,7 @@ private fun ProfileInfoItem(
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
-            color = Primary,
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Medium,
             fontSize = 14.sp
         )
@@ -687,7 +690,7 @@ private fun ProfileInfoItem(
                     .fillMaxWidth()
                     .height(22.dp)
                     .background(
-                        color = SurfaceVariant,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(6.dp)
                     )
             )
@@ -695,19 +698,19 @@ private fun ProfileInfoItem(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 16.sp
             )
         }
-        
+
         // Add subtle divider with blue tint
-        Divider(
+        HorizontalDivider(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 10.dp),
-            color = Primary.copy(alpha = 0.15f),
-            thickness = 1.dp
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         )
     }
 }
