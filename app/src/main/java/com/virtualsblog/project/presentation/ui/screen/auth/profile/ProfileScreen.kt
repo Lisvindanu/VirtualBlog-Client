@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -43,11 +44,15 @@ fun ProfileScreen(
     val focusManager = LocalFocusManager.current
 
     var isEditing by remember { mutableStateOf(false) }
+    var editedFullname by remember { mutableStateOf("") }
+    var editedEmail by remember { mutableStateOf("") }
     var editedUsername by remember { mutableStateOf("") }
 
-    // Initialize edited username when user data is available
+    // Initialize edited values when user data is available
     LaunchedEffect(uiState.user) {
         if (!isEditing) {
+            editedFullname = uiState.user?.fullname ?: ""
+            editedEmail = uiState.user?.email ?: ""
             editedUsername = uiState.user?.username ?: ""
         }
     }
@@ -85,6 +90,8 @@ fun ProfileScreen(
                     IconButton(
                         onClick = {
                             isEditing = true
+                            editedFullname = uiState.user?.fullname ?: ""
+                            editedEmail = uiState.user?.email ?: ""
                             editedUsername = uiState.user?.username ?: ""
                         }
                     ) {
@@ -148,8 +155,54 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Username Field
                     if (isEditing) {
+                        // Full Name Field
+                        OutlinedTextField(
+                            value = editedFullname,
+                            onValueChange = { editedFullname = it },
+                            label = { Text("Full Name") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.small,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Email Field
+                        OutlinedTextField(
+                            value = editedEmail,
+                            onValueChange = { editedEmail = it },
+                            label = { Text("Email") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.small,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Username Field
                         OutlinedTextField(
                             value = editedUsername,
                             onValueChange = { editedUsername = it },
@@ -170,31 +223,48 @@ fun ProfileScreen(
                             )
                         )
                     } else {
+                        // Display mode - show all profile info
+                        ProfileInfoItem(
+                            label = "Full Name",
+                            value = uiState.user?.fullname ?: "Memuat...",
+                            isLoading = uiState.isLoading
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        ProfileInfoItem(
+                            label = "Email",
+                            value = uiState.user?.email ?: "Memuat...",
+                            isLoading = uiState.isLoading
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         ProfileInfoItem(
                             label = "Username",
                             value = uiState.user?.username ?: "Memuat...",
                             isLoading = uiState.isLoading
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        ProfileInfoItem(
+                            label = "ID Pengguna",
+                            value = uiState.user?.id ?: "Memuat...",
+                            isLoading = uiState.isLoading
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        ProfileInfoItem(
+                            label = "Bergabung Sejak",
+                            value = uiState.user?.createdAt?.let {
+                                // Format date jika diperlukan
+                                it.take(10) // Ambil tanggal saja
+                            } ?: "Memuat...",
+                            isLoading = uiState.isLoading
+                        )
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    ProfileInfoItem(
-                        label = "ID Pengguna",
-                        value = uiState.user?.id ?: "Memuat...",
-                        isLoading = uiState.isLoading
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    ProfileInfoItem(
-                        label = "Bergabung Sejak",
-                        value = uiState.user?.createdAt?.let {
-                            // Format date jika diperlukan
-                            it.take(10) // Ambil tanggal saja
-                        } ?: "Memuat...",
-                        isLoading = uiState.isLoading
-                    )
                 }
             }
 
@@ -210,6 +280,8 @@ fun ProfileScreen(
                     OutlinedButton(
                         onClick = {
                             isEditing = false
+                            editedFullname = uiState.user?.fullname ?: ""
+                            editedEmail = uiState.user?.email ?: ""
                             editedUsername = uiState.user?.username ?: ""
                         },
                         modifier = Modifier.weight(1f),
@@ -221,12 +293,15 @@ fun ProfileScreen(
                     // Save Button
                     Button(
                         onClick = {
-                            viewModel.updateProfile(editedUsername)
+                            viewModel.updateProfile(editedFullname, editedEmail, editedUsername)
                             isEditing = false
                         },
                         modifier = Modifier.weight(1f),
                         shape = MaterialTheme.shapes.small,
-                        enabled = !uiState.isLoading && editedUsername.isNotBlank()
+                        enabled = !uiState.isLoading &&
+                                editedFullname.isNotBlank() &&
+                                editedEmail.isNotBlank() &&
+                                editedUsername.isNotBlank()
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(

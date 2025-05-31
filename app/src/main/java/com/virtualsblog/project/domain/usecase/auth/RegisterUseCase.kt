@@ -1,3 +1,4 @@
+// RegisterUseCase.kt
 package com.virtualsblog.project.domain.usecase.auth
 
 import com.virtualsblog.project.domain.model.User

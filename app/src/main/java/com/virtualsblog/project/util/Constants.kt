@@ -12,7 +12,7 @@ object Constants {
     const val PREF_FULLNAME = "fullname"
     const val PREF_EMAIL = "email"
 
-    // Validation
+    // Validation Constants
     const val MIN_FULLNAME_LENGTH = 3
     const val MIN_USERNAME_LENGTH = 6
     const val MIN_PASSWORD_LENGTH = 6

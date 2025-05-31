@@ -20,8 +20,15 @@ class RegisterViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
-    fun register(username: String, password: String, confirmPassword: String) {
-        if (username.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+    fun register(
+        fullname: String,
+        email: String,
+        username: String,
+        password: String,
+        confirmPassword: String
+    ) {
+        if (fullname.isBlank() || email.isBlank() || username.isBlank() ||
+            password.isBlank() || confirmPassword.isBlank()) {
             _uiState.value = _uiState.value.copy(
                 error = Constants.ERROR_REQUIRED_FIELDS,
                 isLoading = false
@@ -40,7 +47,7 @@ class RegisterViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            when (val result = registerUseCase(username, password, confirmPassword)) {
+            when (val result = registerUseCase(fullname, email, username, password, confirmPassword)) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

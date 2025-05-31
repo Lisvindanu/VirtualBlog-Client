@@ -40,6 +40,8 @@ fun RegisterScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
 
+    var fullname by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -81,12 +83,58 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Full Name Field
+            OutlinedTextField(
+                value = fullname,
+                onValueChange = { fullname = it },
+                label = { Text("Nama Lengkap") },
+                placeholder = { Text("Masukkan nama lengkap Anda") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.small,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Email Field
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                placeholder = { Text("Masukkan email Anda") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.small,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Username Field
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username") },
-                placeholder = { Text("Masukkan username Anda") },
+                label = { Text("Nama Pengguna") },
+                placeholder = { Text("Masukkan nama pengguna Anda") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -108,8 +156,8 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
-                placeholder = { Text("Buat password") },
+                label = { Text("Kata Sandi") },
+                placeholder = { Text("Buat kata sandi") },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -123,7 +171,7 @@ fun RegisterScreen(
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Sembunyikan password" else "Tampilkan password"
+                            contentDescription = if (passwordVisible) "Sembunyikan kata sandi" else "Tampilkan kata sandi"
                         )
                     }
                 },
@@ -140,8 +188,8 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
-                label = { Text("Konfirmasi Password") },
-                placeholder = { Text("Masukkan ulang password Anda") },
+                label = { Text("Konfirmasi Kata Sandi") },
+                placeholder = { Text("Masukkan ulang kata sandi Anda") },
                 singleLine = true,
                 visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -155,7 +203,7 @@ fun RegisterScreen(
                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                         Icon(
                             imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (confirmPasswordVisible) "Sembunyikan password" else "Tampilkan password"
+                            contentDescription = if (confirmPasswordVisible) "Sembunyikan kata sandi" else "Tampilkan kata sandi"
                         )
                     }
                 },
@@ -163,7 +211,7 @@ fun RegisterScreen(
                 supportingText = {
                     if (confirmPassword.isNotEmpty() && password != confirmPassword) {
                         Text(
-                            text = "Password tidak sama",
+                            text = "Kata sandi tidak sama",
                             color = MaterialTheme.colorScheme.error
                         )
                     }
@@ -208,7 +256,7 @@ fun RegisterScreen(
             Button(
                 onClick = {
                     if (password == confirmPassword && agreedToTerms) {
-                        viewModel.register(username, password, confirmPassword)
+                        viewModel.register(fullname, email, username, password, confirmPassword)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -218,6 +266,8 @@ fun RegisterScreen(
                 ),
                 enabled = !uiState.isLoading && agreedToTerms &&
                         password == confirmPassword &&
+                        fullname.isNotBlank() &&
+                        email.isNotBlank() &&
                         username.isNotBlank() &&
                         password.isNotBlank()
             ) {
@@ -258,7 +308,9 @@ fun RegisterScreen(
                     )
                 }
             }
+
             Spacer(modifier = Modifier.height(32.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -272,7 +324,9 @@ fun RegisterScreen(
                 )
                 HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
             }
+
             Spacer(modifier = Modifier.height(32.dp))
+
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
