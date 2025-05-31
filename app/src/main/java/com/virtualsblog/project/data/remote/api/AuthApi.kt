@@ -3,6 +3,7 @@ package com.virtualsblog.project.data.remote.api
 import com.virtualsblog.project.data.remote.dto.request.*
 import com.virtualsblog.project.data.remote.dto.response.*
 import com.virtualsblog.project.util.Constants
+import okhttp3.MultipartBody // Pastikan import ini ada
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -44,7 +45,7 @@ interface AuthApi {
     suspend fun forgetPassword(
         @Header("X-API-KEY") apiKey: String = Constants.API_KEY,
         @Body request: ForgetPasswordRequest
-    ): Response<ApiResponse<Any>>
+    ): Response<ApiResponse<Any>> // Atau tipe data spesifik jika ada
 
     @POST("verify-otp")
     suspend fun verifyOtp(
@@ -57,4 +58,12 @@ interface AuthApi {
         @Header("X-API-KEY") apiKey: String = Constants.API_KEY,
         @Body request: ResetPasswordRequest
     ): Response<ApiResponse<UserResponse>>
+
+    @Multipart // Annotation untuk multipart request
+    @PUT("profile/upload") // Endpoint sesuai dokumentasi API
+    suspend fun uploadProfilePicture(
+        @Header("X-API-KEY") apiKey: String = Constants.API_KEY,
+        @Header("Authorization") token: String, // Token autentikasi
+        @Part photo: MultipartBody.Part // Bagian file gambar
+    ): Response<ApiResponse<UserResponse>> // Response berisi data user yang terupdate
 }
