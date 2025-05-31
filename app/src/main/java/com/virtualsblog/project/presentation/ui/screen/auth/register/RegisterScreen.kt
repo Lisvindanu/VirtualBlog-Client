@@ -49,6 +49,13 @@ fun RegisterScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var agreedToTerms by remember { mutableStateOf(false) }
 
+    // Validasi real-time
+    val isFullnameValid = fullname.length >= 3
+    val isEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    val isUsernameValid = username.length >= 6 && username.matches(Regex("^[a-zA-Z0-9_]+$"))
+    val isPasswordValid = password.length >= 6
+    val isPasswordMatch = password == confirmPassword && confirmPassword.isNotEmpty()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -83,7 +90,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Full Name Field
+            // Field Nama Lengkap
             OutlinedTextField(
                 value = fullname,
                 onValueChange = { fullname = it },
@@ -97,6 +104,15 @@ fun RegisterScreen(
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 ),
+                isError = fullname.isNotEmpty() && !isFullnameValid,
+                supportingText = {
+                    if (fullname.isNotEmpty() && !isFullnameValid) {
+                        Text(
+                            text = "Nama lengkap minimal 3 karakter",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.small,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -106,7 +122,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Email Field
+            // Field Email
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -120,6 +136,15 @@ fun RegisterScreen(
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 ),
+                isError = email.isNotEmpty() && !isEmailValid,
+                supportingText = {
+                    if (email.isNotEmpty() && !isEmailValid) {
+                        Text(
+                            text = "Format email tidak valid",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.small,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -129,7 +154,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Username Field
+            // Field Nama Pengguna
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
@@ -143,6 +168,16 @@ fun RegisterScreen(
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 ),
+                isError = username.isNotEmpty() && !isUsernameValid,
+                supportingText = {
+                    if (username.isNotEmpty() && !isUsernameValid) {
+                        Text(
+                            text = if (username.length < 6) "Nama pengguna minimal 6 karakter"
+                            else "Hanya boleh huruf, angka, dan garis bawah",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.small,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -152,7 +187,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password Field
+            // Field Kata Sandi
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -175,6 +210,15 @@ fun RegisterScreen(
                         )
                     }
                 },
+                isError = password.isNotEmpty() && !isPasswordValid,
+                supportingText = {
+                    if (password.isNotEmpty() && !isPasswordValid) {
+                        Text(
+                            text = "Kata sandi minimal 6 karakter",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.small,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -184,7 +228,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Confirm Password Field
+            // Field Konfirmasi Kata Sandi
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
@@ -207,9 +251,9 @@ fun RegisterScreen(
                         )
                     }
                 },
-                isError = confirmPassword.isNotEmpty() && password != confirmPassword,
+                isError = confirmPassword.isNotEmpty() && !isPasswordMatch,
                 supportingText = {
-                    if (confirmPassword.isNotEmpty() && password != confirmPassword) {
+                    if (confirmPassword.isNotEmpty() && !isPasswordMatch) {
                         Text(
                             text = "Kata sandi tidak sama",
                             color = MaterialTheme.colorScheme.error
@@ -226,7 +270,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Terms Agreement
+            // Persetujuan Syarat dan Ketentuan
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -247,15 +291,16 @@ fun RegisterScreen(
                     text = "Syarat dan Ketentuan",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { /* TODO: Show terms */ }
+                    modifier = Modifier.clickable { /* TODO: Tampilkan syarat */ }
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Register Button
+            // Tombol Daftar
             Button(
                 onClick = {
-                    if (password == confirmPassword && agreedToTerms) {
+                    if (isPasswordMatch && agreedToTerms && isFullnameValid &&
+                        isEmailValid && isUsernameValid && isPasswordValid) {
                         viewModel.register(fullname, email, username, password, confirmPassword)
                     }
                 },
@@ -265,11 +310,8 @@ fun RegisterScreen(
                     containerColor = MaterialTheme.colorScheme.primary
                 ),
                 enabled = !uiState.isLoading && agreedToTerms &&
-                        password == confirmPassword &&
-                        fullname.isNotBlank() &&
-                        email.isNotBlank() &&
-                        username.isNotBlank() &&
-                        password.isNotBlank()
+                        isPasswordMatch && isFullnameValid &&
+                        isEmailValid && isUsernameValid && isPasswordValid
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
@@ -286,7 +328,7 @@ fun RegisterScreen(
                 }
             }
 
-            // Error Message
+            // Pesan Error
             AnimatedVisibility(
                 visible = uiState.error != null,
                 enter = fadeIn() + expandVertically(),

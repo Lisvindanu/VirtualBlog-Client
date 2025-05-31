@@ -4,12 +4,17 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.virtualsblog.project.presentation.ui.screen.auth.login.LoginScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.register.RegisterScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.forgotpassword.ForgotPasswordScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.verifyotp.VerifyOtpScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.resetpassword.ResetPasswordScreen
 
 /**
- * Navigation graph for authentication-related screens
- * This can be used as a separate authentication flow
+ * Navigation graph untuk layar terkait autentikasi
+ * Dapat digunakan sebagai alur autentikasi terpisah
  */
 @Composable
 fun AuthNavGraph(
@@ -21,26 +26,84 @@ fun AuthNavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
-        // Login Screen
+        // Layar Masuk
         composable(BlogDestinations.Auth.LOGIN) {
             LoginScreen(
                 onNavigateToRegister = {
                     navController.navigate(BlogDestinations.Auth.REGISTER)
                 },
-                onNavigateToHome = onNavigateToHome
+                onNavigateToHome = onNavigateToHome,
+                onNavigateToForgotPassword = {
+                    navController.navigate(BlogDestinations.Auth.FORGOT_PASSWORD)
+                }
             )
         }
 
-        // Register Screen
+        // Layar Daftar
         composable(BlogDestinations.Auth.REGISTER) {
             RegisterScreen(
                 onNavigateToLogin = {
                     navController.popBackStack()
                 },
                 onNavigateToHome = {
-                    // After successful registration, navigate to login
+                    // Setelah berhasil registrasi, navigasi ke login
                     navController.navigate(BlogDestinations.Auth.LOGIN) {
                         popUpTo(BlogDestinations.Auth.REGISTER) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Layar Lupa Kata Sandi
+        composable(BlogDestinations.Auth.FORGOT_PASSWORD) {
+            ForgotPasswordScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToVerifyOtp = { email ->
+                    navController.navigate(BlogDestinations.verifyOtpRoute(email))
+                }
+            )
+        }
+
+        // Layar Verifikasi OTP
+        composable(
+            route = BlogDestinations.VERIFY_OTP_WITH_EMAIL,
+            arguments = listOf(
+                navArgument(BlogDestinations.Args.EMAIL) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val email = backStackEntry.arguments?.getString(BlogDestinations.Args.EMAIL) ?: ""
+            VerifyOtpScreen(
+                email = email,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToResetPassword = { tokenId, otp ->
+                    navController.navigate(BlogDestinations.resetPasswordRoute(tokenId, otp))
+                }
+            )
+        }
+
+        // Layar Reset Kata Sandi
+        composable(
+            route = BlogDestinations.RESET_PASSWORD_WITH_PARAMS,
+            arguments = listOf(
+                navArgument(BlogDestinations.Args.TOKEN_ID) { type = NavType.StringType },
+                navArgument(BlogDestinations.Args.OTP) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val tokenId = backStackEntry.arguments?.getString(BlogDestinations.Args.TOKEN_ID) ?: ""
+            val otp = backStackEntry.arguments?.getString(BlogDestinations.Args.OTP) ?: ""
+            ResetPasswordScreen(
+                tokenId = tokenId,
+                otp = otp,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToLogin = {
+                    navController.navigate(BlogDestinations.Auth.LOGIN) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
@@ -49,7 +112,7 @@ fun AuthNavGraph(
 }
 
 /**
- * Standalone Auth Navigation composable that can be used independently
+ * Alur Navigasi Auth yang dapat digunakan secara independen
  */
 @Composable
 fun AuthNavigationFlow(
@@ -64,30 +127,40 @@ fun AuthNavigationFlow(
 }
 
 /**
- * Auth navigation helper object
+ * Helper object untuk navigasi auth
  */
 object AuthNavigation {
     /**
-     * Navigate to login screen from any destination
+     * Navigasi ke layar login dari destinasi manapun
      */
     fun navigateToLogin(navController: NavHostController) {
         navController.navigate(BlogDestinations.Auth.LOGIN) {
-            popUpTo(0) { inclusive = true } // Clear entire back stack
+            popUpTo(0) { inclusive = true } // Hapus seluruh back stack
         }
     }
 
     /**
-     * Navigate to register screen
+     * Navigasi ke layar registrasi
      */
     fun navigateToRegister(navController: NavHostController) {
         navController.navigate(BlogDestinations.Auth.REGISTER)
     }
 
     /**
-     * Check if current destination is an auth screen
+     * Navigasi ke lupa kata sandi
+     */
+    fun navigateToForgotPassword(navController: NavHostController) {
+        navController.navigate(BlogDestinations.Auth.FORGOT_PASSWORD)
+    }
+
+    /**
+     * Cek apakah destinasi saat ini adalah layar auth
      */
     fun isAuthDestination(route: String?): Boolean {
         return route == BlogDestinations.Auth.LOGIN ||
-                route == BlogDestinations.Auth.REGISTER
+                route == BlogDestinations.Auth.REGISTER ||
+                route == BlogDestinations.Auth.FORGOT_PASSWORD ||
+                route?.startsWith(BlogDestinations.Auth.VERIFY_OTP) == true ||
+                route?.startsWith(BlogDestinations.Auth.RESET_PASSWORD) == true
     }
 }

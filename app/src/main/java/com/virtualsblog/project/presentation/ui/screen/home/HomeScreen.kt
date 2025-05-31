@@ -32,7 +32,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Check if user is logged in
+    // Periksa apakah pengguna sudah login
     LaunchedEffect(uiState.isLoggedIn) {
         if (!uiState.isLoggedIn) {
             onNavigateToLogin()
@@ -57,7 +57,7 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Implement search */ }) {
+                    IconButton(onClick = { /* TODO: Implementasi pencarian */ }) {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Cari"
@@ -154,20 +154,20 @@ fun HomeScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Welcome Header
+                    // Header Selamat Datang
                     item {
                         WelcomeHeader(username = uiState.username)
                     }
 
-                    // Statistics Card
+                    // Kartu Statistik
                     item {
                         StatisticsCard(
                             totalPosts = uiState.posts.size,
-                            totalUsers = 42 // Mock data
+                            totalUsers = 42 // Data mock
                         )
                     }
 
-                    // Section Header
+                    // Header Bagian
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -180,14 +180,14 @@ fun HomeScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             TextButton(
-                                onClick = { /* TODO: Navigate to all posts */ }
+                                onClick = { /* TODO: Navigasi ke semua post */ }
                             ) {
                                 Text("Lihat Semua")
                             }
                         }
                     }
 
-                    // Posts List
+                    // Daftar Postingan
                     if (uiState.posts.isEmpty()) {
                         item {
                             EmptyStateCard(onCreatePost = onNavigateToCreatePost)

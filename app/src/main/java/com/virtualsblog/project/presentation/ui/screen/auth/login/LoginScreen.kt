@@ -79,7 +79,7 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Username Field
+            // Field Nama Pengguna
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
@@ -102,7 +102,7 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password Field
+            // Field Kata Sandi
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },

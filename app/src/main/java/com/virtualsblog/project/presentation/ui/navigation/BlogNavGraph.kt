@@ -9,11 +9,15 @@ import androidx.navigation.NavType
 import com.virtualsblog.project.presentation.ui.screen.auth.login.LoginScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.register.RegisterScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.profile.ProfileScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.forgotpassword.ForgotPasswordScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.verifyotp.VerifyOtpScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.resetpassword.ResetPasswordScreen
 import com.virtualsblog.project.presentation.ui.screen.home.HomeScreen
 import com.virtualsblog.project.presentation.ui.screen.splash.SplashScreen
 import com.virtualsblog.project.presentation.ui.screen.post.create.CreatePostScreen
 import com.virtualsblog.project.presentation.ui.screen.post.detail.PostDetailScreen
 import com.virtualsblog.project.presentation.ui.screen.post.list.PostListScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.changepassword.ChangePasswordScreen
 
 @Composable
 fun BlogNavGraph(
@@ -23,7 +27,7 @@ fun BlogNavGraph(
         navController = navController,
         startDestination = BlogDestinations.SPLASH_ROUTE
     ) {
-        // Splash Screen
+        // Layar Splash
         composable(BlogDestinations.SPLASH_ROUTE) {
             SplashScreen(
                 onNavigateToLogin = {
@@ -39,7 +43,7 @@ fun BlogNavGraph(
             )
         }
 
-        // Authentication Screens
+        // Layar Autentikasi
         composable(BlogDestinations.LOGIN_ROUTE) {
             LoginScreen(
                 onNavigateToRegister = {
@@ -49,6 +53,9 @@ fun BlogNavGraph(
                     navController.navigate(BlogDestinations.HOME_ROUTE) {
                         popUpTo(BlogDestinations.LOGIN_ROUTE) { inclusive = true }
                     }
+                },
+                onNavigateToForgotPassword = {
+                    navController.navigate(BlogDestinations.FORGOT_PASSWORD_ROUTE)
                 }
             )
         }
@@ -66,7 +73,59 @@ fun BlogNavGraph(
             )
         }
 
-        // Main App Screens
+        composable(BlogDestinations.FORGOT_PASSWORD_ROUTE) {
+            ForgotPasswordScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToVerifyOtp = { email ->
+                    navController.navigate(BlogDestinations.verifyOtpRoute(email))
+                }
+            )
+        }
+
+        composable(
+            route = BlogDestinations.VERIFY_OTP_WITH_EMAIL,
+            arguments = listOf(
+                navArgument(BlogDestinations.Args.EMAIL) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val email = backStackEntry.arguments?.getString(BlogDestinations.Args.EMAIL) ?: ""
+            VerifyOtpScreen(
+                email = email,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToResetPassword = { tokenId, otp ->
+                    navController.navigate(BlogDestinations.resetPasswordRoute(tokenId, otp))
+                }
+            )
+        }
+
+        composable(
+            route = BlogDestinations.RESET_PASSWORD_WITH_PARAMS,
+            arguments = listOf(
+                navArgument(BlogDestinations.Args.TOKEN_ID) { type = NavType.StringType },
+                navArgument(BlogDestinations.Args.OTP) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val tokenId = backStackEntry.arguments?.getString(BlogDestinations.Args.TOKEN_ID) ?: ""
+            val otp = backStackEntry.arguments?.getString(BlogDestinations.Args.OTP) ?: ""
+            ResetPasswordScreen(
+                tokenId = tokenId,
+                otp = otp,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToLogin = {
+                    navController.navigate(BlogDestinations.LOGIN_ROUTE) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Layar Utama Aplikasi
         composable(BlogDestinations.HOME_ROUTE) {
             HomeScreen(
                 onNavigateToProfile = {
@@ -95,11 +154,22 @@ fun BlogNavGraph(
                     navController.navigate(BlogDestinations.LOGIN_ROUTE) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onNavigateToChangePassword = {
+                    navController.navigate(BlogDestinations.CHANGE_PASSWORD_ROUTE)
                 }
             )
         }
 
-        // Create Post Screen (tanpa parameter)
+        composable(BlogDestinations.CHANGE_PASSWORD_ROUTE) {
+            ChangePasswordScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // Layar Buat Post (tanpa parameter)
         composable(BlogDestinations.CREATE_POST_ROUTE) {
             CreatePostScreen(
                 onNavigateBack = {
@@ -125,10 +195,10 @@ fun BlogNavGraph(
         composable(
             route = BlogDestinations.POST_DETAIL_WITH_ID,
             arguments = listOf(
-                navArgument("postId") { type = NavType.StringType }
+                navArgument(BlogDestinations.Args.POST_ID) { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val postId = backStackEntry.arguments?.getString("postId") ?: ""
+            val postId = backStackEntry.arguments?.getString(BlogDestinations.Args.POST_ID) ?: ""
             PostDetailScreen(
                 postId = postId,
                 onNavigateBack = {
@@ -140,17 +210,16 @@ fun BlogNavGraph(
             )
         }
 
-        // Edit Post Screen - untuk saat ini disable dulu karena masih bermasalah
-        // Nanti bisa ditambahkan lagi ketika sudah siap
+        // Edit Post Screen - untuk masa depan
         /*
         composable(
             route = BlogDestinations.EDIT_POST_WITH_ID,
             arguments = listOf(
-                navArgument("postId") { type = NavType.StringType }
+                navArgument(BlogDestinations.Args.POST_ID) { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val postId = backStackEntry.arguments?.getString("postId") ?: ""
-            // TODO: Implement EditPostScreen
+            val postId = backStackEntry.arguments?.getString(BlogDestinations.Args.POST_ID) ?: ""
+            // TODO: Implementasi EditPostScreen
         }
         */
     }
