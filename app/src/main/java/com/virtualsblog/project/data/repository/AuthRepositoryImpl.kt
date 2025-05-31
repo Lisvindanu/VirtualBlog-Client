@@ -1,9 +1,11 @@
 package com.virtualsblog.project.data.repository
 
+import com.virtualsblog.project.data.local.dao.UserDao
+import com.virtualsblog.project.data.mapper.UserMapper
 import com.virtualsblog.project.data.remote.api.AuthApi
 import com.virtualsblog.project.data.remote.dto.request.*
-import com.virtualsblog.project.data.remote.dto.response.ApiResponse // Pastikan ini dari paket yang benar
-import com.virtualsblog.project.data.remote.dto.response.UserResponse // Pastikan ini dari paket yang benar
+import com.virtualsblog.project.data.remote.dto.response.ApiResponse
+import com.virtualsblog.project.data.remote.dto.response.UserResponse
 import com.virtualsblog.project.data.remote.dto.response.ValidationError
 import com.virtualsblog.project.domain.model.User
 import com.virtualsblog.project.domain.repository.AuthRepository
@@ -13,9 +15,7 @@ import com.virtualsblog.project.util.Resource
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-// import okhttp3.MultipartBody // Dihapus dari sini
 import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
@@ -25,6 +25,7 @@ import javax.inject.Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val api: AuthApi,
     private val userPreferences: UserPreferences,
+    private val userDao: UserDao,
     private val gson: Gson
 ) : AuthRepository {
 
@@ -52,14 +53,18 @@ class AuthRepositoryImpl @Inject constructor(
                         updatedAt = userResponse.updatedAt
                     )
 
+                    // Simpan ke DataStore (untuk backward compatibility)
                     userPreferences.saveUserSession(
                         accessToken = accessToken,
                         userId = user.id,
                         username = user.username,
                         fullname = user.fullname,
                         email = user.email,
-                        image = user.image // Sesuai UserPreferences terbaru Anda
+                        image = user.image
                     )
+
+                    // Simpan ke Room Database
+                    saveUserToRoom(user, accessToken)
 
                     Resource.Success(Pair(user, accessToken))
                 } else {
@@ -104,6 +109,11 @@ class AuthRepositoryImpl @Inject constructor(
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
+
+                    // Simpan user ke Room database (tanpa set sebagai current user)
+                    val userEntity = UserMapper.mapDomainToEntity(user, isCurrent = false)
+                    userDao.insertUser(userEntity)
+
                     Resource.Success(user)
                 } else {
                     Resource.Error(apiResponse.message)
@@ -120,15 +130,13 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    // Metode getProfile, updateProfile, uploadProfilePicture DIHAPUS dari sini
-
     override suspend fun changePassword(
         prevPassword: String,
         password: String,
         confirmPassword: String
     ): Resource<User> {
         return try {
-            val token = userPreferences.getAccessToken() // Tidak perlu .first() jika getAccessToken() adalah suspend fun
+            val token = userPreferences.getAccessToken()
             if (token.isNullOrEmpty()) {
                 return Resource.Error(Constants.ERROR_UNAUTHORIZED)
             }
@@ -153,14 +161,10 @@ class AuthRepositoryImpl @Inject constructor(
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
-                    // Pertimbangkan apakah userPreferences.updateProfile perlu dipanggil di sini
-                    // jika API changePassword juga mengembalikan data user terbaru termasuk image.
-                    // userPreferences.updateProfile(
-                    //     username = user.username,
-                    //     fullname = user.fullname,
-                    //     email = user.email,
-                    //     image = user.image
-                    // )
+
+                    // Update user di Room database
+                    updateUserInRoom(user)
+
                     Resource.Success(user)
                 } else {
                     Resource.Error(apiResponse.message)
@@ -192,7 +196,7 @@ class AuthRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
                 if (apiResponse.success) {
-                    Resource.Success(apiResponse.message) // Umumnya pesan sukses, atau bisa data lain jika API mengembalikan
+                    Resource.Success(apiResponse.message)
                 } else {
                     Resource.Error(apiResponse.message)
                 }
@@ -218,7 +222,7 @@ class AuthRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
                 if (apiResponse.success) {
-                    Resource.Success(apiResponse.data.id) // Mengembalikan token ID dari OTP
+                    Resource.Success(apiResponse.data.id)
                 } else {
                     Resource.Error(apiResponse.message)
                 }
@@ -259,6 +263,10 @@ class AuthRepositoryImpl @Inject constructor(
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
+
+                    // Update user di Room database jika ada
+                    updateUserInRoom(user)
+
                     Resource.Success(user)
                 } else {
                     Resource.Error(apiResponse.message)
@@ -276,30 +284,18 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
+        // Clear DataStore
         userPreferences.clearUserSession()
+
+        // Clear current user dari Room database
+        userDao.clearCurrentUser()
     }
 
     override fun getCurrentUser(): Flow<User?> {
-        return userPreferences.userData.map { userData ->
-            if (userData.accessToken != null && userData.userId != null &&
-                userData.username != null && userData.fullname != null &&
-                userData.email != null
-            ) {
-                User(
-                    id = userData.userId,
-                    username = userData.username,
-                    fullname = userData.fullname,
-                    email = userData.email,
-                    image = userData.image, // Sesuai UserPreferences terbaru Anda
-                    createdAt = "", // Atau ambil dari preferences jika disimpan saat login
-                    updatedAt = ""  // Atau ambil dari preferences jika disimpan saat login
-                )
-            } else {
-                null
-            }
+        return userDao.getCurrentUser().map { userEntity ->
+            userEntity?.let { UserMapper.mapEntityToDomain(it) }
         }
     }
-
 
     override fun getAccessToken(): Flow<String?> {
         return userPreferences.accessToken
@@ -309,14 +305,53 @@ class AuthRepositoryImpl @Inject constructor(
         return userPreferences.isLoggedIn
     }
 
+    // Private helper methods
+    private suspend fun saveUserToRoom(user: User, accessToken: String) {
+        try {
+            // Clear current user first
+            userDao.clearCurrentUser()
+
+            // Insert/Update user and set as current
+            val userEntity = UserMapper.mapDomainToEntity(user, isCurrent = true)
+            userDao.insertUser(userEntity)
+        } catch (e: Exception) {
+            // Log error tapi jangan gagalkan login
+            e.printStackTrace()
+        }
+    }
+
+    private suspend fun updateUserInRoom(user: User) {
+        try {
+            // Update user profile di Room database
+            userDao.updateUserProfile(
+                userId = user.id,
+                fullname = user.fullname,
+                email = user.email,
+                username = user.username,
+                image = user.image,
+                updatedAt = user.updatedAt
+            )
+
+            // Update juga di DataStore untuk backward compatibility
+            userPreferences.updateProfile(
+                username = user.username,
+                fullname = user.fullname,
+                email = user.email,
+                image = user.image
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun <T> handleAuthHttpError(code: Int, errorBody: String?): Resource<T> {
         return when (code) {
             401 -> Resource.Error(Constants.ERROR_UNAUTHORIZED)
             400 -> {
                 if (!errorBody.isNullOrEmpty()) {
                     try {
-                        val errorType = object : TypeToken<com.virtualsblog.project.data.remote.dto.response.ApiResponse<Any>>() {}.type
-                        val errorResponse: com.virtualsblog.project.data.remote.dto.response.ApiResponse<Any> = gson.fromJson(errorBody, errorType)
+                        val errorType = object : TypeToken<ApiResponse<Any>>() {}.type
+                        val errorResponse: ApiResponse<Any> = gson.fromJson(errorBody, errorType)
                         return Resource.Error(errorResponse.message ?: "Permintaan tidak valid.")
                     } catch (e: Exception) {
                         return Resource.Error("Permintaan tidak valid.")
@@ -327,8 +362,8 @@ class AuthRepositoryImpl @Inject constructor(
             422 -> {
                 if (!errorBody.isNullOrEmpty()) {
                     try {
-                        val errorType = object : TypeToken<com.virtualsblog.project.data.remote.dto.response.ApiResponse<List<ValidationError>>>() {}.type
-                        val errorResponse: com.virtualsblog.project.data.remote.dto.response.ApiResponse<List<ValidationError>> = gson.fromJson(errorBody, errorType)
+                        val errorType = object : TypeToken<ApiResponse<List<ValidationError>>>() {}.type
+                        val errorResponse: ApiResponse<List<ValidationError>> = gson.fromJson(errorBody, errorType)
                         val firstError = errorResponse.data.firstOrNull()
                         val message = when (firstError?.msg) {
                             "Username sudah terdaftar" -> Constants.ERROR_USERNAME_EXISTS
@@ -346,11 +381,10 @@ class AuthRepositoryImpl @Inject constructor(
             500 -> {
                 if (!errorBody.isNullOrEmpty()) {
                     try {
-                        val errorType = object : TypeToken<com.virtualsblog.project.data.remote.dto.response.ApiResponse<String>>() {}.type
-                        val errorResponse: com.virtualsblog.project.data.remote.dto.response.ApiResponse<String> = gson.fromJson(errorBody, errorType)
+                        val errorType = object : TypeToken<ApiResponse<String>>() {}.type
+                        val errorResponse: ApiResponse<String> = gson.fromJson(errorBody, errorType)
                         val message = when {
                             errorResponse.data.contains("Username atau password salah", ignoreCase = true) -> Constants.ERROR_LOGIN_FAILED
-                            // errorResponse.data.contains("Failed to upload file", ignoreCase = true) -> "Gagal mengunggah file ke server." // Ini seharusnya tidak di sini
                             else -> errorResponse.message ?: "Terjadi kesalahan pada server."
                         }
                         Resource.Error(message)
