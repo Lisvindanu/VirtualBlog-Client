@@ -2,6 +2,8 @@ package com.virtualsblog.project.data.repository
 
 import com.virtualsblog.project.data.remote.api.AuthApi
 import com.virtualsblog.project.data.remote.dto.request.*
+import com.virtualsblog.project.data.remote.dto.response.ApiResponse // Pastikan ini dari paket yang benar
+import com.virtualsblog.project.data.remote.dto.response.UserResponse // Pastikan ini dari paket yang benar
 import com.virtualsblog.project.data.remote.dto.response.ValidationError
 import com.virtualsblog.project.domain.model.User
 import com.virtualsblog.project.domain.repository.AuthRepository
@@ -11,9 +13,9 @@ import com.virtualsblog.project.util.Resource
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first // Pastikan import ini ada
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import okhttp3.MultipartBody // Pastikan import ini ada
+// import okhttp3.MultipartBody // Dihapus dari sini
 import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
@@ -56,7 +58,7 @@ class AuthRepositoryImpl @Inject constructor(
                         username = user.username,
                         fullname = user.fullname,
                         email = user.email,
-                        image = user.image
+                        image = user.image // Sesuai UserPreferences terbaru Anda
                     )
 
                     Resource.Success(Pair(user, accessToken))
@@ -64,10 +66,10 @@ class AuthRepositoryImpl @Inject constructor(
                     Resource.Error(authResponse.message)
                 }
             } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
+                handleAuthHttpError(response.code(), response.errorBody()?.string())
             }
         } catch (e: HttpException) {
-            handleHttpError(e.code(), e.response()?.errorBody()?.string())
+            handleAuthHttpError(e.code(), e.response()?.errorBody()?.string())
         } catch (e: IOException) {
             Resource.Error(Constants.ERROR_NETWORK)
         } catch (e: Exception) {
@@ -107,10 +109,10 @@ class AuthRepositoryImpl @Inject constructor(
                     Resource.Error(apiResponse.message)
                 }
             } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
+                handleAuthHttpError(response.code(), response.errorBody()?.string())
             }
         } catch (e: HttpException) {
-            handleHttpError(e.code(), e.response()?.errorBody()?.string())
+            handleAuthHttpError(e.code(), e.response()?.errorBody()?.string())
         } catch (e: IOException) {
             Resource.Error(Constants.ERROR_NETWORK)
         } catch (e: Exception) {
@@ -118,121 +120,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-
-    override suspend fun getProfile(): Resource<User> {
-        return try {
-            val token = userPreferences.getAccessToken()
-            if (token.isNullOrEmpty()) {
-                return Resource.Error(Constants.ERROR_UNAUTHORIZED)
-            }
-
-            val response = api.getProfile(
-                apiKey = Constants.API_KEY,
-                token = "Bearer $token"
-            )
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-
-                if (apiResponse.success) {
-                    val userResponse = apiResponse.data
-                    val user = User(
-                        id = userResponse.id,
-                        username = userResponse.username,
-                        fullname = userResponse.fullname,
-                        email = userResponse.email,
-                        image = userResponse.image.ifEmpty { null },
-                        createdAt = userResponse.createdAt,
-                        updatedAt = userResponse.updatedAt
-                    )
-
-                    userPreferences.updateProfile(
-                        username = user.username,
-                        fullname = user.fullname,
-                        email = user.email,
-                        image = user.image
-                    )
-
-                    Resource.Success(user)
-                } else {
-                    Resource.Error(apiResponse.message)
-                }
-            } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
-            }
-        } catch (e: HttpException) {
-            if (e.code() == 401) {
-                logout()
-                Resource.Error(Constants.ERROR_UNAUTHORIZED)
-            } else {
-                handleHttpError(e.code(), e.response()?.errorBody()?.string())
-            }
-        } catch (e: IOException) {
-            Resource.Error(Constants.ERROR_NETWORK)
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: Constants.ERROR_UNKNOWN)
-        }
-    }
-
-    override suspend fun updateProfile(
-        fullname: String,
-        email: String,
-        username: String
-    ): Resource<User> {
-        return try {
-            val token = userPreferences.getAccessToken()
-            if (token.isNullOrEmpty()) {
-                return Resource.Error(Constants.ERROR_UNAUTHORIZED)
-            }
-
-            val response = api.updateProfile(
-                apiKey = Constants.API_KEY,
-                token = "Bearer $token",
-                request = UpdateProfileRequest(fullname, email, username)
-            )
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-
-                if (apiResponse.success) {
-                    val userResponse = apiResponse.data
-                    val user = User(
-                        id = userResponse.id,
-                        username = userResponse.username,
-                        fullname = userResponse.fullname,
-                        email = userResponse.email,
-                        image = userResponse.image.ifEmpty { null },
-                        createdAt = userResponse.createdAt,
-                        updatedAt = userResponse.updatedAt
-                    )
-
-                    userPreferences.updateProfile(
-                        username = user.username,
-                        fullname = user.fullname,
-                        email = user.email,
-                        image = user.image
-                    )
-
-                    Resource.Success(user)
-                } else {
-                    Resource.Error(apiResponse.message)
-                }
-            } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
-            }
-        } catch (e: HttpException) {
-            if (e.code() == 401) {
-                logout()
-                Resource.Error(Constants.ERROR_UNAUTHORIZED)
-            } else {
-                handleHttpError(e.code(), e.response()?.errorBody()?.string())
-            }
-        } catch (e: IOException) {
-            Resource.Error(Constants.ERROR_NETWORK)
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: Constants.ERROR_UNKNOWN)
-        }
-    }
+    // Metode getProfile, updateProfile, uploadProfilePicture DIHAPUS dari sini
 
     override suspend fun changePassword(
         prevPassword: String,
@@ -240,7 +128,7 @@ class AuthRepositoryImpl @Inject constructor(
         confirmPassword: String
     ): Resource<User> {
         return try {
-            val token = userPreferences.getAccessToken()
+            val token = userPreferences.getAccessToken() // Tidak perlu .first() jika getAccessToken() adalah suspend fun
             if (token.isNullOrEmpty()) {
                 return Resource.Error(Constants.ERROR_UNAUTHORIZED)
             }
@@ -265,25 +153,27 @@ class AuthRepositoryImpl @Inject constructor(
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
-                    userPreferences.updateProfile(
-                        username = user.username,
-                        fullname = user.fullname,
-                        email = user.email,
-                        image = user.image
-                    )
+                    // Pertimbangkan apakah userPreferences.updateProfile perlu dipanggil di sini
+                    // jika API changePassword juga mengembalikan data user terbaru termasuk image.
+                    // userPreferences.updateProfile(
+                    //     username = user.username,
+                    //     fullname = user.fullname,
+                    //     email = user.email,
+                    //     image = user.image
+                    // )
                     Resource.Success(user)
                 } else {
                     Resource.Error(apiResponse.message)
                 }
             } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
+                handleAuthHttpError(response.code(), response.errorBody()?.string())
             }
         } catch (e: HttpException) {
             if (e.code() == 401) {
                 logout()
                 Resource.Error(Constants.ERROR_UNAUTHORIZED)
             } else {
-                handleHttpError(e.code(), e.response()?.errorBody()?.string())
+                handleAuthHttpError(e.code(), e.response()?.errorBody()?.string())
             }
         } catch (e: IOException) {
             Resource.Error(Constants.ERROR_NETWORK)
@@ -302,15 +192,15 @@ class AuthRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
                 if (apiResponse.success) {
-                    Resource.Success(apiResponse.message)
+                    Resource.Success(apiResponse.message) // Umumnya pesan sukses, atau bisa data lain jika API mengembalikan
                 } else {
                     Resource.Error(apiResponse.message)
                 }
             } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
+                handleAuthHttpError(response.code(), response.errorBody()?.string())
             }
         } catch (e: HttpException) {
-            handleHttpError(e.code(), e.response()?.errorBody()?.string())
+            handleAuthHttpError(e.code(), e.response()?.errorBody()?.string())
         } catch (e: IOException) {
             Resource.Error(Constants.ERROR_NETWORK)
         } catch (e: Exception) {
@@ -328,15 +218,15 @@ class AuthRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
                 if (apiResponse.success) {
-                    Resource.Success(apiResponse.data.id) // Return token ID
+                    Resource.Success(apiResponse.data.id) // Mengembalikan token ID dari OTP
                 } else {
                     Resource.Error(apiResponse.message)
                 }
             } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
+                handleAuthHttpError(response.code(), response.errorBody()?.string())
             }
         } catch (e: HttpException) {
-            handleHttpError(e.code(), e.response()?.errorBody()?.string())
+            handleAuthHttpError(e.code(), e.response()?.errorBody()?.string())
         } catch (e: IOException) {
             Resource.Error(Constants.ERROR_NETWORK)
         } catch (e: Exception) {
@@ -374,69 +264,14 @@ class AuthRepositoryImpl @Inject constructor(
                     Resource.Error(apiResponse.message)
                 }
             } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
+                handleAuthHttpError(response.code(), response.errorBody()?.string())
             }
         } catch (e: HttpException) {
-            handleHttpError(e.code(), e.response()?.errorBody()?.string())
+            handleAuthHttpError(e.code(), e.response()?.errorBody()?.string())
         } catch (e: IOException) {
             Resource.Error(Constants.ERROR_NETWORK)
         } catch (e: Exception) {
             Resource.Error(e.message ?: Constants.ERROR_UNKNOWN)
-        }
-    }
-
-
-    override suspend fun uploadProfilePicture(photoPart: MultipartBody.Part): Resource<User> {
-        return try {
-            val token = userPreferences.getAccessToken() // Mengambil token dari DataStore
-            if (token.isNullOrEmpty()) {
-                return Resource.Error(Constants.ERROR_UNAUTHORIZED)
-            }
-
-            val response = api.uploadProfilePicture(
-                apiKey = Constants.API_KEY,
-                token = "Bearer $token", // Menambahkan "Bearer " prefix
-                photo = photoPart
-            )
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success) {
-                    val userResponse = apiResponse.data
-                    val updatedUser = User(
-                        id = userResponse.id,
-                        username = userResponse.username,
-                        fullname = userResponse.fullname,
-                        email = userResponse.email,
-                        image = userResponse.image.ifEmpty { null },
-                        createdAt = userResponse.createdAt,
-                        updatedAt = userResponse.updatedAt
-                    )
-                    // Update preferences dengan data user yang baru, termasuk image URL
-                    userPreferences.updateProfile(
-                        username = updatedUser.username,
-                        fullname = updatedUser.fullname,
-                        email = updatedUser.email,
-                        image = updatedUser.image
-                    )
-                    Resource.Success(updatedUser)
-                } else {
-                    Resource.Error(apiResponse.message)
-                }
-            } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
-            }
-        } catch (e: HttpException) {
-            if (e.code() == 401) {
-                logout() // Clear invalid session jika token tidak valid
-                Resource.Error(Constants.ERROR_UNAUTHORIZED)
-            } else {
-                handleHttpError(e.code(), e.response()?.errorBody()?.string())
-            }
-        } catch (e: IOException) {
-            Resource.Error(Constants.ERROR_NETWORK) // Kesalahan koneksi
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: Constants.ERROR_UNKNOWN) // Kesalahan umum
         }
     }
 
@@ -455,9 +290,9 @@ class AuthRepositoryImpl @Inject constructor(
                     username = userData.username,
                     fullname = userData.fullname,
                     email = userData.email,
-                    image = userData.image, // Ambil image dari UserData
-                    createdAt = "", // Diisi dari API jika perlu, atau biarkan kosong jika hanya untuk sesi
-                    updatedAt = ""  // Diisi dari API jika perlu
+                    image = userData.image, // Sesuai UserPreferences terbaru Anda
+                    createdAt = "", // Atau ambil dari preferences jika disimpan saat login
+                    updatedAt = ""  // Atau ambil dari preferences jika disimpan saat login
                 )
             } else {
                 null
@@ -474,22 +309,20 @@ class AuthRepositoryImpl @Inject constructor(
         return userPreferences.isLoggedIn
     }
 
-    private fun <T> handleHttpError(code: Int, errorBody: String?): Resource<T> {
+    private fun <T> handleAuthHttpError(code: Int, errorBody: String?): Resource<T> {
         return when (code) {
             401 -> Resource.Error(Constants.ERROR_UNAUTHORIZED)
-            400 -> { // Menangani Bad Request, seringkali karena validasi file
+            400 -> {
                 if (!errorBody.isNullOrEmpty()) {
                     try {
-                        // Coba parse sebagai ApiResponse<Any> atau struktur error umum API Anda
                         val errorType = object : TypeToken<com.virtualsblog.project.data.remote.dto.response.ApiResponse<Any>>() {}.type
                         val errorResponse: com.virtualsblog.project.data.remote.dto.response.ApiResponse<Any> = gson.fromJson(errorBody, errorType)
-                        return Resource.Error(errorResponse.message ?: "File tidak valid atau tipe file tidak didukung.")
+                        return Resource.Error(errorResponse.message ?: "Permintaan tidak valid.")
                     } catch (e: Exception) {
-                        // Jika parsing gagal, kembalikan pesan generik
-                        return Resource.Error("File tidak valid atau tipe file tidak didukung.")
+                        return Resource.Error("Permintaan tidak valid.")
                     }
                 }
-                Resource.Error("File tidak valid atau tipe file tidak didukung.")
+                Resource.Error("Permintaan tidak valid.")
             }
             422 -> {
                 if (!errorBody.isNullOrEmpty()) {
@@ -500,7 +333,6 @@ class AuthRepositoryImpl @Inject constructor(
                         val message = when (firstError?.msg) {
                             "Username sudah terdaftar" -> Constants.ERROR_USERNAME_EXISTS
                             "Email sudah terdaftar" -> Constants.ERROR_EMAIL_EXISTS
-                            // Tambahkan pesan error spesifik lainnya jika ada
                             else -> firstError?.msg ?: Constants.ERROR_VALIDATION
                         }
                         Resource.Error(message)
@@ -518,7 +350,7 @@ class AuthRepositoryImpl @Inject constructor(
                         val errorResponse: com.virtualsblog.project.data.remote.dto.response.ApiResponse<String> = gson.fromJson(errorBody, errorType)
                         val message = when {
                             errorResponse.data.contains("Username atau password salah", ignoreCase = true) -> Constants.ERROR_LOGIN_FAILED
-                            errorResponse.data.contains("Failed to upload file", ignoreCase = true) -> "Gagal mengunggah file ke server."
+                            // errorResponse.data.contains("Failed to upload file", ignoreCase = true) -> "Gagal mengunggah file ke server." // Ini seharusnya tidak di sini
                             else -> errorResponse.message ?: "Terjadi kesalahan pada server."
                         }
                         Resource.Error(message)

@@ -61,7 +61,7 @@ fun ProfileScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            viewModel.uploadProfileImage(it, context)
+            viewModel.uploadProfilePicture(context, it)
         }
     }
 
