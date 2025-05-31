@@ -1,52 +1,64 @@
 <resources>
-    <!-- App Name -->
+    <!-- Nama Aplikasi -->
     <string name="app_name">VirtualsBlog</string>
 
-    <!-- Authentication -->
+    <!-- Autentikasi -->
     <string name="welcome_back">Selamat Datang Kembali!</string>
     <string name="sign_in_subtitle">Masuk untuk melanjutkan perjalanan Anda</string>
     <string name="create_account">Buat Akun Baru</string>
     <string name="join_community">Bergabung dengan komunitas penulis kami</string>
 
-    <!-- Form Fields -->
-    <string name="username">Username</string>
-    <string name="password">Password</string>
-    <string name="confirm_password">Konfirmasi Password</string>
-    <string name="username_hint">Masukkan username Anda</string>
-    <string name="password_hint">Masukkan password Anda</string>
-    <string name="create_password_hint">Buat password</string>
-    <string name="confirm_password_hint">Masukkan ulang password Anda</string>
+    <!-- Field Form -->
+    <string name="fullname">Nama Lengkap</string>
+    <string name="email">Email</string>
+    <string name="username">Nama Pengguna</string>
+    <string name="password">Kata Sandi</string>
+    <string name="confirm_password">Konfirmasi Kata Sandi</string>
+    <string name="new_password">Kata Sandi Baru</string>
+    <string name="old_password">Kata Sandi Lama</string>
 
-    <!-- Buttons -->
+    <!-- Hint Field -->
+    <string name="fullname_hint">Masukkan nama lengkap Anda</string>
+    <string name="email_hint">Masukkan alamat email Anda</string>
+    <string name="username_hint">Masukkan nama pengguna Anda</string>
+    <string name="password_hint">Masukkan kata sandi Anda</string>
+    <string name="new_password_hint">Masukkan kata sandi baru</string>
+    <string name="confirm_password_hint">Masukkan ulang kata sandi Anda</string>
+
+    <!-- Tombol -->
     <string name="sign_in">Masuk</string>
     <string name="sign_up">Daftar</string>
     <string name="create_account_button">Buat Akun</string>
     <string name="save">Simpan</string>
     <string name="cancel">Batal</string>
-    <string name="edit">Edit</string>
+    <string name="edit">Ubah</string>
     <string name="delete">Hapus</string>
     <string name="share">Bagikan</string>
     <string name="retry">Coba Lagi</string>
     <string name="logout">Keluar</string>
+    <string name="send">Kirim</string>
+    <string name="verify">Verifikasi</string>
+    <string name="reset">Atur Ulang</string>
 
-    <!-- Navigation -->
-    <string name="forgot_password">Lupa password?</string>
+    <!-- Navigasi -->
+    <string name="forgot_password">Lupa kata sandi?</string>
     <string name="no_account">Belum punya akun?</string>
     <string name="have_account">Sudah punya akun?</string>
     <string name="or">ATAU</string>
+    <string name="back">Kembali</string>
 
-    <!-- Terms and Conditions -->
+    <!-- Syarat dan Ketentuan -->
     <string name="agree_terms">Saya setuju dengan</string>
     <string name="terms_conditions">Syarat dan Ketentuan</string>
 
-    <!-- Profile -->
+    <!-- Profil -->
     <string name="my_profile">Profil Saya</string>
-    <string name="edit_profile">Edit Profil</string>
+    <string name="edit_profile">Ubah Profil</string>
     <string name="account_info">Informasi Akun</string>
     <string name="user_id">ID Pengguna</string>
     <string name="joined_since">Bergabung Sejak</string>
 
-    <!-- Home -->
+    <!-- Beranda -->
     <string name="hello_user">Halo, %1$s! 👋</string>
     <string name="what_to_share_today">Apa yang ingin kamu bagikan hari ini?</string>
     <string name="latest_posts">Postingan Terbaru</string>
@@ -57,7 +69,7 @@
     <string name="be_first_to_post">Jadilah yang pertama membuat postingan di VirtualsBlog!</string>
     <string name="create_first_post">Tulis Postingan Pertama</string>
 
-    <!-- Posts -->
+    <!-- Postingan -->
     <string name="create_new_post">Tulis Postingan Baru</string>
     <string name="post_title">Judul Postingan</string>
     <string name="post_content">Konten Postingan</string>
@@ -66,86 +78,122 @@
     <string name="post_content_hint">Tulis konten postingan Anda di sini...</string>
     <string name="select_category_hint">Pilih kategori postingan</string>
     <string name="character_count">%1$d karakter</string>
-    <string name="publish">Posting</string>
+    <string name="publish">Terbitkan</string>
     <string name="read_more">Baca Selengkapnya</string>
     <string name="like">Suka</string>
     <string name="comment">Komentar</string>
     <string name="post_detail">Detail Postingan</string>
 
-    <!-- Writing Tips -->
+    <!-- Tips Menulis -->
     <string name="writing_tips_title">💡 Tips Menulis</string>
     <string name="writing_tips_content">• Gunakan judul yang menarik dan deskriptif\n• Tulis konten yang informatif dan bermanfaat\n• Pilih kategori yang sesuai\n• Periksa ejaan sebelum memposting</string>
 
-    <!-- Categories -->
-    <string name="category_technology">Technology</string>
-    <string name="category_lifestyle">Lifestyle</string>
-    <string name="category_food_drink">Food &amp; Drink</string>
-    <string name="category_travel">Travel</string>
-    <string name="category_finance">Finance</string>
-    <string name="category_health">Health</string>
-    <string name="category_education">Education</string>
-    <string name="category_entertainment">Entertainment</string>
-    <string name="category_sports">Sports</string>
-    <string name="category_other">Other</string>
+    <!-- Kategori -->
+    <string name="category_technology">Teknologi</string>
+    <string name="category_lifestyle">Gaya Hidup</string>
+    <string name="category_food_drink">Makanan &amp; Minuman</string>
+    <string name="category_travel">Perjalanan</string>
+    <string name="category_finance">Keuangan</string>
+    <string name="category_health">Kesehatan</string>
+    <string name="category_education">Pendidikan</string>
+    <string name="category_entertainment">Hiburan</string>
+    <string name="category_sports">Olahraga</string>
+    <string name="category_other">Lainnya</string>
 
-    <!-- Loading and Status -->
+    <!-- Status Memuat -->
     <string name="loading">Memuat...</string>
     <string name="loading_posts">Memuat postingan...</string>
     <string name="loading_profile">Memuat profil...</string>
     <string name="something_went_wrong">Oops! Terjadi Kesalahan</string>
 
-    <!-- Success Messages -->
+    <!-- Pesan Sukses -->
     <string name="login_success">Berhasil masuk</string>
     <string name="register_success">Pendaftaran berhasil</string>
     <string name="profile_updated">Profil berhasil diperbarui!</string>
     <string name="post_created_success">🎉\nPostingan berhasil dibuat!</string>
     <string name="post_published">Postingan Anda telah berhasil dipublikasikan</string>
+    <string name="password_changed_success">Kata sandi berhasil diubah!</string>
 
-    <!-- Error Messages -->
+    <!-- Pesan Error -->
     <string name="error_network">Tidak dapat terhubung ke server</string>
     <string name="error_unknown">Terjadi kesalahan yang tidak diketahui</string>
     <string name="error_validation">Data yang dimasukkan tidak valid</string>
     <string name="error_unauthorized">Sesi Anda telah berakhir, silakan masuk kembali</string>
-    <string name="error_login_failed">Username atau password salah</string>
+    <string name="error_login_failed">Nama pengguna atau kata sandi salah</string>
     <string name="error_register_failed">Gagal membuat akun baru</string>
-    <string name="error_required_fields">Semua field harus diisi</string>
-    <string name="error_password_mismatch">Password dan konfirmasi password tidak sama</string>
-    <string name="error_username_exists">Username sudah digunakan</string>
+    <string name="error_required_fields">Semua bidang harus diisi</string>
+    <string name="error_password_mismatch">Kata sandi dan konfirmasi kata sandi tidak sama</string>
+    <string name="error_username_exists">Nama pengguna sudah digunakan</string>
     <string name="error_post_not_found">Postingan dengan ID %1$s tidak ditemukan</string>
     <string name="error_failed_load_post">Gagal memuat postingan: %1$s</string>
 
-    <!-- Validation Messages -->
-    <string name="validation_username_required">Username harus diisi</string>
-    <string name="validation_username_min_length">Username minimal 6 karakter</string>
-    <string name="validation_username_invalid_chars">Username hanya boleh mengandung huruf, angka, dan garis bawah</string>
-    <string name="validation_password_required">Password harus diisi</string>
-    <string name="validation_password_min_length">Password minimal 6 karakter</string>
-    <string name="validation_passwords_not_match">Password tidak sama</string>
+    <!-- Pesan Validasi -->
+    <string name="validation_fullname_required">Nama lengkap harus diisi</string>
+    <string name="validation_fullname_min_length">Nama lengkap minimal 3 karakter</string>
+    <string name="validation_email_required">Email harus diisi</string>
+    <string name="validation_email_invalid">Format email tidak valid</string>
+    <string name="validation_username_required">Nama pengguna harus diisi</string>
+    <string name="validation_username_min_length">Nama pengguna minimal 6 karakter</string>
+    <string name="validation_username_invalid_chars">Nama pengguna hanya boleh mengandung huruf, angka, dan garis bawah</string>
+    <string name="validation_password_required">Kata sandi harus diisi</string>
+    <string name="validation_password_min_length">Kata sandi minimal 6 karakter</string>
+    <string name="validation_passwords_not_match">Kata sandi tidak sama</string>
     <string name="validation_post_title_required">Judul postingan tidak boleh kosong</string>
     <string name="validation_post_title_min_length">Judul postingan minimal 5 karakter</string>
     <string name="validation_post_content_required">Konten postingan tidak boleh kosong</string>
     <string name="validation_post_content_min_length">Konten postingan minimal 20 karakter</string>
 
-    <!-- Accessibility -->
-    <string name="show_password">Tampilkan password</string>
-    <string name="hide_password">Sembunyikan password</string>
-    <string name="back">Kembali</string>
+    <!-- Lupa Kata Sandi -->
+    <string name="forgot_password_title">Lupa Kata Sandi?</string>
+    <string name="forgot_password_message">Jangan khawatir! Masukkan alamat email Anda dan kami akan mengirimkan kode verifikasi untuk mereset kata sandi Anda.</string>
+    <string name="send_verification_code">Kirim Kode Verifikasi</string>
+    <string name="verification_code_sent">Kode verifikasi telah dikirim ke email Anda</string>
+
+    <!-- Verifikasi OTP -->
+    <string name="enter_verification_code">Masukkan Kode Verifikasi</string>
+    <string name="verification_code_message">Kami telah mengirimkan kode verifikasi 6 digit ke alamat email:</string>
+    <string name="verification_code">Kode Verifikasi</string>
+    <string name="enter_6_digit_code">Masukkan 6 digit kode</string>
+    <string name="verify_code">Verifikasi Kode</string>
+    <string name="resend_code">Tidak menerima kode? Kirim ulang</string>
+    <string name="digit_count">%1$d/6 digit</string>
+
+    <!-- Reset Kata Sandi -->
+    <string name="create_new_password">Buat Kata Sandi Baru</string>
+    <string name="new_password_message">Kata sandi baru Anda harus berbeda dari kata sandi sebelumnya.</string>
+    <string name="change_password">Ubah Kata Sandi</string>
+    <string name="password_changed_successfully">Kata Sandi Berhasil Diubah!</string>
+    <string name="redirecting_to_login">Anda akan diarahkan ke halaman masuk...</string>
+
+    <!-- Aksesibilitas -->
+    <string name="show_password">Tampilkan kata sandi</string>
+    <string name="hide_password">Sembunyikan kata sandi</string>
     <string name="search">Cari</string>
     <string name="profile">Profil</string>
     <string name="author_avatar">Avatar Penulis</string>
     <string name="default_avatar">Avatar default</string>
     <string name="more_options">Opsi lainnya</string>
 
-    <!-- Date Formatting -->
+    <!-- Format Tanggal -->
     <string name="date_format_detail">dd MMMM yyyy \'pukul\' HH:mm</string>
     <string name="date_format_card">dd MMM yyyy</string>
     <string name="invalid_date">Tanggal tidak valid</string>
 
-    <!-- Comments (Future Feature) -->
+    <!-- Komentar (Fitur Masa Depan) -->
     <string name="comments_title">💬\nKomentar</string>
     <string name="comments_coming_soon">Fitur komentar akan segera hadir!</string>
 
-    <!-- Actions -->
+    <!-- Aksi -->
     <string name="likes_count">%1$d Suka</string>
     <string name="comments_count">%1$d Komentar</string>
+
+    <!-- Tips dan Info -->
+    <string name="security_tips_title">🔐 Keamanan</string>
+    <string name="security_tips_content">• Kode verifikasi berlaku selama 5 menit\n• Jangan bagikan kode ini kepada siapapun\n• Kode hanya dapat digunakan satu kali</string>
+
+    <string name="password_tips_title">🔒 Tips Kata Sandi Aman</string>
+    <string name="password_tips_content">• Gunakan minimal 8 karakter\n• Kombinasikan huruf besar, kecil, dan angka\n• Hindari menggunakan informasi pribadi\n• Jangan gunakan kata sandi yang sama di tempat lain</string>
+
+    <string name="general_tips_title">💡 Petunjuk</string>
+    <string name="email_tips_content">• Periksa folder spam jika tidak menerima email\n• Kode verifikasi berlaku selama 5 menit\n• Pastikan alamat email yang dimasukkan benar</string>
 </resources>
