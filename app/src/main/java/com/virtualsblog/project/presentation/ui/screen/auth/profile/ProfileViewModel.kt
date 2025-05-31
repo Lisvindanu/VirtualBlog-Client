@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.virtualsblog.project.domain.model.User
 import com.virtualsblog.project.domain.repository.AuthRepository
+import com.virtualsblog.project.domain.usecase.auth.UpdateProfileUseCase
 import com.virtualsblog.project.util.Constants
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val updateProfileUseCase: UpdateProfileUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -66,15 +68,22 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun updateProfile(newUsername: String) {
-        if (newUsername.isBlank()) {
+    fun updateProfile(fullname: String, email: String, username: String) {
+        if (fullname.isBlank() || email.isBlank() || username.isBlank()) {
             _uiState.value = _uiState.value.copy(
-                error = "Username tidak boleh kosong"
+                error = "Semua field harus diisi"
             )
             return
         }
 
-        if (newUsername.length < Constants.MIN_USERNAME_LENGTH) {
+        if (fullname.length < Constants.MIN_FULLNAME_LENGTH) {
+            _uiState.value = _uiState.value.copy(
+                error = "Nama lengkap minimal ${Constants.MIN_FULLNAME_LENGTH} karakter"
+            )
+            return
+        }
+
+        if (username.length < Constants.MIN_USERNAME_LENGTH) {
             _uiState.value = _uiState.value.copy(
                 error = "Username minimal ${Constants.MIN_USERNAME_LENGTH} karakter"
             )
@@ -88,7 +97,7 @@ class ProfileViewModel @Inject constructor(
                 updateSuccess = false
             )
 
-            when (val result = authRepository.updateProfile(newUsername)) {
+            when (val result = updateProfileUseCase(fullname, email, username)) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(
                         user = result.data,
@@ -131,5 +140,9 @@ class ProfileViewModel @Inject constructor(
 
     fun clearUpdateSuccess() {
         _uiState.value = _uiState.value.copy(updateSuccess = false)
+    }
+
+    fun refreshProfile() {
+        loadProfile()
     }
 }

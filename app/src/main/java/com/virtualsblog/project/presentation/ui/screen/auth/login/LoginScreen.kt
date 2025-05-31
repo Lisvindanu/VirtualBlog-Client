@@ -35,6 +35,7 @@ import com.virtualsblog.project.util.Constants
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onNavigateToHome: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -57,6 +58,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(80.dp))
+
             Text(
                 text = Constants.APP_NAME,
                 style = MaterialTheme.typography.displaySmall,
@@ -77,12 +79,12 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Username Field
+            // Field Nama Pengguna
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username") },
-                placeholder = { Text("Masukkan username Anda") },
+                label = { Text("Nama Pengguna") },
+                placeholder = { Text("Masukkan nama pengguna Anda") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -100,12 +102,12 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password Field
+            // Field Kata Sandi
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
-                placeholder = { Text("Masukkan password Anda") },
+                label = { Text("Kata Sandi") },
+                placeholder = { Text("Masukkan kata sandi Anda") },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -122,7 +124,7 @@ fun LoginScreen(
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Sembunyikan password" else "Tampilkan password"
+                            contentDescription = if (passwordVisible) "Sembunyikan kata sandi" else "Tampilkan kata sandi"
                         )
                     }
                 },
@@ -133,20 +135,23 @@ fun LoginScreen(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
+
             Spacer(modifier = Modifier.height(8.dp))
+
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Text(
-                    text = "Lupa password?",
+                    text = "Lupa kata sandi?",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
-                        .clickable { /* TODO: Navigate to forgot password */ }
+                        .clickable { onNavigateToForgotPassword() }
                         .padding(vertical = 8.dp)
                 )
             }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
@@ -196,7 +201,9 @@ fun LoginScreen(
                     )
                 }
             }
+
             Spacer(modifier = Modifier.height(32.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -210,7 +217,9 @@ fun LoginScreen(
                 )
                 HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
             }
+
             Spacer(modifier = Modifier.height(32.dp))
+
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically

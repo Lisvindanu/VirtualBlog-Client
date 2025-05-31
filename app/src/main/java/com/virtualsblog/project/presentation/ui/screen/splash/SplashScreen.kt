@@ -18,13 +18,13 @@ fun SplashScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Start authentication check when screen loads
+    // Mulai pengecekan status autentikasi saat layar dimuat
     LaunchedEffect(Unit) {
-        delay(2000) // Show splash for 2 seconds
+        delay(2000) // Tampilkan splash selama 2 detik
         viewModel.checkAuthenticationStatus()
     }
 
-    // Handle navigation based on authentication status
+    // Handle navigasi berdasarkan status autentikasi
     LaunchedEffect(uiState.shouldNavigate) {
         if (uiState.shouldNavigate) {
             if (uiState.isLoggedIn) {
@@ -60,7 +60,7 @@ fun SplashScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Loading...",
+                    text = "Memuat...",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

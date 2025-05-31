@@ -1,3 +1,4 @@
+// RegisterUseCase.kt
 package com.virtualsblog.project.domain.usecase.auth
 
 import com.virtualsblog.project.domain.model.User
@@ -10,11 +11,15 @@ class RegisterUseCase @Inject constructor(
     private val repository: AuthRepository
 ) {
     suspend operator fun invoke(
-        username: String, // Sekarang ini adalah username tradisional
+        fullname: String,
+        email: String,
+        username: String,
         password: String,
         confirmPassword: String
     ): Resource<User> {
         val validation = ValidationUtil.validateRegisterForm(
+            fullname.trim(),
+            email.trim(),
             username.trim(),
             password,
             confirmPassword
@@ -22,6 +27,12 @@ class RegisterUseCase @Inject constructor(
         if (!validation.isValid) {
             return Resource.Error(validation.errorMessage ?: "Data tidak valid")
         }
-        return repository.register(username.trim(), password, confirmPassword)
+        return repository.register(
+            fullname.trim(),
+            email.trim(),
+            username.trim(),
+            password,
+            confirmPassword
+        )
     }
 }

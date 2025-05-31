@@ -6,17 +6,26 @@ import com.virtualsblog.project.util.Resource
 import com.virtualsblog.project.util.ValidationUtil
 import javax.inject.Inject
 
-class LoginUseCase @Inject constructor(
+class UpdateProfileUseCase @Inject constructor(
     private val repository: AuthRepository
 ) {
     suspend operator fun invoke(
-        username: String,
-        password: String
-    ): Resource<Pair<User, String>> {
-        val validation = ValidationUtil.validateLoginForm(username.trim(), password)
+        fullname: String,
+        email: String,
+        username: String
+    ): Resource<User> {
+        val validation = ValidationUtil.validateUpdateProfileForm(
+            fullname.trim(),
+            email.trim(),
+            username.trim()
+        )
         if (!validation.isValid) {
             return Resource.Error(validation.errorMessage ?: "Data tidak valid")
         }
-        return repository.login(username.trim(), password)
+        return repository.updateProfile(
+            fullname.trim(),
+            email.trim(),
+            username.trim()
+        )
     }
 }

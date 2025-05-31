@@ -18,18 +18,22 @@ class UserPreferences @Inject constructor(
     private val accessTokenKey = stringPreferencesKey(Constants.PREF_ACCESS_TOKEN)
     private val userIdKey = stringPreferencesKey(Constants.PREF_USER_ID)
     private val usernameKey = stringPreferencesKey(Constants.PREF_USERNAME)
+    private val fullnameKey = stringPreferencesKey(Constants.PREF_FULLNAME)
+    private val emailKey = stringPreferencesKey(Constants.PREF_EMAIL)
 
     // Flow untuk observe token
     val accessToken: Flow<String?> = dataStore.data.map { preferences ->
         preferences[accessTokenKey]
     }
 
-    // Flow untuk observe user data
-    val userData: Flow<Triple<String?, String?, String?>> = dataStore.data.map { preferences ->
-        Triple(
-            preferences[accessTokenKey],
-            preferences[userIdKey],
-            preferences[usernameKey]
+    // Flow untuk observe user data lengkap
+    val userData: Flow<UserData> = dataStore.data.map { preferences ->
+        UserData(
+            accessToken = preferences[accessTokenKey],
+            userId = preferences[userIdKey],
+            username = preferences[usernameKey],
+            fullname = preferences[fullnameKey],
+            email = preferences[emailKey]
         )
     }
 
@@ -38,23 +42,33 @@ class UserPreferences @Inject constructor(
         !preferences[accessTokenKey].isNullOrEmpty()
     }
 
-    // Save user session
+    // Save user session dengan data lengkap
     suspend fun saveUserSession(
         accessToken: String,
         userId: String,
-        username: String
+        username: String,
+        fullname: String,
+        email: String
     ) {
         dataStore.edit { preferences ->
             preferences[accessTokenKey] = accessToken
             preferences[userIdKey] = userId
             preferences[usernameKey] = username
+            preferences[fullnameKey] = fullname
+            preferences[emailKey] = email
         }
     }
 
-    // Update username
-    suspend fun updateUsername(username: String) {
+    // Update profile data
+    suspend fun updateProfile(
+        username: String,
+        fullname: String,
+        email: String
+    ) {
         dataStore.edit { preferences ->
             preferences[usernameKey] = username
+            preferences[fullnameKey] = fullname
+            preferences[emailKey] = email
         }
     }
 
@@ -64,6 +78,8 @@ class UserPreferences @Inject constructor(
             preferences.remove(accessTokenKey)
             preferences.remove(userIdKey)
             preferences.remove(usernameKey)
+            preferences.remove(fullnameKey)
+            preferences.remove(emailKey)
         }
     }
 
@@ -73,4 +89,12 @@ class UserPreferences @Inject constructor(
             preferences[accessTokenKey]
         }.first()
     }
+
+    data class UserData(
+        val accessToken: String?,
+        val userId: String?,
+        val username: String?,
+        val fullname: String?,
+        val email: String?
+    )
 }

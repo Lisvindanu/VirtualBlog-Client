@@ -1,8 +1,7 @@
 package com.virtualsblog.project.data.repository
 
 import com.virtualsblog.project.data.remote.api.AuthApi
-import com.virtualsblog.project.data.remote.dto.request.LoginRequest
-import com.virtualsblog.project.data.remote.dto.request.RegisterRequest
+import com.virtualsblog.project.data.remote.dto.request.*
 import com.virtualsblog.project.data.remote.dto.response.ValidationError
 import com.virtualsblog.project.domain.model.User
 import com.virtualsblog.project.domain.repository.AuthRepository
@@ -42,15 +41,20 @@ class AuthRepositoryImpl @Inject constructor(
                     val user = User(
                         id = userResponse.id,
                         username = userResponse.username,
+                        fullname = userResponse.fullname,
+                        email = userResponse.email,
+                        image = userResponse.image,
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
 
-                    // Save user session
+                    // Save user session dengan data lengkap
                     userPreferences.saveUserSession(
                         accessToken = accessToken,
                         userId = user.id,
-                        username = user.username
+                        username = user.username,
+                        fullname = user.fullname,
+                        email = user.email
                     )
 
                     Resource.Success(Pair(user, accessToken))
@@ -69,11 +73,17 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun register(username: String, password: String, confirmPassword: String): Resource<User> {
+    override suspend fun register(
+        fullname: String,
+        email: String,
+        username: String,
+        password: String,
+        confirmPassword: String
+    ): Resource<User> {
         return try {
             val response = api.register(
                 apiKey = Constants.API_KEY,
-                request = RegisterRequest(username, password, confirmPassword)
+                request = RegisterRequest(fullname, email, username, password, confirmPassword)
             )
 
             if (response.isSuccessful && response.body() != null) {
@@ -84,6 +94,9 @@ class AuthRepositoryImpl @Inject constructor(
                     val user = User(
                         id = userResponse.id,
                         username = userResponse.username,
+                        fullname = userResponse.fullname,
+                        email = userResponse.email,
+                        image = userResponse.image,
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
@@ -123,9 +136,20 @@ class AuthRepositoryImpl @Inject constructor(
                     val user = User(
                         id = userResponse.id,
                         username = userResponse.username,
+                        fullname = userResponse.fullname,
+                        email = userResponse.email,
+                        image = userResponse.image,
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
+
+                    // Update local preferences dengan data terbaru
+                    userPreferences.updateProfile(
+                        username = user.username,
+                        fullname = user.fullname,
+                        email = user.email
+                    )
+
                     Resource.Success(user)
                 } else {
                     Resource.Error(apiResponse.message)
@@ -147,18 +171,21 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateProfile(username: String): Resource<User> {
+    override suspend fun updateProfile(
+        fullname: String,
+        email: String,
+        username: String
+    ): Resource<User> {
         return try {
             val token = userPreferences.getAccessToken()
             if (token.isNullOrEmpty()) {
                 return Resource.Error(Constants.ERROR_UNAUTHORIZED)
             }
 
-            val requestBody = mapOf("username" to username)
             val response = api.updateProfile(
                 apiKey = Constants.API_KEY,
                 token = "Bearer $token",
-                request = requestBody
+                request = UpdateProfileRequest(fullname, email, username)
             )
 
             if (response.isSuccessful && response.body() != null) {
@@ -169,12 +196,19 @@ class AuthRepositoryImpl @Inject constructor(
                     val user = User(
                         id = userResponse.id,
                         username = userResponse.username,
+                        fullname = userResponse.fullname,
+                        email = userResponse.email,
+                        image = userResponse.image,
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
 
-                    // Update username in preferences
-                    userPreferences.updateUsername(user.username)
+                    // Update preferences
+                    userPreferences.updateProfile(
+                        username = user.username,
+                        fullname = user.fullname,
+                        email = user.email
+                    )
 
                     Resource.Success(user)
                 } else {
@@ -197,16 +231,166 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun changePassword(
+        prevPassword: String,
+        password: String,
+        confirmPassword: String
+    ): Resource<User> {
+        return try {
+            val token = userPreferences.getAccessToken()
+            if (token.isNullOrEmpty()) {
+                return Resource.Error(Constants.ERROR_UNAUTHORIZED)
+            }
+
+            val response = api.changePassword(
+                apiKey = Constants.API_KEY,
+                token = "Bearer $token",
+                request = ChangePasswordRequest(prevPassword, password, confirmPassword)
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                val apiResponse = response.body()!!
+
+                if (apiResponse.success) {
+                    val userResponse = apiResponse.data
+                    val user = User(
+                        id = userResponse.id,
+                        username = userResponse.username,
+                        fullname = userResponse.fullname,
+                        email = userResponse.email,
+                        image = userResponse.image,
+                        createdAt = userResponse.createdAt,
+                        updatedAt = userResponse.updatedAt
+                    )
+                    Resource.Success(user)
+                } else {
+                    Resource.Error(apiResponse.message)
+                }
+            } else {
+                handleHttpError(response.code(), response.errorBody()?.string())
+            }
+        } catch (e: HttpException) {
+            if (e.code() == 401) {
+                logout()
+                Resource.Error(Constants.ERROR_UNAUTHORIZED)
+            } else {
+                handleHttpError(e.code(), e.response()?.errorBody()?.string())
+            }
+        } catch (e: IOException) {
+            Resource.Error(Constants.ERROR_NETWORK)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: Constants.ERROR_UNKNOWN)
+        }
+    }
+
+    override suspend fun forgetPassword(email: String): Resource<String> {
+        return try {
+            val response = api.forgetPassword(
+                apiKey = Constants.API_KEY,
+                request = ForgetPasswordRequest(email)
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                val apiResponse = response.body()!!
+                if (apiResponse.success) {
+                    Resource.Success(apiResponse.message)
+                } else {
+                    Resource.Error(apiResponse.message)
+                }
+            } else {
+                handleHttpError(response.code(), response.errorBody()?.string())
+            }
+        } catch (e: HttpException) {
+            handleHttpError(e.code(), e.response()?.errorBody()?.string())
+        } catch (e: IOException) {
+            Resource.Error(Constants.ERROR_NETWORK)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: Constants.ERROR_UNKNOWN)
+        }
+    }
+
+    override suspend fun verifyOtp(email: String, otp: String): Resource<String> {
+        return try {
+            val response = api.verifyOtp(
+                apiKey = Constants.API_KEY,
+                request = VerifyOtpRequest(email, otp)
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                val apiResponse = response.body()!!
+                if (apiResponse.success) {
+                    Resource.Success(apiResponse.data.id) // Return token ID
+                } else {
+                    Resource.Error(apiResponse.message)
+                }
+            } else {
+                handleHttpError(response.code(), response.errorBody()?.string())
+            }
+        } catch (e: HttpException) {
+            handleHttpError(e.code(), e.response()?.errorBody()?.string())
+        } catch (e: IOException) {
+            Resource.Error(Constants.ERROR_NETWORK)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: Constants.ERROR_UNKNOWN)
+        }
+    }
+
+    override suspend fun resetPassword(
+        tokenId: String,
+        otp: String,
+        password: String,
+        confirmPassword: String
+    ): Resource<User> {
+        return try {
+            val response = api.resetPassword(
+                apiKey = Constants.API_KEY,
+                request = ResetPasswordRequest(tokenId, otp, password, confirmPassword)
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                val apiResponse = response.body()!!
+                if (apiResponse.success) {
+                    val userResponse = apiResponse.data
+                    val user = User(
+                        id = userResponse.id,
+                        username = userResponse.username,
+                        fullname = userResponse.fullname,
+                        email = userResponse.email,
+                        image = userResponse.image,
+                        createdAt = userResponse.createdAt,
+                        updatedAt = userResponse.updatedAt
+                    )
+                    Resource.Success(user)
+                } else {
+                    Resource.Error(apiResponse.message)
+                }
+            } else {
+                handleHttpError(response.code(), response.errorBody()?.string())
+            }
+        } catch (e: HttpException) {
+            handleHttpError(e.code(), e.response()?.errorBody()?.string())
+        } catch (e: IOException) {
+            Resource.Error(Constants.ERROR_NETWORK)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: Constants.ERROR_UNKNOWN)
+        }
+    }
+
     override suspend fun logout() {
         userPreferences.clearUserSession()
     }
 
     override fun getCurrentUser(): Flow<User?> {
-        return userPreferences.userData.map { (token, userId, username) ->
-            if (token != null && userId != null && username != null) {
+        return userPreferences.userData.map { userData ->
+            if (userData.accessToken != null && userData.userId != null &&
+                userData.username != null && userData.fullname != null &&
+                userData.email != null) {
                 User(
-                    id = userId,
-                    username = username,
+                    id = userData.userId,
+                    username = userData.username,
+                    fullname = userData.fullname,
+                    email = userData.email,
+                    image = null, // Image not stored in preferences
                     createdAt = "",
                     updatedAt = ""
                 )
@@ -234,10 +418,12 @@ class AuthRepositoryImpl @Inject constructor(
 
                         val firstError = errorResponse.data.firstOrNull()
                         val message = when (firstError?.msg) {
-                            "Username already exists" -> Constants.ERROR_USERNAME_EXISTS
-                            "Invalid value" -> Constants.ERROR_USERNAME_INVALID
-                            "Username is required" -> Constants.VALIDATION_USERNAME_REQUIRED
-                            "Password is required" -> Constants.VALIDATION_PASSWORD_REQUIRED
+                            "Username sudah terdaftar" -> Constants.ERROR_USERNAME_EXISTS
+                            "Email sudah terdaftar" -> Constants.ERROR_EMAIL_EXISTS
+                            "Username minimal 6 karakter" -> Constants.VALIDATION_USERNAME_MIN_LENGTH
+                            "Password minimal 6 karakter" -> Constants.VALIDATION_PASSWORD_MIN_LENGTH
+                            "Nama lengkap minimal 3 karakter" -> Constants.VALIDATION_FULLNAME_MIN_LENGTH
+                            "Email tidak valid" -> Constants.VALIDATION_EMAIL_INVALID
                             else -> firstError?.msg ?: Constants.ERROR_VALIDATION
                         }
                         Resource.Error(message)
@@ -256,7 +442,7 @@ class AuthRepositoryImpl @Inject constructor(
                         val errorResponse: com.virtualsblog.project.data.remote.dto.response.ApiResponse<String> = gson.fromJson(errorBody, errorType)
 
                         val message = when {
-                            errorResponse.data.contains("Username or password is incorrect", ignoreCase = true) ->
+                            errorResponse.data.contains("Username atau password salah", ignoreCase = true) ->
                                 Constants.ERROR_LOGIN_FAILED
                             errorResponse.data.contains("Database", ignoreCase = true) ->
                                 "Terjadi kesalahan pada database"

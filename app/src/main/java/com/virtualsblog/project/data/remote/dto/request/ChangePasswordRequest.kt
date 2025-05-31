@@ -1,9 +1,7 @@
 package com.virtualsblog.project.data.remote.dto.request
 
-data class RegisterRequest(
-    val fullname: String,
-    val email: String,
-    val username: String,
+data class ChangePasswordRequest(
+    val prev_password: String,
     val password: String,
     val confirm_password: String
 )

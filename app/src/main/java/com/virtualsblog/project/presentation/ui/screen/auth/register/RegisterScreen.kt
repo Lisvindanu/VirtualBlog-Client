@@ -40,12 +40,21 @@ fun RegisterScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
 
+    var fullname by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var agreedToTerms by remember { mutableStateOf(false) }
+
+    // Validasi real-time
+    val isFullnameValid = fullname.length >= 3
+    val isEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    val isUsernameValid = username.length >= 6 && username.matches(Regex("^[a-zA-Z0-9_]+$"))
+    val isPasswordValid = password.length >= 6
+    val isPasswordMatch = password == confirmPassword && confirmPassword.isNotEmpty()
 
     Box(
         modifier = Modifier
@@ -81,12 +90,12 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Username Field
+            // Field Nama Lengkap
             OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Username") },
-                placeholder = { Text("Masukkan username Anda") },
+                value = fullname,
+                onValueChange = { fullname = it },
+                label = { Text("Nama Lengkap") },
+                placeholder = { Text("Masukkan nama lengkap Anda") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -95,6 +104,15 @@ fun RegisterScreen(
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 ),
+                isError = fullname.isNotEmpty() && !isFullnameValid,
+                supportingText = {
+                    if (fullname.isNotEmpty() && !isFullnameValid) {
+                        Text(
+                            text = "Nama lengkap minimal 3 karakter",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.small,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -104,12 +122,77 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password Field
+            // Field Email
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                placeholder = { Text("Masukkan email Anda") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                isError = email.isNotEmpty() && !isEmailValid,
+                supportingText = {
+                    if (email.isNotEmpty() && !isEmailValid) {
+                        Text(
+                            text = "Format email tidak valid",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.small,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Field Nama Pengguna
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Nama Pengguna") },
+                placeholder = { Text("Masukkan nama pengguna Anda") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                isError = username.isNotEmpty() && !isUsernameValid,
+                supportingText = {
+                    if (username.isNotEmpty() && !isUsernameValid) {
+                        Text(
+                            text = if (username.length < 6) "Nama pengguna minimal 6 karakter"
+                            else "Hanya boleh huruf, angka, dan garis bawah",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.small,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Field Kata Sandi
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
-                placeholder = { Text("Buat password") },
+                label = { Text("Kata Sandi") },
+                placeholder = { Text("Buat kata sandi") },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -123,7 +206,16 @@ fun RegisterScreen(
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Sembunyikan password" else "Tampilkan password"
+                            contentDescription = if (passwordVisible) "Sembunyikan kata sandi" else "Tampilkan kata sandi"
+                        )
+                    }
+                },
+                isError = password.isNotEmpty() && !isPasswordValid,
+                supportingText = {
+                    if (password.isNotEmpty() && !isPasswordValid) {
+                        Text(
+                            text = "Kata sandi minimal 6 karakter",
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
                 },
@@ -136,12 +228,12 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Confirm Password Field
+            // Field Konfirmasi Kata Sandi
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
-                label = { Text("Konfirmasi Password") },
-                placeholder = { Text("Masukkan ulang password Anda") },
+                label = { Text("Konfirmasi Kata Sandi") },
+                placeholder = { Text("Masukkan ulang kata sandi Anda") },
                 singleLine = true,
                 visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -155,15 +247,15 @@ fun RegisterScreen(
                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                         Icon(
                             imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (confirmPasswordVisible) "Sembunyikan password" else "Tampilkan password"
+                            contentDescription = if (confirmPasswordVisible) "Sembunyikan kata sandi" else "Tampilkan kata sandi"
                         )
                     }
                 },
-                isError = confirmPassword.isNotEmpty() && password != confirmPassword,
+                isError = confirmPassword.isNotEmpty() && !isPasswordMatch,
                 supportingText = {
-                    if (confirmPassword.isNotEmpty() && password != confirmPassword) {
+                    if (confirmPassword.isNotEmpty() && !isPasswordMatch) {
                         Text(
-                            text = "Password tidak sama",
+                            text = "Kata sandi tidak sama",
                             color = MaterialTheme.colorScheme.error
                         )
                     }
@@ -178,7 +270,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Terms Agreement
+            // Persetujuan Syarat dan Ketentuan
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -199,16 +291,17 @@ fun RegisterScreen(
                     text = "Syarat dan Ketentuan",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { /* TODO: Show terms */ }
+                    modifier = Modifier.clickable { /* TODO: Tampilkan syarat */ }
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Register Button
+            // Tombol Daftar
             Button(
                 onClick = {
-                    if (password == confirmPassword && agreedToTerms) {
-                        viewModel.register(username, password, confirmPassword)
+                    if (isPasswordMatch && agreedToTerms && isFullnameValid &&
+                        isEmailValid && isUsernameValid && isPasswordValid) {
+                        viewModel.register(fullname, email, username, password, confirmPassword)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -217,9 +310,8 @@ fun RegisterScreen(
                     containerColor = MaterialTheme.colorScheme.primary
                 ),
                 enabled = !uiState.isLoading && agreedToTerms &&
-                        password == confirmPassword &&
-                        username.isNotBlank() &&
-                        password.isNotBlank()
+                        isPasswordMatch && isFullnameValid &&
+                        isEmailValid && isUsernameValid && isPasswordValid
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
@@ -236,7 +328,7 @@ fun RegisterScreen(
                 }
             }
 
-            // Error Message
+            // Pesan Error
             AnimatedVisibility(
                 visible = uiState.error != null,
                 enter = fadeIn() + expandVertically(),
@@ -258,7 +350,9 @@ fun RegisterScreen(
                     )
                 }
             }
+
             Spacer(modifier = Modifier.height(32.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -272,7 +366,9 @@ fun RegisterScreen(
                 )
                 HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
             }
+
             Spacer(modifier = Modifier.height(32.dp))
+
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
