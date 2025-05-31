@@ -1,5 +1,7 @@
 package com.virtualsblog.project.util
 
+import android.util.Patterns
+
 object ValidationUtil {
 
     data class ValidationResult(
@@ -7,7 +9,25 @@ object ValidationUtil {
         val errorMessage: String? = null
     )
 
-    fun validateApiUsername(username: String): ValidationResult {
+    fun validateFullname(fullname: String): ValidationResult {
+        return when {
+            fullname.isBlank() -> ValidationResult(false, Constants.VALIDATION_FULLNAME_REQUIRED)
+            fullname.length < Constants.MIN_FULLNAME_LENGTH ->
+                ValidationResult(false, Constants.VALIDATION_FULLNAME_MIN_LENGTH)
+            else -> ValidationResult(true)
+        }
+    }
+
+    fun validateEmail(email: String): ValidationResult {
+        return when {
+            email.isBlank() -> ValidationResult(false, Constants.VALIDATION_EMAIL_REQUIRED)
+            !Patterns.EMAIL_ADDRESS.matcher(email).matches() ->
+                ValidationResult(false, Constants.VALIDATION_EMAIL_INVALID)
+            else -> ValidationResult(true)
+        }
+    }
+
+    fun validateUsername(username: String): ValidationResult {
         return when {
             username.isBlank() -> ValidationResult(false, Constants.VALIDATION_USERNAME_REQUIRED)
             username.length < Constants.MIN_USERNAME_LENGTH ->
@@ -36,7 +56,7 @@ object ValidationUtil {
     }
 
     fun validateLoginForm(username: String, password: String): ValidationResult {
-        val usernameValidation = validateApiUsername(username)
+        val usernameValidation = validateUsername(username)
         if (!usernameValidation.isValid) return usernameValidation
 
         val passwordValidation = validatePassword(password)
@@ -46,11 +66,19 @@ object ValidationUtil {
     }
 
     fun validateRegisterForm(
+        fullname: String,
+        email: String,
         username: String,
         password: String,
         confirmPassword: String
     ): ValidationResult {
-        val usernameValidation = validateApiUsername(username)
+        val fullnameValidation = validateFullname(fullname)
+        if (!fullnameValidation.isValid) return fullnameValidation
+
+        val emailValidation = validateEmail(email)
+        if (!emailValidation.isValid) return emailValidation
+
+        val usernameValidation = validateUsername(username)
         if (!usernameValidation.isValid) return usernameValidation
 
         val passwordValidation = validatePassword(password)
@@ -58,6 +86,23 @@ object ValidationUtil {
 
         val confirmPasswordValidation = validateConfirmPassword(password, confirmPassword)
         if (!confirmPasswordValidation.isValid) return confirmPasswordValidation
+
+        return ValidationResult(true)
+    }
+
+    fun validateUpdateProfileForm(
+        fullname: String,
+        email: String,
+        username: String
+    ): ValidationResult {
+        val fullnameValidation = validateFullname(fullname)
+        if (!fullnameValidation.isValid) return fullnameValidation
+
+        val emailValidation = validateEmail(email)
+        if (!emailValidation.isValid) return emailValidation
+
+        val usernameValidation = validateUsername(username)
+        if (!usernameValidation.isValid) return usernameValidation
 
         return ValidationResult(true)
     }
