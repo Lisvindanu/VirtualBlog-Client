@@ -35,6 +35,7 @@ import com.virtualsblog.project.util.Constants
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToHome: () -> Unit,
+    onNavigateToTerms: () -> Unit,
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -291,7 +292,7 @@ fun RegisterScreen(
                     text = "Syarat dan Ketentuan",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { /* TODO: Tampilkan syarat */ }
+                    modifier = Modifier.clickable { onNavigateToTerms() }
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
