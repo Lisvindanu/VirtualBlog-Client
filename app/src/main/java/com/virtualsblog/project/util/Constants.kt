@@ -33,6 +33,7 @@ object Constants {
     const val ERROR_REQUIRED_FIELDS = "Semua bidang harus diisi"
     const val ERROR_POST_NOT_FOUND = "Postingan tidak ditemukan"
     const val ERROR_FAILED_LOAD_POST = "Gagal memuat postingan"
+    const val ERROR_FAILED_LOAD_PROFILE = "Gagal memuat profil"
 
     // Pesan Sukses - Bahasa Indonesia
     const val SUCCESS_LOGIN = "Berhasil masuk"

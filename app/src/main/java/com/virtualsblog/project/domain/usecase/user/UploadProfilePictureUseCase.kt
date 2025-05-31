@@ -1,22 +1,19 @@
-package com.virtualsblog.project.domain.usecase.auth
+package com.virtualsblog.project.domain.usecase.user
 
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns // Untuk mendapatkan nama file jika diperlukan
 import com.virtualsblog.project.domain.model.User
-import com.virtualsblog.project.domain.repository.AuthRepository
+import com.virtualsblog.project.domain.repository.UserRepository
 import com.virtualsblog.project.util.Resource
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
-import java.io.InputStream
 import javax.inject.Inject
 
 class UploadProfilePictureUseCase @Inject constructor(
-    private val repository: AuthRepository
+    private val repository: UserRepository
 ) {
     suspend operator fun invoke(context: Context, imageUri: Uri): Resource<User> {
         return try {
