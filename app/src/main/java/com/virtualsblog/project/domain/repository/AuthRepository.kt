@@ -1,9 +1,9 @@
-// AuthRepository.kt
 package com.virtualsblog.project.domain.repository
 
 import com.virtualsblog.project.domain.model.User
 import com.virtualsblog.project.util.Resource
 import kotlinx.coroutines.flow.Flow
+// import okhttp3.MultipartBody // Dihapus dari sini
 
 interface AuthRepository {
     suspend fun login(username: String, password: String): Resource<Pair<User, String>>
@@ -14,12 +14,8 @@ interface AuthRepository {
         password: String,
         confirmPassword: String
     ): Resource<User>
-    suspend fun getProfile(): Resource<User>
-    suspend fun updateProfile(
-        fullname: String,
-        email: String,
-        username: String
-    ): Resource<User>
+
+
     suspend fun changePassword(
         prevPassword: String,
         password: String,

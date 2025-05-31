@@ -7,5 +7,6 @@ data class HomeUiState(
     val posts: List<Post> = emptyList(),
     val error: String? = null,
     val isLoggedIn: Boolean = true,
-    val username: String = ""
+    val username: String = "",
+    val userImageUrl: String? = null
 )

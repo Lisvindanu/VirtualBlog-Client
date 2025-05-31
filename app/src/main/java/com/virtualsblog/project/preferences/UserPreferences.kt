@@ -20,6 +20,7 @@ class UserPreferences @Inject constructor(
     private val usernameKey = stringPreferencesKey(Constants.PREF_USERNAME)
     private val fullnameKey = stringPreferencesKey(Constants.PREF_FULLNAME)
     private val emailKey = stringPreferencesKey(Constants.PREF_EMAIL)
+    private val userImageKey = stringPreferencesKey(Constants.PREF_USER_IMAGE) // <-- Added this line
 
     // Flow untuk observe token
     val accessToken: Flow<String?> = dataStore.data.map { preferences ->
@@ -33,7 +34,8 @@ class UserPreferences @Inject constructor(
             userId = preferences[userIdKey],
             username = preferences[usernameKey],
             fullname = preferences[fullnameKey],
-            email = preferences[emailKey]
+            email = preferences[emailKey],
+            image = preferences[userImageKey] // <-- Added this line
         )
     }
 
@@ -48,7 +50,8 @@ class UserPreferences @Inject constructor(
         userId: String,
         username: String,
         fullname: String,
-        email: String
+        email: String,
+        image: String? // <-- Added image parameter
     ) {
         dataStore.edit { preferences ->
             preferences[accessTokenKey] = accessToken
@@ -56,6 +59,11 @@ class UserPreferences @Inject constructor(
             preferences[usernameKey] = username
             preferences[fullnameKey] = fullname
             preferences[emailKey] = email
+            if (image != null) { // <-- Store image if available
+                preferences[userImageKey] = image
+            } else {
+                preferences.remove(userImageKey) // Or clear if null
+            }
         }
     }
 
@@ -63,12 +71,18 @@ class UserPreferences @Inject constructor(
     suspend fun updateProfile(
         username: String,
         fullname: String,
-        email: String
+        email: String,
+        image: String? // <-- Added image parameter
     ) {
         dataStore.edit { preferences ->
             preferences[usernameKey] = username
             preferences[fullnameKey] = fullname
             preferences[emailKey] = email
+            if (image != null) { // <-- Store image if available
+                preferences[userImageKey] = image
+            } else {
+                preferences.remove(userImageKey) // Or clear if null
+            }
         }
     }
 
@@ -80,6 +94,7 @@ class UserPreferences @Inject constructor(
             preferences.remove(usernameKey)
             preferences.remove(fullnameKey)
             preferences.remove(emailKey)
+            preferences.remove(userImageKey) // <-- Added this line
         }
     }
 
@@ -95,6 +110,7 @@ class UserPreferences @Inject constructor(
         val userId: String?,
         val username: String?,
         val fullname: String?,
-        val email: String?
+        val email: String?,
+        val image: String? // <-- Added this field
     )
 }

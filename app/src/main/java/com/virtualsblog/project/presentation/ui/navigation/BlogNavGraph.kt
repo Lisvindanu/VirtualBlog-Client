@@ -12,6 +12,7 @@ import com.virtualsblog.project.presentation.ui.screen.auth.profile.ProfileScree
 import com.virtualsblog.project.presentation.ui.screen.auth.forgotpassword.ForgotPasswordScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.verifyotp.VerifyOtpScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.resetpassword.ResetPasswordScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.terms.TermsAndConditionsScreen
 import com.virtualsblog.project.presentation.ui.screen.home.HomeScreen
 import com.virtualsblog.project.presentation.ui.screen.splash.SplashScreen
 import com.virtualsblog.project.presentation.ui.screen.post.create.CreatePostScreen
@@ -69,6 +70,17 @@ fun BlogNavGraph(
                     navController.navigate(BlogDestinations.LOGIN_ROUTE) {
                         popUpTo(BlogDestinations.REGISTER_ROUTE) { inclusive = true }
                     }
+                },
+                onNavigateToTerms = {
+                    navController.navigate(BlogDestinations.TERMS_AND_CONDITIONS_ROUTE)
+                }
+            )
+        }
+
+        composable(BlogDestinations.TERMS_AND_CONDITIONS_ROUTE) {
+            TermsAndConditionsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

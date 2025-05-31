@@ -11,6 +11,7 @@ object Constants {
     const val PREF_USERNAME = "username"
     const val PREF_FULLNAME = "fullname"
     const val PREF_EMAIL = "email"
+    const val PREF_USER_IMAGE = "user_image" // <-- Added this line
 
     // Konstanta Validasi
     const val MIN_FULLNAME_LENGTH = 3
@@ -32,6 +33,7 @@ object Constants {
     const val ERROR_REQUIRED_FIELDS = "Semua bidang harus diisi"
     const val ERROR_POST_NOT_FOUND = "Postingan tidak ditemukan"
     const val ERROR_FAILED_LOAD_POST = "Gagal memuat postingan"
+    const val ERROR_FAILED_LOAD_PROFILE = "Gagal memuat profil"
 
     // Pesan Sukses - Bahasa Indonesia
     const val SUCCESS_LOGIN = "Berhasil masuk"
@@ -109,8 +111,8 @@ object Constants {
     const val CATEGORY_OTHER = "Lainnya"
 
     // Format Tanggal
-    const val DATE_FORMAT_DETAIL = "dd MMMM yyyy 'pukul' HH:mm"
-    const val DATE_FORMAT_CARD = "dd MMM yyyy"
+    const val DATE_FORMAT_DETAIL = "dd MMMM systematics 'pukul' HH:mm"
+    const val DATE_FORMAT_CARD = "dd MMM systematics"
     const val INVALID_DATE = "Tanggal tidak valid"
 
     // Pesan Profil

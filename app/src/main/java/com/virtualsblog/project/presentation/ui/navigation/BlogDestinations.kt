@@ -1,60 +1,52 @@
 package com.virtualsblog.project.presentation.ui.navigation
 
+/**
+ * Destinations for navigation in the application
+ */
 object BlogDestinations {
+    // Main Routes
     const val SPLASH_ROUTE = "splash"
     const val LOGIN_ROUTE = "login"
     const val REGISTER_ROUTE = "register"
-    const val HOME_ROUTE = "home"
-    const val PROFILE_ROUTE = "profile"
-    const val CREATE_POST_ROUTE = "create_post"
-    const val POST_DETAIL_ROUTE = "post_detail"
-    const val POST_LIST_ROUTE = "post_list"
     const val FORGOT_PASSWORD_ROUTE = "forgot_password"
     const val VERIFY_OTP_ROUTE = "verify_otp"
     const val RESET_PASSWORD_ROUTE = "reset_password"
+    const val HOME_ROUTE = "home"
+    const val PROFILE_ROUTE = "profile"
     const val CHANGE_PASSWORD_ROUTE = "change_password"
+    const val CREATE_POST_ROUTE = "create_post"
+    const val POST_LIST_ROUTE = "post_list"
+    const val POST_DETAIL_ROUTE = "post_detail"
+    const val EDIT_POST_ROUTE = "edit_post"
+    const val TERMS_AND_CONDITIONS_ROUTE = "terms_and_conditions"
 
-    // Routes dengan argumen
-    const val POST_DETAIL_WITH_ID = "post_detail/{postId}"
-    const val EDIT_POST_WITH_ID = "edit_post/{postId}"
-    const val VERIFY_OTP_WITH_EMAIL = "verify_otp/{email}"
-    const val RESET_PASSWORD_WITH_PARAMS = "reset_password/{tokenId}/{otp}"
+    // Routes with parameters
+    const val VERIFY_OTP_WITH_EMAIL = "$VERIFY_OTP_ROUTE/{${Args.EMAIL}}"
+    const val RESET_PASSWORD_WITH_PARAMS = "$RESET_PASSWORD_ROUTE/{${Args.TOKEN_ID}}/{${Args.OTP}}"
+    const val POST_DETAIL_WITH_ID = "$POST_DETAIL_ROUTE/{${Args.POST_ID}}"
+    const val EDIT_POST_WITH_ID = "$EDIT_POST_ROUTE/{${Args.POST_ID}}"
 
-    // Helper functions untuk membuat routes dengan parameter
-    fun postDetailRoute(postId: String) = "post_detail/$postId"
-    fun editPostRoute(postId: String) = "edit_post/$postId"
-    fun verifyOtpRoute(email: String) = "verify_otp/$email"
-    fun resetPasswordRoute(tokenId: String, otp: String) = "reset_password/$tokenId/$otp"
+    // Helper functions to create routes with parameters
+    fun verifyOtpRoute(email: String) = "$VERIFY_OTP_ROUTE/$email"
+    fun resetPasswordRoute(tokenId: String, otp: String) = "$RESET_PASSWORD_ROUTE/$tokenId/$otp"
+    fun postDetailRoute(postId: String) = "$POST_DETAIL_ROUTE/$postId"
+    fun editPostRoute(postId: String) = "$EDIT_POST_ROUTE/$postId"
 
-    // Parameter names untuk navigasi
+    // Auth-specific nested routes
+    object Auth {
+        const val LOGIN = "auth/login"
+        const val REGISTER = "auth/register"
+        const val FORGOT_PASSWORD = "auth/forgot_password"
+        const val VERIFY_OTP = "auth/verify_otp"
+        const val RESET_PASSWORD = "auth/reset_password"
+        const val TERMS_AND_CONDITIONS = "auth/terms_and_conditions"
+    }
+
+    // Navigation arguments
     object Args {
-        const val POST_ID = "postId"
         const val EMAIL = "email"
         const val TOKEN_ID = "tokenId"
         const val OTP = "otp"
-    }
-
-    // Grup route untuk manajemen yang lebih mudah
-    object Auth {
-        const val LOGIN = LOGIN_ROUTE
-        const val REGISTER = REGISTER_ROUTE
-        const val FORGOT_PASSWORD = FORGOT_PASSWORD_ROUTE
-        const val VERIFY_OTP = VERIFY_OTP_ROUTE
-        const val RESET_PASSWORD = RESET_PASSWORD_ROUTE
-        const val CHANGE_PASSWORD = CHANGE_PASSWORD_ROUTE
-    }
-
-    object Main {
-        const val HOME = HOME_ROUTE
-        const val PROFILE = PROFILE_ROUTE
-        const val SPLASH = SPLASH_ROUTE
-    }
-
-    object Posts {
-        const val CREATE = CREATE_POST_ROUTE
-        const val LIST = POST_LIST_ROUTE
-        const val DETAIL = POST_DETAIL_ROUTE
-        const val DETAIL_WITH_ID = POST_DETAIL_WITH_ID
-        const val EDIT_WITH_ID = EDIT_POST_WITH_ID
+        const val POST_ID = "postId"
     }
 }
