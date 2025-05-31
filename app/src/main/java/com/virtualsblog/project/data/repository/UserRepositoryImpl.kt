@@ -2,17 +2,19 @@ package com.virtualsblog.project.data.repository
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.virtualsblog.project.data.remote.api.AuthApi // Masih menggunakan AuthApi karena endpoint profil ada di sana
+import com.virtualsblog.project.data.local.dao.UserDao
+import com.virtualsblog.project.data.mapper.UserMapper
+import com.virtualsblog.project.data.remote.api.AuthApi
 import com.virtualsblog.project.data.remote.dto.request.UpdateProfileRequest
-import com.virtualsblog.project.data.remote.dto.response.ApiResponse // Pastikan ini dari paket yang benar
-import com.virtualsblog.project.data.remote.dto.response.UserResponse // Pastikan ini dari paket yang benar
+import com.virtualsblog.project.data.remote.dto.response.ApiResponse
+import com.virtualsblog.project.data.remote.dto.response.UserResponse
 import com.virtualsblog.project.data.remote.dto.response.ValidationError
 import com.virtualsblog.project.domain.model.User
 import com.virtualsblog.project.domain.repository.UserRepository
 import com.virtualsblog.project.preferences.UserPreferences
 import com.virtualsblog.project.util.Constants
 import com.virtualsblog.project.util.Resource
-import kotlinx.coroutines.flow.first // Pastikan import ini ada
+import kotlinx.coroutines.flow.first
 import okhttp3.MultipartBody
 import retrofit2.HttpException
 import java.io.IOException
@@ -21,19 +23,19 @@ import javax.inject.Singleton
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
-    private val api: AuthApi, // Nanti bisa diganti UserApi jika endpoint dipisah
+    private val api: AuthApi,
     private val userPreferences: UserPreferences,
+    private val userDao: UserDao,
     private val gson: Gson
 ) : UserRepository {
 
     override suspend fun getProfile(): Resource<User> {
         return try {
-            val token = userPreferences.getAccessToken() // Mengambil token dari DataStore
+            val token = userPreferences.getAccessToken()
             if (token.isNullOrEmpty()) {
                 return Resource.Error(Constants.ERROR_UNAUTHORIZED)
             }
 
-            // Menggunakan 'api' yang merupakan AuthApi karena endpoint 'getProfile' ada di sana
             val response = api.getProfile(
                 apiKey = Constants.API_KEY,
                 token = "Bearer $token"
@@ -48,35 +50,42 @@ class UserRepositoryImpl @Inject constructor(
                         username = userResponse.username,
                         fullname = userResponse.fullname,
                         email = userResponse.email,
-                        image = userResponse.image.ifEmpty { null }, // Sesuai update Anda
+                        image = userResponse.image.ifEmpty { null },
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
+
+                    // Update user di Room database
+                    updateUserInRoom(user)
+
                     // Update UserPreferences dengan data terbaru dari server
                     userPreferences.updateProfile(
                         username = user.username,
                         fullname = user.fullname,
                         email = user.email,
-                        image = user.image // Menyimpan image ke preferences
+                        image = user.image
                     )
+
                     Resource.Success(user)
                 } else {
                     Resource.Error(apiResponse.message)
                 }
             } else {
-                handleHttpError(response.code(), response.errorBody()?.string())
+                // Jika API gagal, coba ambil dari Room database
+                tryGetUserFromRoom() ?: handleHttpError(response.code(), response.errorBody()?.string())
             }
         } catch (e: HttpException) {
             if (e.code() == 401) {
-                // userPreferences.clearUserSession() // Pertimbangkan apakah logout otomatis di sini atau di level atas
                 Resource.Error(Constants.ERROR_UNAUTHORIZED)
             } else {
-                handleHttpError(e.code(), e.response()?.errorBody()?.string())
+                // Jika network error, coba ambil dari Room database
+                tryGetUserFromRoom() ?: handleHttpError(e.code(), e.response()?.errorBody()?.string())
             }
         } catch (e: IOException) {
-            Resource.Error(Constants.ERROR_NETWORK)
+            // Network error, coba ambil dari Room database
+            tryGetUserFromRoom() ?: Resource.Error(Constants.ERROR_NETWORK)
         } catch (e: Exception) {
-            Resource.Error(e.message ?: Constants.ERROR_UNKNOWN)
+            tryGetUserFromRoom() ?: Resource.Error(e.message ?: Constants.ERROR_UNKNOWN)
         }
     }
 
@@ -110,12 +119,18 @@ class UserRepositoryImpl @Inject constructor(
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
+
+                    // Update user di Room database
+                    updateUserInRoom(user)
+
+                    // Update UserPreferences
                     userPreferences.updateProfile(
                         username = user.username,
                         fullname = user.fullname,
                         email = user.email,
-                        image = user.image // Menyimpan image ke preferences
+                        image = user.image
                     )
+
                     Resource.Success(user)
                 } else {
                     Resource.Error(apiResponse.message)
@@ -125,7 +140,6 @@ class UserRepositoryImpl @Inject constructor(
             }
         } catch (e: HttpException) {
             if (e.code() == 401) {
-                // userPreferences.clearUserSession()
                 Resource.Error(Constants.ERROR_UNAUTHORIZED)
             } else {
                 handleHttpError(e.code(), e.response()?.errorBody()?.string())
@@ -144,7 +158,6 @@ class UserRepositoryImpl @Inject constructor(
                 return Resource.Error(Constants.ERROR_UNAUTHORIZED)
             }
 
-            // Menggunakan 'api' (AuthApi) karena endpoint 'uploadProfilePicture' ada di sana
             val response = api.uploadProfilePicture(
                 apiKey = Constants.API_KEY,
                 token = "Bearer $token",
@@ -164,12 +177,22 @@ class UserRepositoryImpl @Inject constructor(
                         createdAt = userResponse.createdAt,
                         updatedAt = userResponse.updatedAt
                     )
+
+                    // Update user image di Room database
+                    userDao.updateUserImage(
+                        userId = updatedUser.id,
+                        imageUrl = updatedUser.image,
+                        updatedAt = updatedUser.updatedAt
+                    )
+
+                    // Update UserPreferences
                     userPreferences.updateProfile(
                         username = updatedUser.username,
                         fullname = updatedUser.fullname,
                         email = updatedUser.email,
-                        image = updatedUser.image // Menyimpan image baru ke preferences
+                        image = updatedUser.image
                     )
+
                     Resource.Success(updatedUser)
                 } else {
                     Resource.Error(apiResponse.message)
@@ -179,7 +202,6 @@ class UserRepositoryImpl @Inject constructor(
             }
         } catch (e: HttpException) {
             if (e.code() == 401) {
-                // userPreferences.clearUserSession()
                 Resource.Error(Constants.ERROR_UNAUTHORIZED)
             } else {
                 handleHttpError(e.code(), e.response()?.errorBody()?.string())
@@ -191,8 +213,34 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    // Fungsi handleHttpError disalin dari AuthRepositoryImpl yang Anda berikan.
-    // Anda mungkin ingin mengekstrak ini ke kelas utilitas jika digunakan di banyak tempat.
+    // Private helper methods
+    private suspend fun tryGetUserFromRoom(): Resource<User>? {
+        return try {
+            val userEntity = userDao.getCurrentUserSync()
+            userEntity?.let {
+                val user = UserMapper.mapEntityToDomain(it)
+                Resource.Success(user)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun updateUserInRoom(user: User) {
+        try {
+            userDao.updateUserProfile(
+                userId = user.id,
+                fullname = user.fullname,
+                email = user.email,
+                username = user.username,
+                image = user.image,
+                updatedAt = user.updatedAt
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun <T> handleHttpError(code: Int, errorBody: String?): Resource<T> {
         return when (code) {
             401 -> Resource.Error(Constants.ERROR_UNAUTHORIZED)
