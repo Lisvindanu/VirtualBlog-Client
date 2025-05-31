@@ -1,25 +1,26 @@
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+// import androidx.compose.foundation.clickable // Tidak diperlukan lagi di sini
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+// import androidx.compose.foundation.shape.CircleShape // Tidak diperlukan lagi di sini
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Person
+// import androidx.compose.material.icons.filled.Person // Tidak diperlukan lagi di sini
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+// import androidx.compose.ui.draw.clip // Tidak diperlukan lagi di sini
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+// import androidx.compose.ui.text.style.TextOverflow // Tidak digunakan di sini
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.virtualsblog.project.presentation.ui.component.PostCard
+import com.virtualsblog.project.presentation.ui.component.UserAvatar // <-- Import UserAvatar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,9 +33,8 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Periksa apakah pengguna sudah login
-    LaunchedEffect(uiState.isLoggedIn) {
-        if (!uiState.isLoggedIn) {
+    LaunchedEffect(uiState.isLoggedIn, uiState.isLoading) { // Tambahkan uiState.isLoading
+        if (!uiState.isLoading && !uiState.isLoggedIn) { // Cek isLoading agar tidak redirect prematur
             onNavigateToLogin()
         }
     }
@@ -49,11 +49,14 @@ fun HomeScreen(
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = "Selamat datang, ${uiState.username}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // Tampilkan username hanya jika sudah login dan tidak loading
+                        if (uiState.isLoggedIn && uiState.username.isNotEmpty()) {
+                            Text(
+                                text = "Selamat datang, ${uiState.username}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 actions = {
@@ -63,22 +66,14 @@ fun HomeScreen(
                             contentDescription = "Cari"
                         )
                     }
-                    IconButton(onClick = onNavigateToProfile) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Profil",
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
+                    // Menggunakan UserAvatar untuk menampilkan foto profil
+                    UserAvatar(
+                        userName = uiState.username.ifEmpty { "User" }, // Fallback jika username kosong
+                        imageUrl = uiState.userImageUrl, // Menggunakan URL gambar dari state
+                        size = 32.dp, // Ukuran avatar
+                        onClick = onNavigateToProfile, // Aksi ketika avatar diklik
+                        modifier = Modifier.padding(end = 8.dp) // Beri sedikit padding jika perlu
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -135,7 +130,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = uiState.error!!,
+                                text = uiState.error!!, // Non-null assertion karena sudah dicek
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
@@ -154,16 +149,18 @@ fun HomeScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Header Selamat Datang
-                    item {
-                        WelcomeHeader(username = uiState.username)
+                    // Header Selamat Datang (hanya jika sudah login dan username ada)
+                    if (uiState.isLoggedIn && uiState.username.isNotEmpty()) {
+                        item {
+                            WelcomeHeader(username = uiState.username)
+                        }
                     }
 
                     // Kartu Statistik
                     item {
                         StatisticsCard(
                             totalPosts = uiState.posts.size,
-                            totalUsers = 42 // Data mock
+                            totalUsers = 42 // Data mock, bisa diganti dengan data asli jika ada
                         )
                     }
 
@@ -266,7 +263,7 @@ private fun StatisticsCard(
             )
 
             StatItem(
-                title = "Pengguna Aktif",
+                title = "Pengguna Aktif", // Ini bisa jadi jumlah teman, atau total pengguna aplikasi
                 value = totalUsers.toString(),
                 modifier = Modifier.weight(1f)
             )

@@ -1,4 +1,3 @@
-// UseCaseModule.kt
 package com.virtualsblog.project.di
 
 import com.virtualsblog.project.domain.repository.AuthRepository
@@ -83,5 +82,13 @@ object UseCaseModule {
         repository: AuthRepository
     ): UpdateProfileUseCase {
         return UpdateProfileUseCase(repository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUploadProfilePictureUseCase( // Ditambahkan
+        repository: AuthRepository
+    ): UploadProfilePictureUseCase {
+        return UploadProfilePictureUseCase(repository)
     }
 }

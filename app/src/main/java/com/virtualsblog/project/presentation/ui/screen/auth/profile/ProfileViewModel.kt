@@ -1,10 +1,13 @@
 package com.virtualsblog.project.presentation.ui.screen.auth.profile
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.virtualsblog.project.domain.model.User
 import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.usecase.auth.UpdateProfileUseCase
+import com.virtualsblog.project.domain.usecase.auth.UploadProfilePictureUseCase // Pastikan diimport
 import com.virtualsblog.project.util.Constants
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val updateProfileUseCase: UpdateProfileUseCase
+    private val updateProfileUseCase: UpdateProfileUseCase,
+    private val uploadProfilePictureUseCase: UploadProfilePictureUseCase // Ditambahkan
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -29,10 +33,9 @@ class ProfileViewModel @Inject constructor(
 
     private fun loadProfile() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, updateSuccess = false)
 
             try {
-                // First try to get profile from server
                 when (val result = authRepository.getProfile()) {
                     is Resource.Success -> {
                         _uiState.value = _uiState.value.copy(
@@ -42,12 +45,11 @@ class ProfileViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        // If server fails, try to get from local storage
                         authRepository.getCurrentUser().collect { localUser ->
                             _uiState.value = _uiState.value.copy(
                                 user = localUser,
                                 isLoading = false,
-                                error = if (localUser == null) result.message else null
+                                error = if (localUser == null) result.message else null // Tampilkan error API jika localUser juga null
                             )
                         }
                     }
@@ -56,12 +58,11 @@ class ProfileViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                // Fallback to local user data
                 authRepository.getCurrentUser().collect { localUser ->
                     _uiState.value = _uiState.value.copy(
                         user = localUser,
                         isLoading = false,
-                        error = if (localUser == null) "Gagal memuat profil" else null
+                        error = if (localUser == null) "Gagal memuat profil: ${e.message}" else null
                     )
                 }
             }
@@ -70,50 +71,56 @@ class ProfileViewModel @Inject constructor(
 
     fun updateProfile(fullname: String, email: String, username: String) {
         if (fullname.isBlank() || email.isBlank() || username.isBlank()) {
-            _uiState.value = _uiState.value.copy(
-                error = "Semua field harus diisi"
-            )
+            _uiState.value = _uiState.value.copy( error = "Semua field harus diisi", updateSuccess = false )
             return
         }
-
-        if (fullname.length < Constants.MIN_FULLNAME_LENGTH) {
-            _uiState.value = _uiState.value.copy(
-                error = "Nama lengkap minimal ${Constants.MIN_FULLNAME_LENGTH} karakter"
-            )
-            return
-        }
-
-        if (username.length < Constants.MIN_USERNAME_LENGTH) {
-            _uiState.value = _uiState.value.copy(
-                error = "Username minimal ${Constants.MIN_USERNAME_LENGTH} karakter"
-            )
-            return
-        }
+        // Validasi lainnya bisa ditambahkan di sini atau di UseCase
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = true,
-                error = null,
-                updateSuccess = false
-            )
-
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, updateSuccess = false)
             when (val result = updateProfileUseCase(fullname, email, username)) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(
                         user = result.data,
                         isLoading = false,
-                        error = null,
-                        updateSuccess = true
+                        updateSuccess = true,
+                        error = null
                     )
-
-                    // Hide success message after 3 seconds
-                    kotlinx.coroutines.delay(3000)
+                    kotlinx.coroutines.delay(2000) // Tampilkan pesan sukses sejenak
                     _uiState.value = _uiState.value.copy(updateSuccess = false)
                 }
                 is Resource.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = result.message ?: Constants.ERROR_UNKNOWN,
+                        error = result.message ?: Constants.ERROR_PROFILE_UPDATE_FAILED,
+                        updateSuccess = false
+                    )
+                }
+                is Resource.Loading -> {
+                    _uiState.value = _uiState.value.copy(isLoading = true)
+                }
+            }
+        }
+    }
+
+    fun uploadProfileImage(imageUri: Uri, context: Context) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, updateSuccess = false)
+            when (val result = uploadProfilePictureUseCase(context, imageUri)) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        user = result.data, // API mengembalikan user yang terupdate
+                        isLoading = false,
+                        updateSuccess = true, // Tandai sukses untuk menampilkan pesan
+                        error = null
+                    )
+                    kotlinx.coroutines.delay(2000) // Sembunyikan pesan sukses setelah beberapa detik
+                    _uiState.value = _uiState.value.copy(updateSuccess = false)
+                }
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = result.message ?: "Gagal mengunggah foto profil",
                         updateSuccess = false
                     )
                 }
@@ -129,7 +136,7 @@ class ProfileViewModel @Inject constructor(
             authRepository.logout()
             _uiState.value = _uiState.value.copy(
                 isLoggedOut = true,
-                user = null
+                user = null // Kosongkan data user setelah logout
             )
         }
     }

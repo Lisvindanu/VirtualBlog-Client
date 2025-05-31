@@ -1,9 +1,9 @@
-// AuthRepository.kt
 package com.virtualsblog.project.domain.repository
 
 import com.virtualsblog.project.domain.model.User
 import com.virtualsblog.project.util.Resource
 import kotlinx.coroutines.flow.Flow
+import okhttp3.MultipartBody // Pastikan import ini ada
 
 interface AuthRepository {
     suspend fun login(username: String, password: String): Resource<Pair<User, String>>
@@ -37,4 +37,5 @@ interface AuthRepository {
     fun getCurrentUser(): Flow<User?>
     fun getAccessToken(): Flow<String?>
     fun isLoggedIn(): Flow<Boolean>
+    suspend fun uploadProfilePicture(photoPart: MultipartBody.Part): Resource<User> // Metode baru
 }
