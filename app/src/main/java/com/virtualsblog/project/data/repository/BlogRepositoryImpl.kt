@@ -23,7 +23,6 @@ class BlogRepositoryImpl @Inject constructor(
         try {
             emit(Resource.Loading())
             
-            // Get token untuk authorization header
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
                 emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
@@ -38,11 +37,90 @@ class BlogRepositoryImpl @Inject constructor(
                 val body = response.body()
                 if (body != null && body.success) {
                     val posts = PostMapper.mapResponseListToDomain(body.data)
-                    // Sort posts by timestamp descending (terbaru pertama)
+                    // Sort posts by creation date descending (newest first)
                     val sortedPosts = posts.sortedByDescending { post ->
                         DateUtil.getTimestamp(post.createdAt)
                     }
                     emit(Resource.Success(sortedPosts))
+                } else {
+                    emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
+                }
+            } else {
+                when (response.code()) {
+                    401 -> emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                    403 -> emit(Resource.Error("Tidak memiliki akses"))
+                    404 -> emit(Resource.Error(Constants.ERROR_POST_NOT_FOUND))
+                    500 -> emit(Resource.Error("Server error, coba lagi nanti"))
+                    else -> emit(Resource.Error("Error: ${response.code()} - ${response.message()}"))
+                }
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+        }
+    }
+
+    override suspend fun getPostsForHome(): Flow<Resource<List<Post>>> = flow {
+        try {
+            emit(Resource.Loading())
+            
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+            
+            val response = blogApi.getAllPosts(
+                authorization = "${Constants.BEARER_PREFIX}$token"
+            )
+            
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val posts = PostMapper.mapResponseListToDomain(body.data)
+                    // Sort posts by creation date descending (newest first)
+                    val sortedPosts = posts.sortedByDescending { post ->
+                        DateUtil.getTimestamp(post.createdAt)
+                    }
+                    // Limit posts to maximum 10 for home screen after sorting
+                    val limitedPosts = sortedPosts.take(Constants.HOME_POSTS_LIMIT)
+                    emit(Resource.Success(limitedPosts))
+                } else {
+                    emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
+                }
+            } else {
+                when (response.code()) {
+                    401 -> emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                    403 -> emit(Resource.Error("Tidak memiliki akses"))
+                    404 -> emit(Resource.Error(Constants.ERROR_POST_NOT_FOUND))
+                    500 -> emit(Resource.Error("Server error, coba lagi nanti"))
+                    else -> emit(Resource.Error("Error: ${response.code()} - ${response.message()}"))
+                }
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+        }
+    }
+
+    override suspend fun getTotalPostsCount(): Flow<Resource<Int>> = flow {
+        try {
+            emit(Resource.Loading())
+            
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+            
+            val response = blogApi.getAllPosts(
+                authorization = "${Constants.BEARER_PREFIX}$token"
+            )
+            
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    // Return total count dari semua posts tanpa limit
+                    val totalCount = body.data.size
+                    emit(Resource.Success(totalCount))
                 } else {
                     emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
                 }

@@ -7,6 +7,9 @@ object Constants {
 
     // API Endpoints
     const val POSTS_ENDPOINT = "posts"
+    
+    // Pagination & Limits
+    const val HOME_POSTS_LIMIT = 10
 
     // Headers
     const val HEADER_API_KEY = "x-api-key"
@@ -140,6 +143,8 @@ object Constants {
     const val NO_POSTS_TEXT = "Belum Ada Postingan"
     const val EMPTY_POSTS_MESSAGE = "Jadilah yang pertama membuat postingan di VirtualsBlog!"
     const val CREATE_FIRST_POST_TEXT = "Tulis Postingan Pertama"
+    const val LATEST_POSTS_DESCRIPTION = "Menampilkan postingan dari yang terakhir dibuat"
+    const val ALL_POSTS_DESCRIPTION = "Diurutkan dari yang terakhir dibuat"
 
     // Pesan Auth
     const val WELCOME_BACK_TEXT = "Selamat Datang Kembali!"

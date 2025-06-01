@@ -6,4 +6,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface BlogRepository {
     suspend fun getAllPosts(): Flow<Resource<List<Post>>>
+    suspend fun getPostsForHome(): Flow<Resource<List<Post>>>
+    suspend fun getTotalPostsCount(): Flow<Resource<Int>>
 }

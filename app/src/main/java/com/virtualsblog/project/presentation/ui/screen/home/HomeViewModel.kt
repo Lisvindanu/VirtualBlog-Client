@@ -5,7 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.virtualsblog.project.data.local.dao.UserDao
 import com.virtualsblog.project.data.mapper.UserMapper
 import com.virtualsblog.project.domain.repository.AuthRepository
-import com.virtualsblog.project.domain.usecase.blog.GetPostsUseCase
+import com.virtualsblog.project.domain.usecase.blog.GetPostsForHomeUseCase
+import com.virtualsblog.project.domain.usecase.blog.GetTotalPostsCountUseCase
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,8 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userDao: UserDao,
-    private val getPostsUseCase: GetPostsUseCase
+    private val getPostsForHomeUseCase: GetPostsForHomeUseCase,
+    private val getTotalPostsCountUseCase: GetTotalPostsCountUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -28,6 +30,7 @@ class HomeViewModel @Inject constructor(
     init {
         checkAuthStatus()
         loadPosts()
+        loadTotalPostsCount()
     }
 
     private fun checkAuthStatus() {
@@ -51,7 +54,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            getPostsUseCase().collect { resource ->
+            getPostsForHomeUseCase().collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {
                         _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -74,9 +77,31 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun loadTotalPostsCount() {
+        viewModelScope.launch {
+            getTotalPostsCountUseCase().collect { resource ->
+                when (resource) {
+                    is Resource.Success -> {
+                        _uiState.value = _uiState.value.copy(
+                            totalPostsCount = resource.data ?: 0
+                        )
+                    }
+                    is Resource.Error -> {
+                        // Handle error jika diperlukan, tapi tidak perlu menampilkan error ke user
+                        // karena ini hanya untuk statistik
+                    }
+                    is Resource.Loading -> {
+                        // Loading state untuk total count tidak perlu ditampilkan
+                    }
+                }
+            }
+        }
+    }
+
     fun refreshPosts() {
         checkAuthStatus()
         loadPosts()
+        loadTotalPostsCount()
     }
 
     fun clearError() {

@@ -29,6 +29,7 @@ fun HomeScreen(
     onNavigateToCreatePost: () -> Unit,
     onNavigateToPostDetail: (String) -> Unit,
     onNavigateToLogin: () -> Unit,
+    onNavigateToAllPosts: () -> Unit, // Add this parameter
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -159,7 +160,7 @@ fun HomeScreen(
                     // Kartu Statistik
                     item {
                         StatisticsCard(
-                            totalPosts = uiState.posts.size,
+                            totalPosts = uiState.totalPostsCount, // Use totalPostsCount instead of posts.size
                             totalUsers = 42 // Data mock, bisa diganti dengan data asli jika ada
                         )
                     }
@@ -171,13 +172,15 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "Postingan Terbaru",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Column {
+                                Text(
+                                    text = "Postingan Terbaru",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                             TextButton(
-                                onClick = { /* TODO: Navigasi ke semua post */ }
+                                onClick = onNavigateToAllPosts
                             ) {
                                 Text("Lihat Semua")
                             }

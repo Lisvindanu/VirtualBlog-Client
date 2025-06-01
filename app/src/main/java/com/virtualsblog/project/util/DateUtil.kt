@@ -62,6 +62,7 @@ object DateUtil {
     
     /**
      * Format relative time (e.g., "2 jam yang lalu")
+     * Optimized for newest-first display
      */
     fun getRelativeTime(dateString: String): String {
         val date = parseApiDate(dateString)
@@ -71,11 +72,12 @@ object DateUtil {
         val diff = now.time - date.time
         
         return when {
-            diff < 60 * 1000 -> "Baru saja"
-            diff < 60 * 60 * 1000 -> "${diff / (60 * 1000)} menit yang lalu"
-            diff < 24 * 60 * 60 * 1000 -> "${diff / (60 * 60 * 1000)} jam yang lalu"
-            diff < 7 * 24 * 60 * 60 * 1000 -> "${diff / (24 * 60 * 60 * 1000)} hari yang lalu"
-            else -> formatDateForCard(dateString)
+            diff < 60 * 1000 -> "Baru saja" // Less than 1 minute
+            diff < 60 * 60 * 1000 -> "${diff / (60 * 1000)} menit yang lalu" // Less than 1 hour
+            diff < 24 * 60 * 60 * 1000 -> "${diff / (60 * 60 * 1000)} jam yang lalu" // Less than 1 day
+            diff < 7 * 24 * 60 * 60 * 1000 -> "${diff / (24 * 60 * 60 * 1000)} hari yang lalu" // Less than 1 week
+            diff < 30 * 24 * 60 * 60 * 1000 -> "${diff / (7 * 24 * 60 * 60 * 1000)} minggu yang lalu" // Less than 1 month
+            else -> formatDateForCard(dateString) // For very old posts, show date
         }
     }
 }
