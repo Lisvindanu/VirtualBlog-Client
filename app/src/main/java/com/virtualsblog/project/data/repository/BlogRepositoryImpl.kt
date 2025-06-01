@@ -10,6 +10,7 @@ import com.virtualsblog.project.domain.repository.BlogRepository
 import com.virtualsblog.project.util.Constants
 import com.virtualsblog.project.util.DateUtil
 import com.virtualsblog.project.util.Resource
+import com.virtualsblog.project.util.FileUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -225,20 +226,58 @@ class BlogRepositoryImpl @Inject constructor(
                 return@flow
             }
 
+            // Validasi input sebelum upload - sama dengan AuthRepositoryImpl
+            if (title.trim().isEmpty()) {
+                emit(Resource.Error("Judul tidak boleh kosong"))
+                return@flow
+            }
+            
+            if (content.trim().isEmpty()) {
+                emit(Resource.Error("Konten tidak boleh kosong"))
+                return@flow
+            }
+            
+            if (categoryId.trim().isEmpty()) {
+                emit(Resource.Error("Kategori harus dipilih"))
+                return@flow
+            }
+
+            // Validasi file seperti AuthRepositoryImpl
+            if (!photo.exists()) {
+                emit(Resource.Error("File gambar tidak ditemukan"))
+                return@flow
+            }
+            
+            if (photo.length() == 0L) {
+                emit(Resource.Error("File gambar kosong atau rusak"))
+                return@flow
+            }
+            
+            if (photo.length() > Constants.MAX_IMAGE_SIZE) {
+                emit(Resource.Error("File terlalu besar (maksimal 10MB)"))
+                return@flow
+            }
+            
+            if (!FileUtils.isValidImageFile(photo)) {
+                emit(Resource.Error("File harus berupa gambar JPG, JPEG, atau PNG yang valid"))
+                return@flow
+            }
+
             // PERSIS seperti AuthRepositoryImpl - pattern yang sudah proven work!
             // Create multipart request body
-            val titleBody = title.toRequestBody("text/plain".toMediaTypeOrNull())
-            val contentBody = content.toRequestBody("text/plain".toMediaTypeOrNull())
-            val categoryIdBody = categoryId.toRequestBody("text/plain".toMediaTypeOrNull())
+            val titleBody = title.trim().toRequestBody("text/plain".toMediaTypeOrNull())
+            val contentBody = content.trim().toRequestBody("text/plain".toMediaTypeOrNull())
+            val categoryIdBody = categoryId.trim().toRequestBody("text/plain".toMediaTypeOrNull())
             
             // File handling PERSIS seperti uploadProfilePicture di AuthRepositoryImpl
-            val requestFile = photo.asRequestBody("image/*".toMediaTypeOrNull())
+            val mimeType = FileUtils.getImageMimeType(photo)
+            val requestFile = photo.asRequestBody(mimeType.toMediaTypeOrNull())
             val photoPart = MultipartBody.Part.createFormData("photo", photo.name, requestFile)
 
             // API call dengan pattern AuthApi
             val response = blogApi.createPost(
                 apiKey = Constants.API_KEY,
-                authorization = "Bearer $token", // Changed 'token' to 'authorization'
+                authorization = "${Constants.BEARER_PREFIX}$token", 
                 title = titleBody,
                 content = contentBody,
                 categoryId = categoryIdBody,
@@ -248,41 +287,37 @@ class BlogRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
+                    // Mapping response menggunakan fungsi yang sudah ada - pattern AuthRepositoryImpl
                     val post = PostMapper.mapResponseToDomain(body)
                     emit(Resource.Success(post))
                 } else {
                     emit(Resource.Error("Response body kosong dari server"))
                 }
             } else {
-                // Error handling seperti AuthRepositoryImpl
+                // Error handling seperti AuthRepositoryImpl - simplified
                 val errorBody = response.errorBody()?.string()
                 val errorMessage = when (response.code()) {
-                    400 -> "Data yang dikirim tidak valid: $errorBody"
+                    400 -> "Data yang dikirim tidak valid. Periksa semua field"
                     401 -> Constants.ERROR_UNAUTHORIZED
                     403 -> "Tidak memiliki akses untuk membuat postingan"
                     413 -> "File terlalu besar (maksimal 10MB)"
-                    422 -> "Data validasi gagal: $errorBody"
-                    500 -> {
-                        // Parse error message dari server seperti AuthRepositoryImpl
-                        if (errorBody?.contains("File type not allowed") == true) {
-                            "Tipe file tidak diizinkan. Gunakan JPG, JPEG, atau PNG"
-                        } else {
-                            "Server Error: $errorBody"
-                        }
-                    }
-                    else -> "HTTP ${response.code()}: ${response.message()}"
+                    415 -> "Tipe file tidak didukung. Gunakan JPG atau PNG"
+                    422 -> "Data validasi gagal. Periksa kategori dan format file"
+                    500 -> "Terjadi kesalahan pada server. Coba lagi nanti"
+                    else -> "Terjadi kesalahan. Coba lagi nanti"
                 }
                 emit(Resource.Error(errorMessage))
             }
         } catch (e: Exception) {
+            // Error handling seperti AuthRepositoryImpl
             val errorMessage = when {
                 e.message?.contains("timeout", ignoreCase = true) == true -> 
                     "Request timeout - coba lagi"
                 e.message?.contains("connect", ignoreCase = true) == true -> 
                     Constants.ERROR_NETWORK
-                e.message?.contains("json", ignoreCase = true) == true ->
-                    "Error parsing response dari server"
-                else -> "${Constants.ERROR_NETWORK}: ${e.localizedMessage}"
+                e.message?.contains("file", ignoreCase = true) == true ->
+                    "Error dengan file gambar"
+                else -> "Tidak dapat terhubung ke server"
             }
             emit(Resource.Error(errorMessage))
         }

@@ -88,8 +88,9 @@ class CreatePostViewModel @Inject constructor(
         val imageError = when {
             file == null -> "Pilih gambar untuk postingan"
             !file.exists() -> "File gambar tidak ditemukan"
-            !FileUtils.isValidImageFile(file) -> "File harus berupa gambar JPG, JPEG, atau PNG"
+            file.length() == 0L -> "File gambar kosong atau rusak"
             file.length() > Constants.MAX_IMAGE_SIZE -> "Ukuran gambar maksimal 10MB"
+            !FileUtils.isValidImageFile(file) -> "File harus berupa gambar JPG, JPEG, atau PNG yang valid"
             else -> null
         }
 
@@ -136,6 +137,9 @@ class CreatePostViewModel @Inject constructor(
                                 isSuccess = true,
                                 error = null
                             )
+                            // Auto hide success message after delay seperti ProfileViewModel
+                            kotlinx.coroutines.delay(3000)
+                            _uiState.value = _uiState.value.copy(isSuccess = false)
                         }
                         is Resource.Error -> {
                             _uiState.value = _uiState.value.copy(
@@ -214,9 +218,17 @@ class CreatePostViewModel @Inject constructor(
                 hasError = true
                 "File gambar tidak ditemukan"
             }
+            currentState.selectedImageFile.length() == 0L -> {
+                hasError = true
+                "File gambar kosong atau rusak"
+            }
+            currentState.selectedImageFile.length() > Constants.MAX_IMAGE_SIZE -> {
+                hasError = true
+                "File terlalu besar (maksimal 10MB)"
+            }
             !FileUtils.isValidImageFile(currentState.selectedImageFile) -> {
                 hasError = true
-                "File harus berupa gambar JPG, JPEG, atau PNG maksimal 10MB"
+                "File harus berupa gambar JPG, JPEG, atau PNG yang valid"
             }
             else -> null
         }

@@ -34,11 +34,11 @@ interface BlogApi {
     @Multipart
     @POST("posts")
     suspend fun createPost(
-        @Header("X-API-KEY") apiKey: String, // Or however you pass the API Key
-        @Header("Authorization") authorization: String, // This is the parameter name
+        @Header(Constants.HEADER_API_KEY) apiKey: String,
+        @Header(Constants.HEADER_AUTHORIZATION) authorization: String,
         @Part("title") title: RequestBody,
         @Part("content") content: RequestBody,
-        @Part("category_id") categoryId: RequestBody,
+        @Part("categoryId") categoryId: RequestBody,
         @Part photo: MultipartBody.Part
     ): Response<PostResponse>
 }

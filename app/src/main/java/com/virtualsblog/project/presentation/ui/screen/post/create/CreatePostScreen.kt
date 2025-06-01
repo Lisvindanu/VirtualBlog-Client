@@ -60,9 +60,11 @@ fun CreatePostScreen(
         }
     }
 
-    // Handle successful post creation - konsisten dengan pattern lain
+    // Handle successful post creation - konsisten dengan ProfileScreen pattern
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
+            // Delay sebentar untuk user melihat success message seperti ProfileScreen
+            kotlinx.coroutines.delay(2500)
             onPostCreated()
         }
     }
