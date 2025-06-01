@@ -33,4 +33,5 @@ interface AuthRepository {
     fun getCurrentUser(): Flow<User?>
     fun getAccessToken(): Flow<String?>
     fun isLoggedIn(): Flow<Boolean>
+    suspend fun getAuthToken(): String?
 }

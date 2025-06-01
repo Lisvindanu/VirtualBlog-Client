@@ -7,6 +7,8 @@ import com.virtualsblog.project.domain.usecase.auth.*
 import com.virtualsblog.project.domain.usecase.user.GetProfileUseCase
 import com.virtualsblog.project.domain.usecase.user.UpdateProfileUseCase // Pastikan path import benar
 import com.virtualsblog.project.domain.usecase.user.UploadProfilePictureUseCase
+import com.virtualsblog.project.domain.repository.BlogRepository
+import com.virtualsblog.project.domain.usecase.blog.GetPostsUseCase
 
 import dagger.Module
 import dagger.Provides
@@ -84,5 +86,12 @@ object UseCaseModule {
     @Singleton
     fun provideUploadProfilePictureUseCase(repository: UserRepository): UploadProfilePictureUseCase {
         return UploadProfilePictureUseCase(repository)
+    }
+
+    // Blog UseCases
+    @Provides
+    @Singleton
+    fun provideGetPostsUseCase(repository: BlogRepository): GetPostsUseCase {
+        return GetPostsUseCase(repository)
     }
 }
