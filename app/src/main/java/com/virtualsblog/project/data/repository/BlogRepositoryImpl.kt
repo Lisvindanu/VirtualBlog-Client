@@ -118,11 +118,40 @@ class BlogRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success) {
-                    // Return total count dari semua posts tanpa limit
-                    val totalCount = body.data.size
-                    emit(Resource.Success(totalCount))
+                    emit(Resource.Success(body.data.size))
                 } else {
                     emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
+                }
+            } else {
+                emit(Resource.Error("Gagal mengambil jumlah postingan"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+        }
+    }
+
+    override suspend fun getPostById(postId: String): Flow<Resource<Post>> = flow {
+        try {
+            emit(Resource.Loading())
+            
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+            
+            val response = blogApi.getPostById(
+                postId = postId,
+                authorization = "${Constants.BEARER_PREFIX}$token"
+            )
+            
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val post = PostMapper.mapDetailResponseToDomain(body.data)
+                    emit(Resource.Success(post))
+                } else {
+                    emit(Resource.Error(body?.message ?: Constants.ERROR_POST_NOT_FOUND))
                 }
             } else {
                 when (response.code()) {

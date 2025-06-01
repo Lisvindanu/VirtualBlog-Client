@@ -1,7 +1,11 @@
 package com.virtualsblog.project.presentation.ui.component
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -11,15 +15,22 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.virtualsblog.project.R
 import com.virtualsblog.project.domain.model.Post
 import com.virtualsblog.project.util.DateUtil
@@ -28,42 +39,64 @@ import com.virtualsblog.project.util.DateUtil
 fun PostCard(
     post: Post,
     onClick: () -> Unit,
+    onLikeClick: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var isPressed by remember { mutableStateOf(false) }
+    
+    // Animation states
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = 0.4f),
+        label = "card_scale"
+    )
+    
+    val elevation by animateFloatAsState(
+        targetValue = if (isPressed) 1f else 4f,
+        animationSpec = spring(dampingRatio = 0.4f),
+        label = "card_elevation"
+    )
 
     Card(
         modifier = modifier
-            .clickable { onClick() },
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        isPressed = true
+                        tryAwaitRelease()
+                        isPressed = false
+                    },
+                    onTap = { onClick() }
+                )
+            },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation.dp),
         shape = MaterialTheme.shapes.large
     ) {
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
-            // Author and Date Row
+            // Author and Date Row with enhanced design
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Author Avatar
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = stringResource(R.string.author_avatar),
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
+                // Enhanced Author Avatar
+                UserAvatar(
+                    userName = post.author,
+                    imageUrl = post.authorImage,
+                    size = 44.dp,
+                    showBorder = true,
+                    borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    borderWidth = 1.dp
+                )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -71,9 +104,18 @@ fun PostCard(
                     Text(
                         text = post.author,
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    if (post.authorUsername.isNotEmpty()) {
+                        Text(
+                            text = "@${post.authorUsername}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+                    }
+                    
+                    // Enhanced time display
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -81,28 +123,30 @@ fun PostCard(
                             imageVector = Icons.Default.AccessTime,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = DateUtil.getRelativeTime(post.createdAt),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                     }
                 }
 
-                // Category Badge
+                // Enhanced Category Badge
                 if (post.category.isNotEmpty()) {
                     Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = MaterialTheme.shapes.small
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.padding(4.dp)
                     ) {
                         Text(
                             text = getCategoryDisplayName(post.category),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -110,93 +154,163 @@ fun PostCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Post Title
+            // Enhanced Post Title
             Text(
                 text = post.title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = MaterialTheme.typography.titleLarge.lineHeight * 1.1
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Post Content Preview
+            // Enhanced Post Image with gradient overlay
+            if (!post.image.isNullOrEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 220.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Box {
+                        val fullImageUrl = if (post.image.startsWith("http")) {
+                            post.image
+                        } else {
+                            "https://be-prakmob.kodingin.id${post.image}"
+                        }
+                        
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(fullImageUrl)
+                                .crossfade(true)
+                                .placeholder(android.R.drawable.ic_menu_gallery)
+                                .error(android.R.drawable.ic_menu_gallery)
+                                .build(),
+                            contentDescription = "Post Image",
+                            modifier = Modifier.fillMaxWidth(),
+                            contentScale = ContentScale.Crop
+                        )
+                        
+                        // Gradient overlay for better text readability
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            Color.Black.copy(alpha = 0.3f)
+                                        )
+                                    )
+                                )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Enhanced Post Content Preview
             Text(
                 text = post.content,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
-                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.3
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Action Row
+            // Enhanced Action Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Like and Comment Actions
+                // Like and Comment Actions with enhanced design
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // Like Button
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { /* TODO: Handle like */ }
-                    ) {
-                        Icon(
-                            imageVector = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = stringResource(R.string.like),
-                            modifier = Modifier.size(18.dp),
-                            tint = if (post.isLiked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = post.likes.toString(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    // Enhanced Like Button
+                    ActionButton(
+                        icon = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        text = formatCount(post.likes),
+                        isActive = post.isLiked,
+                        activeColor = MaterialTheme.colorScheme.error,
+                        onClick = { onLikeClick?.invoke(post.id) }
+                    )
 
-                    // Comment Button
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { /* TODO: Handle comment */ }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ModeComment,
-                            contentDescription = stringResource(R.string.comment),
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = post.comments.toString(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    // Enhanced Comment Button
+                    ActionButton(
+                        icon = Icons.Default.ModeComment,
+                        text = formatCount(post.comments),
+                        isActive = false,
+                        activeColor = MaterialTheme.colorScheme.primary,
+                        onClick = { onClick() }
+                    )
                 }
 
-                // Read More Button
-                TextButton(
+                // Enhanced Read More Button
+                FilledTonalButton(
                     onClick = onClick,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    shape = MaterialTheme.shapes.small
                 ) {
                     Text(
-                        text = stringResource(R.string.read_more),
+                        text = "Baca Lengkap",
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    isActive: Boolean,
+    activeColor: Color,
+    onClick: () -> Unit
+) {
+    val color by animateColorAsState(
+        targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "action_color"
+    )
+    
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(4.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = color
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
+        )
+    }
+}
+
+private fun formatCount(count: Int): String = when {
+    count >= 1000000 -> "${count / 1000000}M"
+    count >= 1000 -> "${count / 1000}K"
+    else -> count.toString()
 }
 
 @Composable

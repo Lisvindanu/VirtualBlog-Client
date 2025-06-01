@@ -5,14 +5,14 @@ data class Post(
     val title: String,
     val content: String,
     val author: String,
-    val authorUsername: String? = null,
+    val authorUsername: String,
     val authorImage: String? = null,
+    val category: String,
     val createdAt: String,
     val updatedAt: String,
-    val category: String,
-    val likes: Int,
-    val comments: Int,
-    val isLiked: Boolean,
+    val likes: Int = 0,
+    val comments: Int = 0,
+    val isLiked: Boolean = false,
     val image: String? = null,
-    val slug: String? = null
+    val slug: String
 )

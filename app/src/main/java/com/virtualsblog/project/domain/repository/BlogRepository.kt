@@ -8,4 +8,5 @@ interface BlogRepository {
     suspend fun getAllPosts(): Flow<Resource<List<Post>>>
     suspend fun getPostsForHome(): Flow<Resource<List<Post>>>
     suspend fun getTotalPostsCount(): Flow<Resource<Int>>
+    suspend fun getPostById(postId: String): Flow<Resource<Post>>
 }
