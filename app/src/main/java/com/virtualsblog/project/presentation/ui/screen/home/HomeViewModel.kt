@@ -62,6 +62,7 @@ class HomeViewModel @Inject constructor(
                     is Resource.Success -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
+                            isRefreshing = false, // Stop refreshing
                             posts = resource.data ?: emptyList(),
                             error = null
                         )
@@ -69,6 +70,7 @@ class HomeViewModel @Inject constructor(
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
+                            isRefreshing = false, // Stop refreshing
                             error = resource.message ?: "Gagal memuat postingan"
                         )
                     }
@@ -99,6 +101,8 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refreshPosts() {
+        // Set refreshing state
+        _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
         checkAuthStatus()
         loadPosts()
         loadTotalPostsCount()
