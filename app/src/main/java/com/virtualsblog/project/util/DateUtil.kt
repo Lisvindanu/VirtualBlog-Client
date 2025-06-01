@@ -2,53 +2,31 @@ package com.virtualsblog.project.util
 
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 object DateUtil {
     
-    private val inputFormats = arrayOf(
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()),
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()),
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault())
-    )
-    
-    private val outputFormatCard = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
-    private val outputFormatDetail = SimpleDateFormat("dd MMMM yyyy 'pukul' HH:mm", Locale("id", "ID"))
+    private const val API_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+    private const val API_DATE_FORMAT_ALT = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+    private const val INPUT_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+    private const val DETAIL_FORMAT = "dd MMMM yyyy, HH:mm"
     
     /**
      * Parse date string dari API response
      */
     fun parseApiDate(dateString: String): Date? {
-        for (format in inputFormats) {
+        return try {
+            val formatWithMillis = SimpleDateFormat(API_DATE_FORMAT, Locale.getDefault())
+            formatWithMillis.timeZone = TimeZone.getTimeZone("UTC")
+            formatWithMillis.parse(dateString)
+        } catch (e: Exception) {
             try {
-                return format.parse(dateString)
-            } catch (e: Exception) {
-                // Continue to next format
+                val formatWithoutMillis = SimpleDateFormat(API_DATE_FORMAT_ALT, Locale.getDefault())
+                formatWithoutMillis.timeZone = TimeZone.getTimeZone("UTC")
+                formatWithoutMillis.parse(dateString)
+            } catch (e2: Exception) {
+                null
             }
-        }
-        return null
-    }
-    
-    /**
-     * Format date untuk display di card
-     */
-    fun formatDateForCard(dateString: String): String {
-        val date = parseApiDate(dateString)
-        return if (date != null) {
-            outputFormatCard.format(date)
-        } else {
-            Constants.INVALID_DATE
-        }
-    }
-    
-    /**
-     * Format date untuk display detail
-     */
-    fun formatDateForDetail(dateString: String): String {
-        val date = parseApiDate(dateString)
-        return if (date != null) {
-            outputFormatDetail.format(date)
-        } else {
-            Constants.INVALID_DATE
         }
     }
     
@@ -56,8 +34,7 @@ object DateUtil {
      * Get timestamp untuk sorting
      */
     fun getTimestamp(dateString: String): Long {
-        val date = parseApiDate(dateString)
-        return date?.time ?: 0L
+        return parseApiDate(dateString)?.time ?: 0L
     }
     
     /**
@@ -65,19 +42,62 @@ object DateUtil {
      * Optimized for newest-first display
      */
     fun getRelativeTime(dateString: String): String {
+        return try {
+            val sdf = SimpleDateFormat(INPUT_FORMAT, Locale.getDefault())
+            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            val date = sdf.parse(dateString) ?: return dateString
+            
+            val now = System.currentTimeMillis()
+            val diff = now - date.time
+            
+            when {
+                diff < TimeUnit.MINUTES.toMillis(1) -> "Baru saja"
+                diff < TimeUnit.HOURS.toMillis(1) -> {
+                    val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
+                    "$minutes menit yang lalu"
+                }
+                diff < TimeUnit.DAYS.toMillis(1) -> {
+                    val hours = TimeUnit.MILLISECONDS.toHours(diff)
+                    "$hours jam yang lalu"
+                }
+                diff < TimeUnit.DAYS.toMillis(7) -> {
+                    val days = TimeUnit.MILLISECONDS.toDays(diff)
+                    "$days hari yang lalu"
+                }
+                else -> {
+                    val detailSdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                    detailSdf.format(date)
+                }
+            }
+        } catch (e: Exception) {
+            dateString
+        }
+    }
+    
+    /**
+     * Format date untuk detail post (e.g., "1 Juni 2025 pukul 14:17")
+     */
+    fun formatDateForDetail(dateString: String): String {
+        return try {
+            val inputSdf = SimpleDateFormat(INPUT_FORMAT, Locale.getDefault())
+            inputSdf.timeZone = TimeZone.getTimeZone("UTC")
+            val date = inputSdf.parse(dateString) ?: return dateString
+            
+            val outputSdf = SimpleDateFormat(DETAIL_FORMAT, Locale("id", "ID"))
+            outputSdf.format(date)
+        } catch (e: Exception) {
+            dateString
+        }
+    }
+
+    /**
+     * Format date untuk card (e.g., "1 Jun 2025")
+     */
+    fun formatDateForCard(dateString: String): String {
         val date = parseApiDate(dateString)
         if (date == null) return Constants.INVALID_DATE
         
-        val now = Date()
-        val diff = now.time - date.time
-        
-        return when {
-            diff < 60 * 1000 -> "Baru saja" // Less than 1 minute
-            diff < 60 * 60 * 1000 -> "${diff / (60 * 1000)} menit yang lalu" // Less than 1 hour
-            diff < 24 * 60 * 60 * 1000 -> "${diff / (60 * 60 * 1000)} jam yang lalu" // Less than 1 day
-            diff < 7 * 24 * 60 * 60 * 1000 -> "${diff / (24 * 60 * 60 * 1000)} hari yang lalu" // Less than 1 week
-            diff < 30 * 24 * 60 * 60 * 1000 -> "${diff / (7 * 24 * 60 * 60 * 1000)} minggu yang lalu" // Less than 1 month
-            else -> formatDateForCard(dateString) // For very old posts, show date
-        }
+        val formatter = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+        return formatter.format(date)
     }
 }

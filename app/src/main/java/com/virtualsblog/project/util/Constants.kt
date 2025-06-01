@@ -166,4 +166,11 @@ object Constants {
     const val POST_TITLE_HINT = "Masukkan judul yang menarik..."
     const val POST_CONTENT_HINT = "Tulis konten postingan Anda di sini..."
     const val SEARCH_HINT = "Cari postingan..."
+
+    // Image URLs
+    const val IMAGE_BASE_URL = "https://be-prakmob.kodingin.id"
+    const val PROFILE_IMAGE_PATH = "/uploads/photo-profile/"
+    
+    // Placeholder values
+    const val DEFAULT_AVATAR = "default_avatar.png"
 }

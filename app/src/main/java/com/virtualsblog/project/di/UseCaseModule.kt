@@ -11,6 +11,7 @@ import com.virtualsblog.project.domain.repository.BlogRepository
 import com.virtualsblog.project.domain.usecase.blog.GetPostsUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetPostsForHomeUseCase // Import GetPostsForHomeUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetTotalPostsCountUseCase
+import com.virtualsblog.project.domain.usecase.blog.GetPostByIdUseCase
 
 import dagger.Module
 import dagger.Provides
@@ -107,5 +108,11 @@ object UseCaseModule {
     @Singleton
     fun provideGetTotalPostsCountUseCase(repository: BlogRepository): GetTotalPostsCountUseCase {
         return GetTotalPostsCountUseCase(repository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGetPostByIdUseCase(repository: BlogRepository): GetPostByIdUseCase {
+        return GetPostByIdUseCase(repository)
     }
 }
