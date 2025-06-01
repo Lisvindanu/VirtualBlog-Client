@@ -5,13 +5,24 @@ object Constants {
     const val BASE_URL = "https://be-prakmob.kodingin.id/api/v1/"
     const val API_KEY = "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW"
 
+    // API Endpoints
+    const val POSTS_ENDPOINT = "posts"
+    
+    // Pagination & Limits
+    const val HOME_POSTS_LIMIT = 10
+
+    // Headers
+    const val HEADER_API_KEY = "x-api-key"
+    const val HEADER_AUTHORIZATION = "Authorization"
+    const val BEARER_PREFIX = "Bearer "
+
     // Kunci Preferensi
     const val PREF_ACCESS_TOKEN = "access_token"
     const val PREF_USER_ID = "user_id"
     const val PREF_USERNAME = "username"
     const val PREF_FULLNAME = "fullname"
     const val PREF_EMAIL = "email"
-    const val PREF_USER_IMAGE = "user_image" // <-- Added this line
+    const val PREF_USER_IMAGE = "user_image"
 
     // Konstanta Validasi
     const val MIN_FULLNAME_LENGTH = 3
@@ -132,6 +143,8 @@ object Constants {
     const val NO_POSTS_TEXT = "Belum Ada Postingan"
     const val EMPTY_POSTS_MESSAGE = "Jadilah yang pertama membuat postingan di VirtualsBlog!"
     const val CREATE_FIRST_POST_TEXT = "Tulis Postingan Pertama"
+    const val LATEST_POSTS_DESCRIPTION = "Menampilkan postingan dari yang terakhir dibuat"
+    const val ALL_POSTS_DESCRIPTION = "Diurutkan dari yang terakhir dibuat"
 
     // Pesan Auth
     const val WELCOME_BACK_TEXT = "Selamat Datang Kembali!"
@@ -153,4 +166,21 @@ object Constants {
     const val POST_TITLE_HINT = "Masukkan judul yang menarik..."
     const val POST_CONTENT_HINT = "Tulis konten postingan Anda di sini..."
     const val SEARCH_HINT = "Cari postingan..."
+
+    // Image URLs
+    const val IMAGE_BASE_URL = "https://be-prakmob.kodingin.id"
+    const val PROFILE_IMAGE_PATH = "/uploads/photo-profile/"
+    
+    // Placeholder values
+    const val DEFAULT_AVATAR = "default_avatar.png"
+
+    // Image picker constants
+    const val MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+    const val IMAGE_QUALITY = 80
+    
+    // Validation constants
+    const val MIN_TITLE_LENGTH = 3
+    const val MIN_CONTENT_LENGTH = 10
+    const val MAX_TITLE_LENGTH = 200
+    const val MAX_CONTENT_LENGTH = 5000
 }

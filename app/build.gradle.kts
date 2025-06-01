@@ -78,15 +78,16 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
-    // Compose - BOM (Bill of Materials) manages versions for Compose libraries
+    // UI & Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics) // Corrected alias will be used from libs.versions.toml
-    implementation(libs.androidx.ui.tooling.preview) // For @Preview annotations
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.compose.navigation)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.material.icons.extended) // Extended Material Icons for Compose
+    implementation(libs.androidx.material.icons.extended) 
+
+    // Pull to refresh - Material 1 implementation (androidx.compose.material.pullrefresh.*)
+    implementation("androidx.compose.material:material") 
 
     // Hilt - Dependency Injection
     implementation(libs.hilt.android)

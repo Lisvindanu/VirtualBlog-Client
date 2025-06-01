@@ -2,7 +2,8 @@ package com.virtualsblog.project.presentation.ui.component
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -10,12 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.virtualsblog.project.domain.model.Comment
+import com.virtualsblog.project.util.DateUtil
 
 @Composable
 fun CommentItem(
     comment: Comment,
-    modifier: Modifier = Modifier,
-    onMoreClick: (() -> Unit)? = null
+    onDeleteClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -27,38 +29,57 @@ fun CommentItem(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
+            // Header dengan author info
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    UserAvatar(
-                        userName = comment.authorName,
-                        size = 32.dp
+                // Author Avatar
+                UserAvatar(
+                    userName = comment.authorName,
+                    imageUrl = comment.authorImage,
+                    size = 32.dp
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = comment.authorName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = comment.authorName,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AccessTime,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = formatDate(comment.createdAt),
+                            text = DateUtil.getRelativeTime(comment.createdAt),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                if (onMoreClick != null) {
-                    IconButton(onClick = onMoreClick) {
+                // Delete button (if allowed)
+                if (onDeleteClick != null) {
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More options"
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Hapus komentar",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -66,21 +87,13 @@ fun CommentItem(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Comment content
             Text(
                 text = comment.content,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.2
             )
         }
-    }
-}
-
-private fun formatDate(dateString: String): String {
-    // Simple date formatting - you can enhance this
-    return try {
-        // Format the date string as needed
-        dateString.take(10) // Simple approach, take first 10 characters
-    } catch (e: Exception) {
-        "Unknown date"
     }
 }

@@ -1,6 +1,7 @@
 package com.virtualsblog.project.di
 
 import com.virtualsblog.project.data.remote.api.AuthApi
+import com.virtualsblog.project.data.remote.api.BlogApi
 import com.virtualsblog.project.util.Constants
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -80,5 +81,11 @@ object NetworkModule {
     @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApi {
         return retrofit.create(AuthApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBlogApi(retrofit: Retrofit): BlogApi {
+        return retrofit.create(BlogApi::class.java)
     }
 }
