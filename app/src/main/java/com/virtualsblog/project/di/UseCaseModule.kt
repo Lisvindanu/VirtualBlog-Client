@@ -9,6 +9,8 @@ import com.virtualsblog.project.domain.usecase.user.UpdateProfileUseCase // Past
 import com.virtualsblog.project.domain.usecase.user.UploadProfilePictureUseCase
 import com.virtualsblog.project.domain.repository.BlogRepository
 import com.virtualsblog.project.domain.usecase.blog.GetPostsUseCase
+import com.virtualsblog.project.domain.usecase.blog.GetPostsForHomeUseCase // Import GetPostsForHomeUseCase
+import com.virtualsblog.project.domain.usecase.blog.GetTotalPostsCountUseCase
 
 import dagger.Module
 import dagger.Provides
@@ -93,5 +95,17 @@ object UseCaseModule {
     @Singleton
     fun provideGetPostsUseCase(repository: BlogRepository): GetPostsUseCase {
         return GetPostsUseCase(repository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGetPostsForHomeUseCase(repository: BlogRepository): GetPostsForHomeUseCase {
+        return GetPostsForHomeUseCase(repository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGetTotalPostsCountUseCase(repository: BlogRepository): GetTotalPostsCountUseCase {
+        return GetTotalPostsCountUseCase(repository)
     }
 }

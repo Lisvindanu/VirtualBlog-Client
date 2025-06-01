@@ -153,6 +153,9 @@ fun BlogNavGraph(
                     navController.navigate(BlogDestinations.LOGIN_ROUTE) {
                         popUpTo(BlogDestinations.HOME_ROUTE) { inclusive = true }
                     }
+                },
+                onNavigateToAllPosts = {
+                    navController.navigate(BlogDestinations.POST_LIST_ROUTE)
                 }
             )
         }
