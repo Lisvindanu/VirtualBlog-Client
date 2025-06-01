@@ -22,7 +22,7 @@ object Constants {
     const val PREF_USERNAME = "username"
     const val PREF_FULLNAME = "fullname"
     const val PREF_EMAIL = "email"
-    const val PREF_USER_IMAGE = "user_image" // <-- Added this line
+    const val PREF_USER_IMAGE = "user_image"
 
     // Konstanta Validasi
     const val MIN_FULLNAME_LENGTH = 3
@@ -173,4 +173,14 @@ object Constants {
     
     // Placeholder values
     const val DEFAULT_AVATAR = "default_avatar.png"
+
+    // Image picker constants
+    const val MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+    const val IMAGE_QUALITY = 80
+    
+    // Validation constants
+    const val MIN_TITLE_LENGTH = 3
+    const val MIN_CONTENT_LENGTH = 10
+    const val MAX_TITLE_LENGTH = 200
+    const val MAX_CONTENT_LENGTH = 5000
 }

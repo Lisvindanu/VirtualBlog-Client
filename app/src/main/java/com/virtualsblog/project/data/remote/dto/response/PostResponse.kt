@@ -97,17 +97,6 @@ data class AuthorResponse(
     val username: String
 )
 
-data class CategoryResponse(
-    @SerializedName("id")
-    val id: String,
-    @SerializedName("name")
-    val name: String,
-    @SerializedName("createdAt")
-    val createdAt: String,
-    @SerializedName("updatedAt")
-    val updatedAt: String
-)
-
 data class CountResponse(
     @SerializedName("Comment")
     val Comment: Int,
