@@ -2,21 +2,66 @@ package com.virtualsblog.project.presentation.ui.screen.post.create
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.virtualsblog.project.domain.model.Category
+import com.virtualsblog.project.domain.usecase.blog.CreatePostUseCase
+import com.virtualsblog.project.domain.usecase.blog.GetCategoriesUseCase
+import com.virtualsblog.project.util.Constants
+import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
+import com.virtualsblog.project.util.FileUtils
 
 @HiltViewModel
 class CreatePostViewModel @Inject constructor(
-    // TODO: Inject CreatePostUseCase when available
+    private val createPostUseCase: CreatePostUseCase,
+    private val getCategoriesUseCase: GetCategoriesUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreatePostUiState())
     val uiState: StateFlow<CreatePostUiState> = _uiState.asStateFlow()
+
+    init {
+        loadCategories()
+    }
+
+    private fun loadCategories() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isCategoriesLoading = true)
+            
+            try {
+                getCategoriesUseCase().collect { resource ->
+                    when (resource) {
+                        is Resource.Success -> {
+                            _uiState.value = _uiState.value.copy(
+                                categories = resource.data ?: emptyList(),
+                                isCategoriesLoading = false,
+                                error = null
+                            )
+                        }
+                        is Resource.Error -> {
+                            _uiState.value = _uiState.value.copy(
+                                isCategoriesLoading = false,
+                                error = resource.message
+                            )
+                        }
+                        is Resource.Loading -> {
+                            _uiState.value = _uiState.value.copy(isCategoriesLoading = true)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isCategoriesLoading = false,
+                    error = e.message ?: Constants.ERROR_UNKNOWN
+                )
+            }
+        }
+    }
 
     fun updateTitle(title: String) {
         _uiState.value = _uiState.value.copy(
@@ -32,21 +77,42 @@ class CreatePostViewModel @Inject constructor(
         )
     }
 
-    fun updateCategory(category: String) {
+    fun updateSelectedCategory(category: Category) {
         _uiState.value = _uiState.value.copy(
-            category = category,
+            selectedCategory = category,
             categoryError = null
         )
     }
 
-    fun updateSelectedImageUri(uri: String?) {
+    fun updateSelectedImage(file: File?, uriString: String?) {
+        val imageError = when {
+            file == null -> "Pilih gambar untuk postingan"
+            !file.exists() -> "File gambar tidak ditemukan"
+            !FileUtils.isValidImageFile(file) -> "File harus berupa gambar JPG, JPEG, atau PNG"
+            file.length() > Constants.MAX_IMAGE_SIZE -> "Ukuran gambar maksimal 10MB"
+            else -> null
+        }
+
         _uiState.value = _uiState.value.copy(
-            selectedImageUri = uri
+            selectedImageFile = if (imageError == null) file else null,
+            selectedImageUri = if (imageError == null) uriString else null,
+            imageError = imageError
         )
     }
 
     fun createPost() {
         if (!validateForm()) {
+            return
+        }
+
+        val currentState = _uiState.value
+        val imageFile = currentState.selectedImageFile
+        val category = currentState.selectedCategory
+
+        if (imageFile == null || category == null) {
+            _uiState.value = _uiState.value.copy(
+                error = "Semua field harus diisi dengan benar"
+            )
             return
         }
 
@@ -57,21 +123,35 @@ class CreatePostViewModel @Inject constructor(
             )
 
             try {
-                // TODO: Replace with actual API call
-                // Simulate API call with delay
-                delay(2000)
-
-                // Simulate success response
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    isSuccess = true,
-                    error = null
-                )
-
+                createPostUseCase(
+                    title = currentState.title.trim(),
+                    content = currentState.content.trim(),
+                    categoryId = category.id,
+                    photo = imageFile
+                ).collect { resource ->
+                    when (resource) {
+                        is Resource.Success -> {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                isSuccess = true,
+                                error = null
+                            )
+                        }
+                        is Resource.Error -> {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                error = resource.message ?: "Gagal membuat postingan"
+                            )
+                        }
+                        is Resource.Loading -> {
+                            _uiState.value = _uiState.value.copy(isLoading = true)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Gagal membuat postingan. Silakan coba lagi."
+                    error = "Error: ${e.message}"
                 )
             }
         }
@@ -85,15 +165,15 @@ class CreatePostViewModel @Inject constructor(
         val titleError = when {
             currentState.title.isBlank() -> {
                 hasError = true
-                "Judul postingan tidak boleh kosong"
+                Constants.VALIDATION_POST_TITLE_REQUIRED
             }
-            currentState.title.length < 10 -> {
+            currentState.title.length < Constants.MIN_TITLE_LENGTH -> {
                 hasError = true
-                "Judul postingan minimal 10 karakter"
+                "Judul postingan minimal ${Constants.MIN_TITLE_LENGTH} karakter"
             }
-            currentState.title.length > 200 -> {
+            currentState.title.length > Constants.MAX_TITLE_LENGTH -> {
                 hasError = true
-                "Judul postingan maksimal 200 karakter"
+                "Judul postingan maksimal ${Constants.MAX_TITLE_LENGTH} karakter"
             }
             else -> null
         }
@@ -102,24 +182,41 @@ class CreatePostViewModel @Inject constructor(
         val contentError = when {
             currentState.content.isBlank() -> {
                 hasError = true
-                "Konten postingan tidak boleh kosong"
+                Constants.VALIDATION_POST_CONTENT_REQUIRED
             }
-            currentState.content.length < 50 -> {
+            currentState.content.length < Constants.MIN_CONTENT_LENGTH -> {
                 hasError = true
-                "Konten postingan minimal 50 karakter"
+                "Konten postingan minimal ${Constants.MIN_CONTENT_LENGTH} karakter"
             }
-            currentState.content.length > 5000 -> {
+            currentState.content.length > Constants.MAX_CONTENT_LENGTH -> {
                 hasError = true
-                "Konten postingan maksimal 5000 karakter"
+                "Konten postingan maksimal ${Constants.MAX_CONTENT_LENGTH} karakter"
             }
             else -> null
         }
 
         // Validate category
         val categoryError = when {
-            currentState.category.isBlank() -> {
+            currentState.selectedCategory == null -> {
                 hasError = true
                 "Pilih kategori postingan"
+            }
+            else -> null
+        }
+
+        // Validate image dengan pengecekan yang lebih ketat
+        val imageError = when {
+            currentState.selectedImageFile == null -> {
+                hasError = true
+                "Pilih gambar untuk postingan"
+            }
+            !currentState.selectedImageFile.exists() -> {
+                hasError = true
+                "File gambar tidak ditemukan"
+            }
+            !FileUtils.isValidImageFile(currentState.selectedImageFile) -> {
+                hasError = true
+                "File harus berupa gambar JPG, JPEG, atau PNG maksimal 10MB"
             }
             else -> null
         }
@@ -127,7 +224,8 @@ class CreatePostViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             titleError = titleError,
             contentError = contentError,
-            categoryError = categoryError
+            categoryError = categoryError,
+            imageError = imageError
         )
 
         return !hasError
@@ -139,5 +237,10 @@ class CreatePostViewModel @Inject constructor(
 
     fun resetState() {
         _uiState.value = CreatePostUiState()
+        loadCategories()
+    }
+
+    fun refreshCategories() {
+        loadCategories()
     }
 }

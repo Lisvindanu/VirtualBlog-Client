@@ -1,4 +1,8 @@
 package com.virtualsblog.project.domain.model
 
-class Category {
-}
+data class Category(
+    val id: String,
+    val name: String,
+    val createdAt: String,
+    val updatedAt: String
+)

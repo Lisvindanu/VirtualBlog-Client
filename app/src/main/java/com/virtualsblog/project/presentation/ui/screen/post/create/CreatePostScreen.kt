@@ -1,5 +1,8 @@
 package com.virtualsblog.project.presentation.ui.screen.post.create
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -9,26 +12,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.virtualsblog.project.presentation.ui.theme.extendedColors
+import com.virtualsblog.project.util.Constants
+import com.virtualsblog.project.util.FileUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,17 +39,44 @@ fun CreatePostScreen(
     viewModel: CreatePostViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
 
-    // Handle successful post creation
+    // Image picker launcher dengan validation yang sama seperti ProfileScreen
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val file = FileUtils.getFileFromUri(context, it)
+                if (file != null) {
+                    viewModel.updateSelectedImage(file, it.toString())
+                } else {
+                    // Error handling konsisten dengan ProfileScreen
+                    viewModel.updateSelectedImage(null, null)
+                }
+            } catch (e: Exception) {
+                viewModel.updateSelectedImage(null, null)
+            }
+        }
+    }
+
+    // Handle successful post creation - konsisten dengan pattern lain
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             onPostCreated()
         }
     }
 
+    // Handle error clearing - konsisten dengan HomeScreen
+    LaunchedEffect(uiState.error) {
+        if (uiState.error != null) {
+            // Auto clear error after some time if needed
+        }
+    }
+
     Scaffold(
         topBar = {
+            // Enhanced TopBar - konsisten dengan PostDetailScreen style
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surface,
@@ -57,7 +85,7 @@ fun CreatePostScreen(
                 TopAppBar(
                     title = { 
                         Text(
-                            text = "Buat Postingan",
+                            text = Constants.CREATE_POST_TEXT,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -65,18 +93,22 @@ fun CreatePostScreen(
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack, // Fixed: Using correct import
-                                contentDescription = "Kembali"
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = Constants.BACK_TEXT
                             )
                         }
                     },
                     actions = {
-                        // Publish Button with primary indigo color
+                        // Enhanced Publish Button - konsisten dengan style lain
                         FilledTonalButton(
                             onClick = { 
                                 viewModel.createPost()
                             },
-                            enabled = !uiState.isLoading && uiState.title.isNotBlank() && uiState.content.isNotBlank(),
+                            enabled = !uiState.isLoading && 
+                                    uiState.title.isNotBlank() && 
+                                    uiState.content.isNotBlank() &&
+                                    uiState.selectedCategory != null &&
+                                    uiState.selectedImageFile != null,
                             colors = ButtonDefaults.filledTonalButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -90,14 +122,14 @@ fun CreatePostScreen(
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                             } else {
-                                Text("Publish")
+                                Text(Constants.PUBLISH_TEXT)
                             }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    modifier = Modifier.padding(top = 8.dp) // Added top margin for status bar
+                    modifier = Modifier.padding(top = 8.dp) // Konsisten dengan screens lain
                 )
             }
         }
@@ -115,15 +147,15 @@ fun CreatePostScreen(
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // Title Input
-                CreatePostCard(
-                    title = "Judul Postingan",
+                // Enhanced Title Input Card - konsisten dengan DetailScreen style
+                EnhancedCreatePostCard(
+                    title = Constants.POST_TITLE_TEXT,
                     content = {
                         OutlinedTextField(
                             value = uiState.title,
                             onValueChange = { viewModel.updateTitle(it) },
                             placeholder = { 
-                                Text("Masukkan judul postingan yang menarik...") 
+                                Text(Constants.POST_TITLE_HINT) 
                             },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -133,6 +165,8 @@ fun CreatePostScreen(
                             shape = RoundedCornerShape(12.dp),
                             isError = uiState.titleError != null
                         )
+                        
+                        // Enhanced Error Display
                         if (uiState.titleError != null) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -144,49 +178,67 @@ fun CreatePostScreen(
                     }
                 )
 
-                // Category Selection
-                CreatePostCard(
-                    title = "Kategori",
+                // Enhanced Category Selection - konsisten dengan HomeScreen dropdown style
+                EnhancedCreatePostCard(
+                    title = Constants.POST_CATEGORY_TEXT,
                     content = {
                         var expanded by remember { mutableStateOf(false) }
-                        val categories = listOf(
-                            "Technology", "Lifestyle", "Food & Drink", "Travel", 
-                            "Finance", "Health", "Education", "Entertainment", "Sports"
-                        )
 
-                        ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = it }
-                        ) {
-                            OutlinedTextField(
-                                value = uiState.category,
-                                onValueChange = {},
-                                readOnly = true,
-                                placeholder = { Text("Pilih kategori") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        if (uiState.isCategoriesLoading) {
+                            // Enhanced Loading State - konsisten dengan HomeScreen
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .menuAnchor(),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                                ),
-                                shape = RoundedCornerShape(12.dp),
-                                isError = uiState.categoryError != null
-                            )
-                            
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
+                                    .height(56.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                categories.forEach { category ->
-                                    DropdownMenuItem(
-                                        text = { Text(category) },
-                                        onClick = {
-                                            viewModel.updateCategory(category)
-                                            expanded = false
-                                        }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    Text(
+                                        text = Constants.LOADING_TEXT,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                }
+                            }
+                        } else {
+                            ExposedDropdownMenuBox(
+                                expanded = expanded,
+                                onExpandedChange = { expanded = it }
+                            ) {
+                                OutlinedTextField(
+                                    value = uiState.selectedCategory?.name ?: "",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    placeholder = { Text("Pilih kategori") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor(),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    isError = uiState.categoryError != null
+                                )
+                                
+                                ExposedDropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false }
+                                ) {
+                                    uiState.categories.forEach { categoryItem ->
+                                        DropdownMenuItem(
+                                            text = { Text(categoryItem.name) },
+                                            onClick = {
+                                                viewModel.updateSelectedCategory(categoryItem)
+                                                expanded = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -202,15 +254,15 @@ fun CreatePostScreen(
                     }
                 )
 
-                // Content Input
-                CreatePostCard(
-                    title = "Konten Postingan",
+                // Enhanced Content Input - konsisten dengan style lain
+                EnhancedCreatePostCard(
+                    title = Constants.POST_CONTENT_TEXT,
                     content = {
                         OutlinedTextField(
                             value = uiState.content,
                             onValueChange = { viewModel.updateContent(it) },
                             placeholder = { 
-                                Text("Tulis konten postingan di sini. Ceritakan pengalaman, tips, atau pemikiran menarik lainnya...") 
+                                Text(Constants.POST_CONTENT_HINT) 
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -234,42 +286,66 @@ fun CreatePostScreen(
                     }
                 )
 
-                // Image Upload (Optional)
-                CreatePostCard(
-                    title = "Gambar (Opsional)",
+                // Enhanced Image Upload - konsisten dengan PostDetailScreen image handling
+                EnhancedCreatePostCard(
+                    title = "Gambar *",
                     content = {
-                        OutlinedButton(
-                            onClick = { 
-                                // TODO: Implement image picker
-                                viewModel.updateSelectedImageUri("sample_image_uri.jpg")
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
-                                width = 1.dp
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Image,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Pilih Gambar")
-                        }
-                        
-                        if (uiState.selectedImageUri != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Gambar dipilih: ${uiState.selectedImageUri}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                        Column {
+                            OutlinedButton(
+                                onClick = { 
+                                    // Pastikan hanya memilih gambar seperti di ProfileScreen
+                                    imagePickerLauncher.launch("image/*")
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Pilih Gambar (JPG/PNG, Max 10MB)")
+                            }
+                            
+                            if (uiState.selectedImageUri != null) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                // Enhanced Image Preview - konsisten dengan PostDetailScreen
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    AsyncImage(
+                                        model = uiState.selectedImageUri,
+                                        contentDescription = "Preview gambar",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(200.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Gambar dipilih",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            
+                            if (uiState.imageError != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = uiState.imageError!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 )
 
-                // Error Message
+                // Enhanced Error Message - konsisten dengan HomeScreen error handling
                 AnimatedVisibility(
                     visible = uiState.error != null,
                     enter = fadeIn() + expandVertically(),
@@ -280,19 +356,37 @@ fun CreatePostScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         ),
-                        shape = MaterialTheme.shapes.medium
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text(
-                            text = uiState.error ?: "",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        Column(
                             modifier = Modifier.padding(16.dp),
-                            textAlign = TextAlign.Center
-                        )
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Oops! Terjadi Kesalahan",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = uiState.error ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.clearError() },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Tutup")
+                            }
+                        }
                     }
                 }
 
-                // Success Message
+                // Enhanced Success Message - konsisten dengan pattern HomeScreen
                 AnimatedVisibility(
                     visible = uiState.isSuccess,
                     enter = fadeIn() + expandVertically(),
@@ -303,7 +397,7 @@ fun CreatePostScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.extendedColors.success.copy(alpha = 0.1f)
                         ),
-                        shape = MaterialTheme.shapes.medium
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
@@ -315,7 +409,7 @@ fun CreatePostScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Postingan berhasil dibuat!",
+                                text = Constants.SUCCESS_POST_CREATED,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.extendedColors.success,
@@ -337,8 +431,9 @@ fun CreatePostScreen(
     }
 }
 
+// Enhanced CreatePostCard Component - konsisten dengan PostDetailScreen components
 @Composable
-private fun CreatePostCard(
+private fun EnhancedCreatePostCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
