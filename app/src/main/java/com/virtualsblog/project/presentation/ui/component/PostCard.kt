@@ -22,8 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.virtualsblog.project.R
 import com.virtualsblog.project.domain.model.Post
-import java.text.SimpleDateFormat
-import java.util.*
+import com.virtualsblog.project.util.DateUtil
 
 @Composable
 fun PostCard(
@@ -86,7 +85,7 @@ fun PostCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = formatDate(post.createdAt),
+                            text = DateUtil.getRelativeTime(post.createdAt),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -213,16 +212,5 @@ private fun getCategoryDisplayName(category: String): String {
         "Entertainment" -> stringResource(R.string.category_entertainment)
         "Sports" -> stringResource(R.string.category_sports)
         else -> stringResource(R.string.category_other)
-    }
-}
-
-private fun formatDate(dateString: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
-        val date = inputFormat.parse(dateString)
-        outputFormat.format(date ?: Date())
-    } catch (e: Exception) {
-        "Tanggal tidak valid"
     }
 }

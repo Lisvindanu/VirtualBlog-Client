@@ -1,8 +1,10 @@
 package com.virtualsblog.project.di
 
 import com.virtualsblog.project.data.repository.AuthRepositoryImpl
+import com.virtualsblog.project.data.repository.BlogRepositoryImpl
 import com.virtualsblog.project.data.repository.UserRepositoryImpl
 import com.virtualsblog.project.domain.repository.AuthRepository
+import com.virtualsblog.project.domain.repository.BlogRepository
 import com.virtualsblog.project.domain.repository.UserRepository
 import dagger.Binds
 import dagger.Module
@@ -25,4 +27,9 @@ abstract class RepositoryModule {
     abstract fun bindUserRepository( // Binding untuk UserRepository
         userRepositoryImpl: UserRepositoryImpl
     ): UserRepository
+
+    @Binds
+    abstract fun bindBlogRepository(
+        blogRepositoryImpl: BlogRepositoryImpl
+    ): BlogRepository
 }

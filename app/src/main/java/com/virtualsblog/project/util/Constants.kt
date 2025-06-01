@@ -5,6 +5,14 @@ object Constants {
     const val BASE_URL = "https://be-prakmob.kodingin.id/api/v1/"
     const val API_KEY = "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW"
 
+    // API Endpoints
+    const val POSTS_ENDPOINT = "posts"
+
+    // Headers
+    const val HEADER_API_KEY = "x-api-key"
+    const val HEADER_AUTHORIZATION = "Authorization"
+    const val BEARER_PREFIX = "Bearer "
+
     // Kunci Preferensi
     const val PREF_ACCESS_TOKEN = "access_token"
     const val PREF_USER_ID = "user_id"

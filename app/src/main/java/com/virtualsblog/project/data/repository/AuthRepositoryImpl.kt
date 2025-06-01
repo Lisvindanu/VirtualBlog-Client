@@ -305,6 +305,10 @@ class AuthRepositoryImpl @Inject constructor(
         return userPreferences.isLoggedIn
     }
 
+    override suspend fun getAuthToken(): String? {
+        return userPreferences.getAccessToken()
+    }
+
     // Private helper methods
     private suspend fun saveUserToRoom(user: User, accessToken: String) {
         try {
