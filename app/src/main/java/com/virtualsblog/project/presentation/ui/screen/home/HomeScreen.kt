@@ -1,38 +1,41 @@
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.compose.foundation.background
-// import androidx.compose.foundation.clickable // Tidak diperlukan lagi di sini
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-// import androidx.compose.foundation.shape.CircleShape // Tidak diperlukan lagi di sini
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-// import androidx.compose.material.icons.filled.Person // Tidak diperlukan lagi di sini
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-// import androidx.compose.ui.draw.clip // Tidak diperlukan lagi di sini
 import androidx.compose.ui.text.font.FontWeight
-// import androidx.compose.ui.text.style.TextOverflow // Tidak digunakan di sini
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.virtualsblog.project.presentation.ui.component.PostCard
 import com.virtualsblog.project.presentation.ui.component.UserAvatar // <-- Import UserAvatar
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToCreatePost: () -> Unit,
     onNavigateToPostDetail: (String) -> Unit,
     onNavigateToLogin: () -> Unit,
-    onNavigateToAllPosts: () -> Unit, // Add this parameter
+    onNavigateToAllPosts: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = uiState.isRefreshing,
+        onRefresh = { viewModel.refreshPosts() }
+    )
 
     LaunchedEffect(uiState.isLoggedIn, uiState.isLoading) { // Tambahkan uiState.isLoading
         if (!uiState.isLoading && !uiState.isLoggedIn) { // Cek isLoading agar tidak redirect prematur
@@ -100,14 +103,14 @@ fun HomeScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            if (uiState.isLoading) {
+            if (uiState.isLoading && !uiState.isRefreshing) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
-            } else if (uiState.error != null) {
+            } else if (uiState.error != null && !uiState.isRefreshing) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -145,62 +148,82 @@ fun HomeScreen(
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pullRefresh(pullRefreshState)
                 ) {
-                    // Header Selamat Datang (hanya jika sudah login dan username ada)
-                    if (uiState.isLoggedIn && uiState.username.isNotEmpty()) {
-                        item {
-                            WelcomeHeader(username = uiState.username)
-                        }
-                    }
-
-                    // Kartu Statistik
-                    item {
-                        StatisticsCard(
-                            totalPosts = uiState.totalPostsCount, // Use totalPostsCount instead of posts.size
-                            totalUsers = 42 // Data mock, bisa diganti dengan data asli jika ada
-                        )
-                    }
-
-                    // Header Bagian
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Postingan Terbaru",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            TextButton(
-                                onClick = onNavigateToAllPosts
-                            ) {
-                                Text("Lihat Semua")
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Header Selamat Datang (hanya jika sudah login dan username ada)
+                        if (uiState.isLoggedIn && uiState.username.isNotEmpty()) {
+                            item {
+                                WelcomeHeader(username = uiState.username)
                             }
                         }
-                    }
 
-                    // Daftar Postingan
-                    if (uiState.posts.isEmpty()) {
+                        // Kartu Statistik
                         item {
-                            EmptyStateCard(onCreatePost = onNavigateToCreatePost)
-                        }
-                    } else {
-                        items(uiState.posts) { post ->
-                            PostCard(
-                                post = post,
-                                onClick = { onNavigateToPostDetail(post.id) },
-                                modifier = Modifier.fillMaxWidth()
+                            StatisticsCard(
+                                totalPosts = uiState.totalPostsCount,
+                                totalUsers = 42
                             )
                         }
+
+                        // Header Bagian
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "📝 Postingan Terbaru",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Tarik ke bawah untuk refresh",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                TextButton(
+                                    onClick = onNavigateToAllPosts
+                                ) {
+                                    Text("Lihat Semua")
+                                }
+                            }
+                        }
+
+                        // Daftar Postingan
+                        if (uiState.posts.isEmpty() && !uiState.isLoading) {
+                            item {
+                                EmptyStateCard(onCreatePost = onNavigateToCreatePost)
+                            }
+                        } else {
+                            items(uiState.posts) { post ->
+                                PostCard(
+                                    post = post,
+                                    onClick = { onNavigateToPostDetail(post.id) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
                     }
+
+                    // Pull Refresh Indicator
+                    PullRefreshIndicator(
+                        refreshing = uiState.isRefreshing,
+                        state = pullRefreshState,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        backgroundColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

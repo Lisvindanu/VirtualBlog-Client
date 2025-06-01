@@ -16,8 +16,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.virtualsblog.project.presentation.ui.component.PostCard
 import com.virtualsblog.project.presentation.ui.component.LoadingIndicator
 import com.virtualsblog.project.presentation.ui.component.ErrorMessage
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun PostListScreen(
     onNavigateToPostDetail: (String) -> Unit,
@@ -25,6 +29,10 @@ fun PostListScreen(
     viewModel: PostListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = uiState.isRefreshing,
+        onRefresh = { viewModel.refreshPosts() }
+    )
 
     Scaffold(
         topBar = {
@@ -57,7 +65,7 @@ fun PostListScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             when {
-                uiState.isLoading -> {
+                uiState.isLoading && !uiState.isRefreshing -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -65,7 +73,7 @@ fun PostListScreen(
                         CircularProgressIndicator()
                     }
                 }
-                uiState.error != null -> {
+                uiState.error != null && !uiState.isRefreshing -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -103,7 +111,7 @@ fun PostListScreen(
                         }
                     }
                 }
-                uiState.posts.isEmpty() -> {
+                uiState.posts.isEmpty() && !uiState.isLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -132,7 +140,7 @@ fun PostListScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Tidak ada postingan yang tersedia saat ini.",
+                                    text = "Tarik ke bawah untuk refresh atau tunggu postingan baru.",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -142,52 +150,67 @@ fun PostListScreen(
                     }
                 }
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pullRefresh(pullRefreshState)
                     ) {
-                        // Header info
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "📚",
-                                        style = MaterialTheme.typography.headlineMedium
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Header info
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Text(
-                                            text = "Total ${uiState.posts.size} Postingan",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.SemiBold
+                                            text = "📚",
+                                            style = MaterialTheme.typography.headlineMedium
                                         )
-                                        Text(
-                                            text = "Diurutkan dari yang terakhir dibuat",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = "Total ${uiState.posts.size} Postingan",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                text = "Tarik ke bawah untuk refresh data",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
                                 }
                             }
+
+                            // Posts list
+                            items(uiState.posts) { post ->
+                                PostCard(
+                                    post = post,
+                                    onClick = { onNavigateToPostDetail(post.id) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
 
-                        // Posts list
-                        items(uiState.posts) { post ->
-                            PostCard(
-                                post = post,
-                                onClick = { onNavigateToPostDetail(post.id) },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                        // Pull Refresh Indicator
+                        PullRefreshIndicator(
+                            refreshing = uiState.isRefreshing,
+                            state = pullRefreshState,
+                            modifier = Modifier.align(Alignment.TopCenter),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }

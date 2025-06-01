@@ -35,13 +35,15 @@ class PostListViewModel @Inject constructor(
                     is Resource.Success -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            posts = resource.data ?: emptyList(), // Show all posts without limit
+                            isRefreshing = false, // Stop refreshing
+                            posts = resource.data ?: emptyList(),
                             error = null
                         )
                     }
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
+                            isRefreshing = false, // Stop refreshing
                             error = resource.message ?: "Gagal memuat postingan"
                         )
                     }
@@ -51,6 +53,8 @@ class PostListViewModel @Inject constructor(
     }
 
     fun refreshPosts() {
+        // Set refreshing state and reload posts
+        _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
         loadPosts()
     }
 
