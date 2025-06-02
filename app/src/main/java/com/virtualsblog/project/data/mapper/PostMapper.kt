@@ -5,7 +5,7 @@ import com.virtualsblog.project.data.remote.dto.response.PostResponse
 import com.virtualsblog.project.domain.model.Post
 
 object PostMapper {
-    
+
     fun mapResponseToDomain(response: PostResponse): Post {
         return Post(
             id = response.id,
@@ -17,14 +17,15 @@ object PostMapper {
             createdAt = response.createdAt,
             updatedAt = response.updatedAt,
             category = response.category.name,
-            likes = response.count.Like,
-            comments = response.count.Comment,
+            // FIXED: Handle null count safely - post baru biasanya belum ada like/comment
+            likes = response.count?.Like ?: 0,
+            comments = response.count?.Comment ?: 0,
             isLiked = response.liked,
             image = response.image,
             slug = response.slug
         )
     }
-    
+
     fun mapResponseListToDomain(responseList: List<PostResponse>): List<Post> {
         return responseList.map { mapResponseToDomain(it) }
     }
@@ -40,8 +41,9 @@ object PostMapper {
             category = response.category.name,
             createdAt = response.createdAt,
             updatedAt = response.updatedAt,
-            likes = response.count.Like,
-            comments = response.count.Comment,
+            // FIXED: Handle null count safely - detail post juga bisa null pada kasus tertentu
+            likes = response.count?.Like ?: 0,
+            comments = response.count?.Comment ?: 0,
             isLiked = response.liked,
             image = response.image,
             slug = response.slug
