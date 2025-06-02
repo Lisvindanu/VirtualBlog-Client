@@ -29,7 +29,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.virtualsblog.project.presentation.ui.theme.extendedColors
 import com.virtualsblog.project.util.Constants
-import com.virtualsblog.project.util.FileUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,51 +40,32 @@ fun CreatePostScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Image picker launcher dengan validation yang sama seperti ProfileScreen
+    // FIXED: Image picker launcher seperti di ProfileScreen
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            try {
-                val file = FileUtils.getFileFromUri(context, it)
-                if (file != null) {
-                    viewModel.updateSelectedImage(file, it.toString())
-                } else {
-                    // Error handling konsisten dengan ProfileScreen
-                    viewModel.updateSelectedImage(null, null)
-                }
-            } catch (e: Exception) {
-                viewModel.updateSelectedImage(null, null)
-            }
+            // Pattern sama dengan ProfileScreen - langsung panggil ViewModel
+            viewModel.updateSelectedImage(context, it)
         }
     }
 
-    // Handle successful post creation - konsisten dengan ProfileScreen pattern
+    // Handle successful post creation
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
-            // Delay sebentar untuk user melihat success message seperti ProfileScreen
-            kotlinx.coroutines.delay(2500)
             onPostCreated()
-        }
-    }
-
-    // Handle error clearing - konsisten dengan HomeScreen
-    LaunchedEffect(uiState.error) {
-        if (uiState.error != null) {
-            // Auto clear error after some time if needed
         }
     }
 
     Scaffold(
         topBar = {
-            // Enhanced TopBar - konsisten dengan PostDetailScreen style
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 4.dp
             ) {
                 TopAppBar(
-                    title = { 
+                    title = {
                         Text(
                             text = Constants.CREATE_POST_TEXT,
                             style = MaterialTheme.typography.titleLarge,
@@ -101,13 +81,12 @@ fun CreatePostScreen(
                         }
                     },
                     actions = {
-                        // Enhanced Publish Button - konsisten dengan style lain
                         FilledTonalButton(
-                            onClick = { 
+                            onClick = {
                                 viewModel.createPost()
                             },
-                            enabled = !uiState.isLoading && 
-                                    uiState.title.isNotBlank() && 
+                            enabled = !uiState.isLoading &&
+                                    uiState.title.isNotBlank() &&
                                     uiState.content.isNotBlank() &&
                                     uiState.selectedCategory != null &&
                                     uiState.selectedImageFile != null,
@@ -131,7 +110,7 @@ fun CreatePostScreen(
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    modifier = Modifier.padding(top = 8.dp) // Konsisten dengan screens lain
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
         }
@@ -149,15 +128,15 @@ fun CreatePostScreen(
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // Enhanced Title Input Card - konsisten dengan DetailScreen style
+                // Title Input Card
                 EnhancedCreatePostCard(
                     title = Constants.POST_TITLE_TEXT,
                     content = {
                         OutlinedTextField(
                             value = uiState.title,
                             onValueChange = { viewModel.updateTitle(it) },
-                            placeholder = { 
-                                Text(Constants.POST_TITLE_HINT) 
+                            placeholder = {
+                                Text(Constants.POST_TITLE_HINT)
                             },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -167,8 +146,7 @@ fun CreatePostScreen(
                             shape = RoundedCornerShape(12.dp),
                             isError = uiState.titleError != null
                         )
-                        
-                        // Enhanced Error Display
+
                         if (uiState.titleError != null) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -180,14 +158,13 @@ fun CreatePostScreen(
                     }
                 )
 
-                // Enhanced Category Selection - konsisten dengan HomeScreen dropdown style
+                // Category Selection
                 EnhancedCreatePostCard(
                     title = Constants.POST_CATEGORY_TEXT,
                     content = {
                         var expanded by remember { mutableStateOf(false) }
 
                         if (uiState.isCategoriesLoading) {
-                            // Enhanced Loading State - konsisten dengan HomeScreen
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -227,7 +204,7 @@ fun CreatePostScreen(
                                     shape = RoundedCornerShape(12.dp),
                                     isError = uiState.categoryError != null
                                 )
-                                
+
                                 ExposedDropdownMenu(
                                     expanded = expanded,
                                     onDismissRequest = { expanded = false }
@@ -244,7 +221,7 @@ fun CreatePostScreen(
                                 }
                             }
                         }
-                        
+
                         if (uiState.categoryError != null) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -256,15 +233,15 @@ fun CreatePostScreen(
                     }
                 )
 
-                // Enhanced Content Input - konsisten dengan style lain
+                // Content Input
                 EnhancedCreatePostCard(
                     title = Constants.POST_CONTENT_TEXT,
                     content = {
                         OutlinedTextField(
                             value = uiState.content,
                             onValueChange = { viewModel.updateContent(it) },
-                            placeholder = { 
-                                Text(Constants.POST_CONTENT_HINT) 
+                            placeholder = {
+                                Text(Constants.POST_CONTENT_HINT)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -288,14 +265,13 @@ fun CreatePostScreen(
                     }
                 )
 
-                // Enhanced Image Upload - konsisten dengan PostDetailScreen image handling
+                // FIXED: Image Upload section
                 EnhancedCreatePostCard(
                     title = "Gambar *",
                     content = {
                         Column {
                             OutlinedButton(
-                                onClick = { 
-                                    // Pastikan hanya memilih gambar seperti di ProfileScreen
+                                onClick = {
                                     imagePickerLauncher.launch("image/*")
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -309,10 +285,9 @@ fun CreatePostScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Pilih Gambar (JPG/PNG, Max 10MB)")
                             }
-                            
+
                             if (uiState.selectedImageUri != null) {
                                 Spacer(modifier = Modifier.height(12.dp))
-                                // Enhanced Image Preview - konsisten dengan PostDetailScreen
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp),
@@ -329,12 +304,12 @@ fun CreatePostScreen(
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Gambar dipilih",
+                                    text = "✅ Gambar dipilih",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            
+
                             if (uiState.imageError != null) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
@@ -347,7 +322,7 @@ fun CreatePostScreen(
                     }
                 )
 
-                // Enhanced Error Message - konsisten dengan HomeScreen error handling
+                // Error Message
                 AnimatedVisibility(
                     visible = uiState.error != null,
                     enter = fadeIn() + expandVertically(),
@@ -388,7 +363,7 @@ fun CreatePostScreen(
                     }
                 }
 
-                // Enhanced Success Message - konsisten dengan pattern HomeScreen
+                // Success Message
                 AnimatedVisibility(
                     visible = uiState.isSuccess,
                     enter = fadeIn() + expandVertically(),
@@ -433,7 +408,6 @@ fun CreatePostScreen(
     }
 }
 
-// Enhanced CreatePostCard Component - konsisten dengan PostDetailScreen components
 @Composable
 private fun EnhancedCreatePostCard(
     title: String,

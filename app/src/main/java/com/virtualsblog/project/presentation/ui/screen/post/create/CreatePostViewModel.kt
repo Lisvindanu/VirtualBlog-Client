@@ -1,5 +1,7 @@
 package com.virtualsblog.project.presentation.ui.screen.post.create
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.virtualsblog.project.domain.model.Category
@@ -14,7 +16,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
-import com.virtualsblog.project.util.FileUtils
 
 @HiltViewModel
 class CreatePostViewModel @Inject constructor(
@@ -32,7 +33,7 @@ class CreatePostViewModel @Inject constructor(
     private fun loadCategories() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isCategoriesLoading = true)
-            
+
             try {
                 getCategoriesUseCase().collect { resource ->
                     when (resource) {
@@ -84,21 +85,91 @@ class CreatePostViewModel @Inject constructor(
         )
     }
 
-    fun updateSelectedImage(file: File?, uriString: String?) {
-        val imageError = when {
-            file == null -> "Pilih gambar untuk postingan"
-            !file.exists() -> "File gambar tidak ditemukan"
-            file.length() == 0L -> "File gambar kosong atau rusak"
-            file.length() > Constants.MAX_IMAGE_SIZE -> "Ukuran gambar maksimal 10MB"
-            !FileUtils.isValidImageFile(file) -> "File harus berupa gambar JPG, JPEG, atau PNG yang valid"
-            else -> null
-        }
+    // SIMPLIFIED: Image handling method yang lebih sederhana dan reliable
+    fun updateSelectedImage(context: Context, imageUri: Uri) {
+        viewModelScope.launch {
+            try {
+                // Validasi MIME type
+                val mimeType = context.contentResolver.getType(imageUri)
+                if (mimeType == null || !isValidImageType(mimeType)) {
+                    _uiState.value = _uiState.value.copy(
+                        selectedImageFile = null,
+                        selectedImageUri = null,
+                        imageError = "File harus berupa gambar JPG, JPEG, atau PNG"
+                    )
+                    return@launch
+                }
 
-        _uiState.value = _uiState.value.copy(
-            selectedImageFile = if (imageError == null) file else null,
-            selectedImageUri = if (imageError == null) uriString else null,
-            imageError = imageError
-        )
+                // Baca input stream untuk validasi
+                val inputStream = context.contentResolver.openInputStream(imageUri)
+                if (inputStream == null) {
+                    _uiState.value = _uiState.value.copy(
+                        selectedImageFile = null,
+                        selectedImageUri = null,
+                        imageError = "Gagal membaca file gambar"
+                    )
+                    return@launch
+                }
+
+                // Read file content ke byte array untuk validasi ukuran
+                val fileBytes = inputStream.use { it.readBytes() }
+
+                if (fileBytes.size > Constants.MAX_IMAGE_SIZE) {
+                    _uiState.value = _uiState.value.copy(
+                        selectedImageFile = null,
+                        selectedImageUri = null,
+                        imageError = "Ukuran file maksimal 10MB"
+                    )
+                    return@launch
+                }
+
+                // Buat temporary file dengan nama yang proper
+                val fileExtension = getFileExtension(mimeType)
+                val fileName = "post_image_${System.currentTimeMillis()}.$fileExtension"
+                val tempFile = File(context.cacheDir, fileName)
+
+                // Write bytes ke file
+                tempFile.writeBytes(fileBytes)
+
+                // Validasi file hasil write
+                if (tempFile.exists() && tempFile.length() > 0) {
+                    _uiState.value = _uiState.value.copy(
+                        selectedImageFile = tempFile,
+                        selectedImageUri = imageUri.toString(),
+                        imageError = null
+                    )
+                } else {
+                    if (tempFile.exists()) tempFile.delete()
+                    _uiState.value = _uiState.value.copy(
+                        selectedImageFile = null,
+                        selectedImageUri = null,
+                        imageError = "Gagal memproses file gambar"
+                    )
+                }
+
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    selectedImageFile = null,
+                    selectedImageUri = null,
+                    imageError = "Error: ${e.message}"
+                )
+            }
+        }
+    }
+
+    // Helper methods
+    private fun isValidImageType(mimeType: String): Boolean {
+        val allowedTypes = arrayOf("image/jpeg", "image/png", "image/jpg")
+        return allowedTypes.contains(mimeType.lowercase())
+    }
+
+    private fun getFileExtension(mimeType: String): String {
+        return when (mimeType.lowercase()) {
+            "image/jpeg" -> "jpg"
+            "image/jpg" -> "jpg"
+            "image/png" -> "png"
+            else -> "jpg"
+        }
     }
 
     fun createPost() {
@@ -137,9 +208,6 @@ class CreatePostViewModel @Inject constructor(
                                 isSuccess = true,
                                 error = null
                             )
-                            // Auto hide success message after delay seperti ProfileViewModel
-                            kotlinx.coroutines.delay(3000)
-                            _uiState.value = _uiState.value.copy(isSuccess = false)
                         }
                         is Resource.Error -> {
                             _uiState.value = _uiState.value.copy(
@@ -165,15 +233,15 @@ class CreatePostViewModel @Inject constructor(
         val currentState = _uiState.value
         var hasError = false
 
-        // Validate title
+        // Validate title sesuai API requirement (minimal 3 karakter)
         val titleError = when {
             currentState.title.isBlank() -> {
                 hasError = true
-                Constants.VALIDATION_POST_TITLE_REQUIRED
+                "Judul postingan harus diisi"
             }
-            currentState.title.length < Constants.MIN_TITLE_LENGTH -> {
+            currentState.title.length < 3 -> { // API requirement
                 hasError = true
-                "Judul postingan minimal ${Constants.MIN_TITLE_LENGTH} karakter"
+                "Judul postingan minimal 3 karakter"
             }
             currentState.title.length > Constants.MAX_TITLE_LENGTH -> {
                 hasError = true
@@ -182,15 +250,15 @@ class CreatePostViewModel @Inject constructor(
             else -> null
         }
 
-        // Validate content
+        // Validate content sesuai API requirement (minimal 10 karakter)
         val contentError = when {
             currentState.content.isBlank() -> {
                 hasError = true
-                Constants.VALIDATION_POST_CONTENT_REQUIRED
+                "Konten postingan harus diisi"
             }
-            currentState.content.length < Constants.MIN_CONTENT_LENGTH -> {
+            currentState.content.length < 10 -> { // API requirement
                 hasError = true
-                "Konten postingan minimal ${Constants.MIN_CONTENT_LENGTH} karakter"
+                "Konten postingan minimal 10 karakter"
             }
             currentState.content.length > Constants.MAX_CONTENT_LENGTH -> {
                 hasError = true
@@ -208,7 +276,7 @@ class CreatePostViewModel @Inject constructor(
             else -> null
         }
 
-        // Validate image dengan pengecekan yang lebih ketat
+        // Validate image
         val imageError = when {
             currentState.selectedImageFile == null -> {
                 hasError = true
@@ -220,15 +288,11 @@ class CreatePostViewModel @Inject constructor(
             }
             currentState.selectedImageFile.length() == 0L -> {
                 hasError = true
-                "File gambar kosong atau rusak"
+                "File gambar kosong"
             }
             currentState.selectedImageFile.length() > Constants.MAX_IMAGE_SIZE -> {
                 hasError = true
-                "File terlalu besar (maksimal 10MB)"
-            }
-            !FileUtils.isValidImageFile(currentState.selectedImageFile) -> {
-                hasError = true
-                "File harus berupa gambar JPG, JPEG, atau PNG yang valid"
+                "Ukuran gambar maksimal 10MB"
             }
             else -> null
         }
