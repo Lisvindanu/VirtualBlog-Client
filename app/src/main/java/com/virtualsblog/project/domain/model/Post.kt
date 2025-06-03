@@ -4,7 +4,8 @@ data class Post(
     val id: String,
     val title: String,
     val content: String,
-    val author: String,
+    val author: String, // Author's full name
+    val authorId: String, // ID of the author
     val authorUsername: String,
     val authorImage: String? = null,
     val category: String,

@@ -1,3 +1,4 @@
+// app/src/main/java/com/virtualsblog/project/data/mapper/PostMapper.kt
 package com.virtualsblog.project.data.mapper
 
 import com.virtualsblog.project.data.remote.dto.response.PostDetailResponse
@@ -13,6 +14,7 @@ object PostMapper {
             title = response.title,
             content = response.content,
             author = response.author.fullname,
+            authorId = response.authorId, // Added authorId mapping
             authorUsername = response.author.username,
             authorImage = response.author.image,
             createdAt = response.createdAt,
@@ -23,7 +25,7 @@ object PostMapper {
             isLiked = response.liked,
             image = response.image,
             slug = response.slug,
-            actualComments = CommentMapper.mapEmbeddedCommentResponseListToDomain(response.comments ?: emptyList()) // Handle null
+            actualComments = CommentMapper.mapEmbeddedCommentResponseListToDomain(response.comments ?: emptyList())
         )
     }
 
@@ -37,6 +39,7 @@ object PostMapper {
             title = response.title,
             content = response.content,
             author = response.author.fullname,
+            authorId = response.authorId, // Added authorId mapping
             authorUsername = response.author.username,
             authorImage = response.author.image,
             category = response.category.name,
@@ -47,7 +50,7 @@ object PostMapper {
             isLiked = response.liked,
             image = response.image,
             slug = response.slug,
-            actualComments = CommentMapper.mapEmbeddedCommentResponseListToDomain(response.comments ?: emptyList()) // Handle null
+            actualComments = CommentMapper.mapEmbeddedCommentResponseListToDomain(response.comments ?: emptyList())
         )
     }
 }

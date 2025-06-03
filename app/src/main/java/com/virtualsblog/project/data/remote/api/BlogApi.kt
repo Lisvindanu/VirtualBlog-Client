@@ -1,8 +1,10 @@
+// app/src/main/java/com/virtualsblog/project/data/remote/api/BlogApi.kt
 package com.virtualsblog.project.data.remote.api
 
 import com.virtualsblog.project.data.remote.dto.request.CreateCommentRequest
+// import com.virtualsblog.project.data.remote.dto.request.EditPostRequest // Will be implicitly handled by Multipart
 import com.virtualsblog.project.data.remote.dto.response.*
-import com.virtualsblog.project.util.Constants // Still needed for BEARER_PREFIX etc.
+import com.virtualsblog.project.util.Constants
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -35,6 +37,22 @@ interface BlogApi {
         @Part("categoryId") categoryId: RequestBody,
         @Part photo: MultipartBody.Part
     ): Response<ApiResponse<PostResponse>>
+
+    @Multipart
+    @PUT("posts/{id}")
+    suspend fun updatePost(
+        @Path("id") postId: String,
+        @Header("Authorization") authorization: String,
+        @Part("title") title: RequestBody,
+        @Part("content") content: RequestBody,
+        @Part photo: MultipartBody.Part? // Photo is optional for update
+    ): Response<ApiResponse<PostResponse>> // Assuming response is similar to createPost
+
+    @DELETE("posts/{id}")
+    suspend fun deletePost(
+        @Path("id") postId: String,
+        @Header("Authorization") authorization: String
+    ): Response<ApiResponse<PostResponse>> // API docs say it returns the deleted post data
 
     // COMMENT ENDPOINTS
     @POST("posts/{id}/comments")

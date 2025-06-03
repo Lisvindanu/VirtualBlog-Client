@@ -17,6 +17,7 @@ import com.virtualsblog.project.presentation.ui.screen.home.HomeScreen
 import com.virtualsblog.project.presentation.ui.screen.splash.SplashScreen
 import com.virtualsblog.project.presentation.ui.screen.post.create.CreatePostScreen
 import com.virtualsblog.project.presentation.ui.screen.post.detail.PostDetailScreen
+import com.virtualsblog.project.presentation.ui.screen.post.edit.EditPostScreen
 import com.virtualsblog.project.presentation.ui.screen.post.list.PostListScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.changepassword.ChangePasswordScreen
 
@@ -191,7 +192,11 @@ fun BlogNavGraph(
                     navController.popBackStack()
                 },
                 onPostCreated = {
-                    navController.popBackStack()
+                    // Navigate back to Home and clear backstack to prevent going back to CreatePost
+                    navController.navigate(BlogDestinations.HOME_ROUTE) {
+                        popUpTo(BlogDestinations.CREATE_POST_ROUTE) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             )
         }
@@ -225,8 +230,7 @@ fun BlogNavGraph(
             )
         }
 
-        // Edit Post Screen - Next Jobdesk
-        /*
+        // Edit Post Screen - Implementation
         composable(
             route = BlogDestinations.EDIT_POST_WITH_ID,
             arguments = listOf(
@@ -234,8 +238,18 @@ fun BlogNavGraph(
             )
         ) { backStackEntry ->
             val postId = backStackEntry.arguments?.getString(BlogDestinations.Args.POST_ID) ?: ""
-            // TODO: Implementasi EditPostScreen
+            EditPostScreen(
+                postId = postId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onPostUpdated = {
+                    // Navigate back to post detail and ensure it refreshes
+                    navController.popBackStack() // Pop EditPostScreen
+                    // The PostDetailScreen should automatically refresh its data
+                    // when resumed due to LaunchedEffect or similar data loading mechanism
+                }
+            )
         }
-        */
     }
 }
