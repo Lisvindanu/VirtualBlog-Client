@@ -2,7 +2,7 @@ package com.virtualsblog.project.data.remote.api
 
 import com.virtualsblog.project.data.remote.dto.request.CreateCommentRequest
 import com.virtualsblog.project.data.remote.dto.response.*
-import com.virtualsblog.project.util.Constants
+import com.virtualsblog.project.util.Constants // Still needed for BEARER_PREFIX etc.
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -12,27 +12,23 @@ interface BlogApi {
 
     @GET("posts")
     suspend fun getAllPosts(
-        @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY,
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
     ): Response<PostsApiResponse>
 
     @GET("posts/{id}")
     suspend fun getPostById(
         @Path("id") postId: String,
-        @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY,
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
     ): Response<PostDetailApiResponse>
 
     @GET("categories")
     suspend fun getCategories(
-        @Header(Constants.HEADER_AUTHORIZATION) authorization: String,
-        @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY
+        @Header(Constants.HEADER_AUTHORIZATION) authorization: String
     ): Response<CategoriesApiResponse>
 
     @Multipart
     @POST("posts")
     suspend fun createPost(
-        @Header("X-API-KEY") apiKey: String = Constants.API_KEY,
         @Header("Authorization") authorization: String,
         @Part("title") title: RequestBody,
         @Part("content") content: RequestBody,
@@ -44,7 +40,6 @@ interface BlogApi {
     @POST("posts/{id}/comments")
     suspend fun createComment(
         @Path("id") postId: String,
-        @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY,
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String,
         @Body request: CreateCommentRequest
     ): Response<CommentApiResponse>
@@ -52,7 +47,6 @@ interface BlogApi {
     @DELETE("comments/{id}")
     suspend fun deleteComment(
         @Path("id") commentId: String,
-        @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY,
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
     ): Response<CommentApiResponse>
 
@@ -60,7 +54,6 @@ interface BlogApi {
     @POST("posts/{id}/likes")
     suspend fun toggleLike(
         @Path("id") postId: String,
-        @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY,
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
     ): Response<LikeToggleResponse>
 }

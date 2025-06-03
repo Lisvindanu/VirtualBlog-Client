@@ -2,7 +2,8 @@ package com.virtualsblog.project.presentation.ui.screen.post.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.virtualsblog.project.domain.model.User
+import com.virtualsblog.project.domain.model.User // Pastikan Comment diimport jika belum
+import com.virtualsblog.project.domain.model.Comment // Import Comment
 import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.usecase.blog.GetPostByIdUseCase
 import com.virtualsblog.project.domain.usecase.blog.ToggleLikeUseCase
@@ -32,19 +33,17 @@ class PostDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PostDetailUiState())
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
 
-    // Method to get current user ID from UserPreferences
     fun getCurrentUserId(): Flow<String?> {
         return userPreferences.userData.map { it.userId }
     }
 
-    // Method to get current user from AuthRepository
     fun getCurrentUser(): Flow<User?> {
         return authRepository.getCurrentUser()
     }
 
     fun loadPost(postId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, comments = emptyList()) // Reset comments
 
             getPostByIdUseCase(postId).collect { resource ->
                 when (resource) {
@@ -52,9 +51,11 @@ class PostDetailViewModel @Inject constructor(
                         _uiState.value = _uiState.value.copy(isLoading = true, error = null)
                     }
                     is Resource.Success -> {
+                        val postData = resource.data // Ini adalah domain.model.Post
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            post = resource.data,
+                            post = postData,
+                            comments = postData?.actualComments ?: emptyList(), // Isi uiState.comments dari postData
                             error = null
                         )
                     }
@@ -71,10 +72,8 @@ class PostDetailViewModel @Inject constructor(
 
     fun toggleLike() {
         val currentPost = _uiState.value.post ?: return
-
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLikeLoading = true)
-
             toggleLikeUseCase(currentPost.id).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
@@ -82,6 +81,7 @@ class PostDetailViewModel @Inject constructor(
                         val updatedPost = currentPost.copy(
                             isLiked = isLiked,
                             likes = totalLikes
+                            // Jumlah komentar di sini (currentPost.comments) tidak perlu diubah saat like
                         )
                         _uiState.value = _uiState.value.copy(
                             post = updatedPost,
@@ -104,27 +104,24 @@ class PostDetailViewModel @Inject constructor(
 
     fun createComment(content: String) {
         val currentPost = _uiState.value.post ?: return
-
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isCommentLoading = true)
-
             createCommentUseCase(currentPost.id, content).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
                         val newComment = resource.data!!
                         val updatedComments = _uiState.value.comments.toMutableList()
-                        updatedComments.add(0, newComment) // Add to beginning
+                        updatedComments.add(0, newComment)
 
-                        // Update comment count in post
+                        // Perbarui jumlah komentar pada objek Post di UI state
                         val updatedPost = currentPost.copy(
-                            comments = currentPost.comments + 1
+                            comments = currentPost.comments + 1 // Ini adalah count (Int)
                         )
-
                         _uiState.value = _uiState.value.copy(
                             post = updatedPost,
-                            comments = updatedComments,
+                            comments = updatedComments, // Ini adalah List<Comment>
                             isCommentLoading = false,
-                            commentText = "" // Clear comment input
+                            commentText = ""
                         )
                     }
                     is Resource.Error -> {
@@ -143,19 +140,15 @@ class PostDetailViewModel @Inject constructor(
 
     fun deleteComment(commentId: String) {
         val currentPost = _uiState.value.post ?: return
-
         viewModelScope.launch {
             deleteCommentUseCase(commentId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        val updatedComments = _uiState.value.comments.toMutableList()
-                        updatedComments.removeAll { it.id == commentId }
+                        val updatedComments = _uiState.value.comments.filterNot { it.id == commentId }
 
-                        // Update comment count in post
                         val updatedPost = currentPost.copy(
                             comments = maxOf(0, currentPost.comments - 1)
                         )
-
                         _uiState.value = _uiState.value.copy(
                             post = updatedPost,
                             comments = updatedComments
@@ -167,7 +160,7 @@ class PostDetailViewModel @Inject constructor(
                         )
                     }
                     is Resource.Loading -> {
-                        // Could add loading state for individual comment deletion if needed
+                        // Optional: loading state
                     }
                 }
             }

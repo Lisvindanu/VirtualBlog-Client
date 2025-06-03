@@ -189,7 +189,6 @@ class BlogRepositoryImpl @Inject constructor(
 
             val response = blogApi.getCategories(
                 authorization = "${Constants.BEARER_PREFIX}$token",
-                apiKey = Constants.API_KEY
             )
 
             if (response.isSuccessful) {
@@ -265,7 +264,6 @@ class BlogRepositoryImpl @Inject constructor(
 
             // API call
             val response = blogApi.createPost(
-                apiKey = Constants.API_KEY,
                 authorization = "Bearer $token",
                 title = titleBody,
                 content = contentBody,

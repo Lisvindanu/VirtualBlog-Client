@@ -11,8 +11,9 @@ data class Post(
     val createdAt: String,
     val updatedAt: String,
     val likes: Int = 0,
-    val comments: Int = 0,
+    val comments: Int = 0, // Jumlah komentar (count)
     val isLiked: Boolean = false,
     val image: String? = null,
-    val slug: String
+    val slug: String,
+    val actualComments: List<Comment> = emptyList() // Field baru untuk daftar detail komentar
 )
