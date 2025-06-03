@@ -1,10 +1,7 @@
 package com.virtualsblog.project.data.remote.api
 
-import com.virtualsblog.project.data.remote.dto.response.CategoriesApiResponse
-import com.virtualsblog.project.data.remote.dto.response.PostResponse
-import com.virtualsblog.project.data.remote.dto.response.PostsApiResponse
-import com.virtualsblog.project.data.remote.dto.response.PostDetailApiResponse
-import com.virtualsblog.project.data.remote.dto.response.ApiResponse
+import com.virtualsblog.project.data.remote.dto.request.CreateCommentRequest
+import com.virtualsblog.project.data.remote.dto.response.*
 import com.virtualsblog.project.util.Constants
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -32,7 +29,6 @@ interface BlogApi {
         @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY
     ): Response<CategoriesApiResponse>
 
-    // FIXED: Response type should be wrapped in ApiResponse based on API documentation
     @Multipart
     @POST("posts")
     suspend fun createPost(
@@ -42,5 +38,29 @@ interface BlogApi {
         @Part("content") content: RequestBody,
         @Part("categoryId") categoryId: RequestBody,
         @Part photo: MultipartBody.Part
-    ): Response<ApiResponse<PostResponse>> // FIXED: Wrap in ApiResponse
+    ): Response<ApiResponse<PostResponse>>
+
+    // COMMENT ENDPOINTS
+    @POST("posts/{id}/comments")
+    suspend fun createComment(
+        @Path("id") postId: String,
+        @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY,
+        @Header(Constants.HEADER_AUTHORIZATION) authorization: String,
+        @Body request: CreateCommentRequest
+    ): Response<CommentApiResponse>
+
+    @DELETE("comments/{id}")
+    suspend fun deleteComment(
+        @Path("id") commentId: String,
+        @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY,
+        @Header(Constants.HEADER_AUTHORIZATION) authorization: String
+    ): Response<CommentApiResponse>
+
+    // LIKE ENDPOINTS
+    @POST("posts/{id}/likes")
+    suspend fun toggleLike(
+        @Path("id") postId: String,
+        @Header(Constants.HEADER_API_KEY) apiKey: String = Constants.API_KEY,
+        @Header(Constants.HEADER_AUTHORIZATION) authorization: String
+    ): Response<LikeToggleResponse>
 }

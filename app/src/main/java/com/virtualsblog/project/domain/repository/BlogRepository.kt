@@ -1,6 +1,7 @@
 package com.virtualsblog.project.domain.repository
 
 import com.virtualsblog.project.domain.model.Category
+import com.virtualsblog.project.domain.model.Comment
 import com.virtualsblog.project.domain.model.Post
 import com.virtualsblog.project.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -18,4 +19,19 @@ interface BlogRepository {
         categoryId: String,
         photo: File
     ): Flow<Resource<Post>>
+
+    // COMMENT METHODS
+    suspend fun createComment(
+        postId: String,
+        content: String
+    ): Flow<Resource<Comment>>
+
+    suspend fun deleteComment(
+        commentId: String
+    ): Flow<Resource<Comment>>
+
+    // LIKE METHODS
+    suspend fun toggleLike(
+        postId: String
+    ): Flow<Resource<Pair<Boolean, Int>>> // Returns (isLiked, totalLikes)
 }
