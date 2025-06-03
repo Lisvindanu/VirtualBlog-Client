@@ -166,7 +166,7 @@ private fun EnhancedTopAppBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 16.dp), // Added top margin
+                .padding(start = 16.dp, end = 16.dp, top = 40.dp, bottom = 16.dp), // Increased top margin from 24dp to 40dp
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
