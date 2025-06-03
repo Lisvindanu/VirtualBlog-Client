@@ -39,6 +39,7 @@ import com.virtualsblog.project.preferences.UserPreferences
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.map
+import com.virtualsblog.project.presentation.ui.component.FullScreenImageViewer
 
 // Helper composable to get current user ID from UserPreferences
 @Composable
