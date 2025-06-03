@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
+import com.virtualsblog.project.presentation.MainViewModel
 import com.virtualsblog.project.presentation.ui.screen.auth.login.LoginScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.register.RegisterScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.profile.ProfileScreen
@@ -23,7 +24,8 @@ import com.virtualsblog.project.presentation.ui.screen.auth.changepassword.Chang
 
 @Composable
 fun BlogNavGraph(
-    navController: NavHostController
+    navController: NavHostController,
+    mainViewModel: MainViewModel? = null
 ) {
     NavHost(
         navController = navController,
@@ -138,7 +140,7 @@ fun BlogNavGraph(
             )
         }
 
-        // Layar Utama Aplikasi
+        // Layar Utama Aplikasi - TIDAK PERLU MAINVIEWMODEL DI PARAMETER
         composable(BlogDestinations.HOME_ROUTE) {
             HomeScreen(
                 onNavigateToProfile = {
@@ -151,6 +153,8 @@ fun BlogNavGraph(
                     navController.navigate(BlogDestinations.postDetailRoute(postId))
                 },
                 onNavigateToLogin = {
+                    // Clear navigation state when logging out
+                    mainViewModel?.userLoggedOut()
                     navController.navigate(BlogDestinations.LOGIN_ROUTE) {
                         popUpTo(BlogDestinations.HOME_ROUTE) { inclusive = true }
                     }
@@ -158,6 +162,7 @@ fun BlogNavGraph(
                 onNavigateToAllPosts = {
                     navController.navigate(BlogDestinations.POST_LIST_ROUTE)
                 }
+                // REMOVED: mainViewModel parameter - HomeScreen uses hiltViewModel() internally
             )
         }
 
@@ -167,6 +172,8 @@ fun BlogNavGraph(
                     navController.popBackStack()
                 },
                 onNavigateToLogin = {
+                    // Clear navigation state when logging out
+                    mainViewModel?.userLoggedOut()
                     navController.navigate(BlogDestinations.LOGIN_ROUTE) {
                         popUpTo(0) { inclusive = true }
                     }
@@ -185,14 +192,17 @@ fun BlogNavGraph(
             )
         }
 
-        // Layar Buat Post (tanpa parameter)
+        // Layar Buat Post
         composable(BlogDestinations.CREATE_POST_ROUTE) {
             CreatePostScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
                 onPostCreated = {
-                    // Navigate back to Home and clear backstack to prevent going back to CreatePost
+                    // Signal that a new post was created
+                    mainViewModel?.postCreated("new_post")
+
+                    // Navigate back to Home and ensure refresh
                     navController.navigate(BlogDestinations.HOME_ROUTE) {
                         popUpTo(BlogDestinations.CREATE_POST_ROUTE) { inclusive = true }
                         launchSingleTop = true
@@ -201,6 +211,7 @@ fun BlogNavGraph(
             )
         }
 
+        // Post List Screen
         composable(BlogDestinations.POST_LIST_ROUTE) {
             PostListScreen(
                 onNavigateToPostDetail = { postId ->
@@ -209,9 +220,11 @@ fun BlogNavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
+                // REMOVED: mainViewModel parameter - PostListScreen uses hiltViewModel() internally
             )
         }
 
+        // Post Detail Screen
         composable(
             route = BlogDestinations.POST_DETAIL_WITH_ID,
             arguments = listOf(
@@ -227,10 +240,11 @@ fun BlogNavGraph(
                 onNavigateToEdit = { id ->
                     navController.navigate(BlogDestinations.editPostRoute(id))
                 }
+                // REMOVED: mainViewModel parameter - PostDetailScreen uses hiltViewModel() internally
             )
         }
 
-        // Edit Post Screen - Implementation
+        // Edit Post Screen
         composable(
             route = BlogDestinations.EDIT_POST_WITH_ID,
             arguments = listOf(
@@ -244,11 +258,13 @@ fun BlogNavGraph(
                     navController.popBackStack()
                 },
                 onPostUpdated = {
-                    // Navigate back to post detail and ensure it refreshes
-                    navController.popBackStack() // Pop EditPostScreen
-                    // The PostDetailScreen should automatically refresh its data
-                    // when resumed due to LaunchedEffect or similar data loading mechanism
+                    // Signal that a post was updated
+                    mainViewModel?.postUpdated(postId)
+
+                    // Navigate back to post detail and refresh data
+                    navController.popBackStack()
                 }
+                // REMOVED: mainViewModel parameter - EditPostScreen uses hiltViewModel() internally
             )
         }
     }

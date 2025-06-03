@@ -7,18 +7,18 @@ import com.virtualsblog.project.domain.model.Comment
 import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.usecase.blog.GetPostByIdUseCase
 import com.virtualsblog.project.domain.usecase.blog.ToggleLikeUseCase
-// Import for deleting the post itself
 import com.virtualsblog.project.domain.usecase.blog.DeletePostUseCase as ActualDeletePostUseCase
 import com.virtualsblog.project.domain.usecase.comment.CreateCommentUseCase
-import com.virtualsblog.project.domain.usecase.comment.DeleteCommentUseCase // This is for comments
+import com.virtualsblog.project.domain.usecase.comment.DeleteCommentUseCase
 import com.virtualsblog.project.preferences.UserPreferences
+import com.virtualsblog.project.util.NavigationState
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first // For getting the first emission
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -28,43 +28,40 @@ class PostDetailViewModel @Inject constructor(
     private val getPostByIdUseCase: GetPostByIdUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
     private val createCommentUseCase: CreateCommentUseCase,
-    private val deleteCommentUseCase: DeleteCommentUseCase, // For deleting comments
-    private val actualDeletePostUseCase: ActualDeletePostUseCase, // For deleting the entire post
-    private val authRepository: AuthRepository, // Kept for getCurrentUser if still needed elsewhere
-    private val userPreferences: UserPreferences
+    private val deleteCommentUseCase: DeleteCommentUseCase,
+    private val actualDeletePostUseCase: ActualDeletePostUseCase,
+    private val authRepository: AuthRepository,
+    private val userPreferences: UserPreferences,
+    private val navigationState: NavigationState
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PostDetailUiState())
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
 
     init {
-        // Fetch and set currentUserId in the state when ViewModel is created
         viewModelScope.launch {
-            val userId = userPreferences.userData.map { it.userId }.first() // Get initial value
+            val userId = userPreferences.userData.map { it.userId }.first()
             _uiState.value = _uiState.value.copy(currentUserId = userId)
         }
     }
 
-    // This function can still be used by the screen if it needs a direct Flow
     fun getCurrentUserId(): Flow<String?> {
         return userPreferences.userData.map { it.userId }
     }
 
-    // Kept if the screen directly observes this, though currentUserId is now in UiState
     fun getCurrentUser(): Flow<User?> {
         return authRepository.getCurrentUser()
     }
 
     fun loadPost(postId: String) {
         viewModelScope.launch {
-            // Reset relevant states before loading
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 error = null,
                 comments = emptyList(),
-                post = null, // Clear previous post data
-                deletePostSuccess = false, // Reset delete success flag
-                deletePostError = null // Reset delete error
+                post = null,
+                deletePostSuccess = false,
+                deletePostError = null
             )
 
             getPostByIdUseCase(postId).collect { resource ->
@@ -85,7 +82,7 @@ class PostDetailViewModel @Inject constructor(
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             error = resource.message ?: "Gagal memuat detail postingan",
-                            post = null // Ensure post is null on error
+                            post = null
                         )
                     }
                 }
@@ -113,7 +110,7 @@ class PostDetailViewModel @Inject constructor(
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
                             isLikeLoading = false,
-                            error = resource.message // Can show this error in a Snackbar/Toast
+                            error = resource.message
                         )
                     }
                     is Resource.Loading -> {
@@ -133,7 +130,7 @@ class PostDetailViewModel @Inject constructor(
                     is Resource.Success -> {
                         val newComment = resource.data!!
                         val updatedComments = _uiState.value.comments.toMutableList().apply {
-                            add(0, newComment) // Add new comment to the top
+                            add(0, newComment)
                         }
                         val updatedPost = currentPost.copy(
                             comments = currentPost.comments + 1
@@ -142,13 +139,13 @@ class PostDetailViewModel @Inject constructor(
                             post = updatedPost,
                             comments = updatedComments,
                             isCommentLoading = false,
-                            commentText = "" // Clear comment input
+                            commentText = ""
                         )
                     }
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
                             isCommentLoading = false,
-                            error = resource.message // Show this error
+                            error = resource.message
                         )
                     }
                     is Resource.Loading -> {
@@ -162,7 +159,6 @@ class PostDetailViewModel @Inject constructor(
     fun deleteComment(commentId: String) {
         val currentPost = _uiState.value.post ?: return
         viewModelScope.launch {
-            // Optionally, add a loading state for deleting a specific comment if needed
             deleteCommentUseCase(commentId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
@@ -177,7 +173,7 @@ class PostDetailViewModel @Inject constructor(
                     }
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
-                            error = resource.message // Show this error
+                            error = resource.message
                         )
                     }
                     is Resource.Loading -> {
@@ -196,40 +192,60 @@ class PostDetailViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null, deletePostError = null)
     }
 
-    // --- ADDED FUNCTIONS for Post Deletion ---
+
     fun deleteCurrentPost() {
-        val postIdToDelete = _uiState.value.post?.id ?: return // Ensure post ID is available
+        val postIdToDelete = _uiState.value.post?.id ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isDeletingPost = true,
                 deletePostError = null,
-                deletePostSuccess = false
+                deletePostSuccess = false,
+                error = null
             )
-            actualDeletePostUseCase(postIdToDelete).collect { resource ->
-                when (resource) {
-                    is Resource.Success -> {
-                        _uiState.value = _uiState.value.copy(
-                            isDeletingPost = false,
-                            deletePostSuccess = true,
-                            post = null // Clear the post from state upon successful deletion
-                        )
-                    }
-                    is Resource.Error -> {
-                        _uiState.value = _uiState.value.copy(
-                            isDeletingPost = false,
-                            deletePostError = resource.message ?: "Gagal menghapus postingan."
-                        )
-                    }
-                    is Resource.Loading -> {
-                        _uiState.value = _uiState.value.copy(isDeletingPost = true) // Already set, but good for clarity
+
+            try {
+                actualDeletePostUseCase(postIdToDelete).collect { resource ->
+                    when (resource) {
+                        is Resource.Success -> {
+                            // FIXED: Signal navigation state about deletion
+                            navigationState.postDeleted(postIdToDelete)
+
+                            _uiState.value = _uiState.value.copy(
+                                isDeletingPost = false,
+                                deletePostSuccess = true,
+                                post = null,
+                                comments = emptyList(),
+                                error = null
+                            )
+                        }
+                        is Resource.Error -> {
+                            _uiState.value = _uiState.value.copy(
+                                isDeletingPost = false,
+                                deletePostError = resource.message ?: "Gagal menghapus postingan.",
+                                deletePostSuccess = false
+                            )
+                        }
+                        is Resource.Loading -> {
+                            _uiState.value = _uiState.value.copy(
+                                isDeletingPost = true,
+                                deletePostError = null
+                            )
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isDeletingPost = false,
+                    deletePostError = "Terjadi kesalahan tidak terduga: ${e.localizedMessage}",
+                    deletePostSuccess = false
+                )
             }
         }
     }
 
-    fun resetDeleteSuccessFlag() {
+
+
+fun resetDeleteSuccessFlag() {
         _uiState.value = _uiState.value.copy(deletePostSuccess = false)
     }
-    // --- END OF ADDED FUNCTIONS ---
 }
