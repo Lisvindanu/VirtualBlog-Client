@@ -2,12 +2,12 @@ package com.virtualsblog.project.util
 
 object Constants {
     // Konfigurasi API
-    const val BASE_URL = "https://be-prakmob.kodingin.id/api/v1/"
-    const val API_KEY = "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW"
+    const val BASE_URL = "https://be-prakmob.kodingin.id/api/v1/" // [cite: 22]
+    const val API_KEY = "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW" // [cite: 22]
 
     // API Endpoints
-    const val POSTS_ENDPOINT = "posts"
-    
+    const val POSTS_ENDPOINT = "posts" // [cite: 57]
+
     // Pagination & Limits
     const val HOME_POSTS_LIMIT = 10
 
@@ -25,37 +25,40 @@ object Constants {
     const val PREF_USER_IMAGE = "user_image"
 
     // Konstanta Validasi
-    const val MIN_FULLNAME_LENGTH = 3
-    const val MIN_USERNAME_LENGTH = 6
-    const val MIN_PASSWORD_LENGTH = 6
+    const val MIN_FULLNAME_LENGTH = 3 // [cite: 29]
+    const val MIN_USERNAME_LENGTH = 6 // [cite: 29]
+    const val MIN_PASSWORD_LENGTH = 6 // [cite: 29]
 
     // Pesan Error - Bahasa Indonesia
     const val ERROR_NETWORK = "Tidak dapat terhubung ke server"
     const val ERROR_UNKNOWN = "Terjadi kesalahan yang tidak diketahui"
     const val ERROR_VALIDATION = "Data yang dimasukkan tidak valid"
-    const val ERROR_UNAUTHORIZED = "Sesi Anda telah berakhir, silakan masuk kembali"
-    const val ERROR_USERNAME_EXISTS = "Nama pengguna sudah digunakan"
-    const val ERROR_EMAIL_EXISTS = "Email sudah digunakan"
+    const val ERROR_UNAUTHORIZED = "Sesi Anda telah berakhir, silakan masuk kembali" // [cite: 24, 27, 30, 35, 38, 41, 45, 47, 51, 56, 60, 65, 70, 72, 76, 80, 83, 87, 91, 95, 102, 108, 111]
+    const val ERROR_USERNAME_EXISTS = "Nama pengguna sudah terdaftar" // [cite: 31]
+    const val ERROR_EMAIL_EXISTS = "Email sudah digunakan" // [cite: 31]
     const val ERROR_USERNAME_INVALID = "Nama pengguna tidak valid"
     const val ERROR_PASSWORD_MISMATCH = "Kata sandi dan konfirmasi kata sandi tidak sama"
-    const val ERROR_LOGIN_FAILED = "Nama pengguna atau kata sandi salah"
+    const val ERROR_LOGIN_FAILED = "Nama pengguna atau kata sandi salah" // [cite: 28]
     const val ERROR_REGISTER_FAILED = "Gagal membuat akun baru"
     const val ERROR_PROFILE_UPDATE_FAILED = "Gagal memperbarui profil"
     const val ERROR_REQUIRED_FIELDS = "Semua bidang harus diisi"
-    const val ERROR_POST_NOT_FOUND = "Postingan tidak ditemukan"
+    const val ERROR_POST_NOT_FOUND = "Postingan tidak ditemukan" // [cite: 68, 70]
     const val ERROR_FAILED_LOAD_POST = "Gagal memuat postingan"
     const val ERROR_FAILED_LOAD_PROFILE = "Gagal memuat profil"
+    const val ERROR_POST_UPDATE_FAILED = "Gagal memperbarui postingan" // New
+    const val ERROR_POST_DELETE_FAILED = "Gagal menghapus postingan" // New
+
 
     // Pesan Sukses - Bahasa Indonesia
-    const val SUCCESS_LOGIN = "Berhasil masuk"
-    const val SUCCESS_REGISTER = "Pendaftaran berhasil"
-    const val SUCCESS_PROFILE_UPDATE = "Profil berhasil diperbarui"
+    const val SUCCESS_LOGIN = "Berhasil masuk" // [cite: 26]
+    const val SUCCESS_REGISTER = "Pendaftaran berhasil" // [cite: 30]
+    const val SUCCESS_PROFILE_UPDATE = "Profil berhasil diperbarui" // [cite: 47]
     const val SUCCESS_LOGOUT = "Berhasil keluar"
-    const val SUCCESS_POST_CREATED = "Postingan berhasil dibuat"
-    const val SUCCESS_POST_UPDATED = "Postingan berhasil diperbarui"
-    const val SUCCESS_POST_DELETED = "Postingan berhasil dihapus"
-    const val SUCCESS_PASSWORD_CHANGED = "Kata sandi berhasil diubah"
-    const val SUCCESS_OTP_SENT = "Kode verifikasi telah dikirim"
+    const val SUCCESS_POST_CREATED = "🎉\nPostingan berhasil dibuat!" // [cite: 63]
+    const val SUCCESS_POST_UPDATED = "Postingan berhasil diperbarui!" // New
+    const val SUCCESS_POST_DELETED = "Postingan berhasil dihapus." // New
+    const val SUCCESS_PASSWORD_CHANGED = "Kata sandi berhasil diubah!" // [cite: 51]
+    const val SUCCESS_OTP_SENT = "Kode verifikasi telah dikirim" // [cite: 35]
 
     // Pesan Validasi Form - Bahasa Indonesia
     const val VALIDATION_FULLNAME_REQUIRED = "Nama lengkap harus diisi"
@@ -71,9 +74,10 @@ object Constants {
     const val VALIDATION_CONFIRM_PASSWORD_MISMATCH = "Kata sandi dan konfirmasi kata sandi tidak sama"
     const val VALIDATION_TERMS_AGREEMENT = "Anda harus menyetujui syarat dan ketentuan"
     const val VALIDATION_POST_TITLE_REQUIRED = "Judul postingan harus diisi"
-    const val VALIDATION_POST_TITLE_MIN_LENGTH = "Judul postingan minimal 5 karakter"
+    const val VALIDATION_POST_TITLE_MIN_LENGTH = "Judul postingan minimal 3 karakter" // Adjusted from 5 to 3 for consistency [cite: 62, 71]
     const val VALIDATION_POST_CONTENT_REQUIRED = "Konten postingan harus diisi"
-    const val VALIDATION_POST_CONTENT_MIN_LENGTH = "Konten postingan minimal 20 karakter"
+    const val VALIDATION_POST_CONTENT_MIN_LENGTH = "Konten postingan minimal 10 karakter" // Adjusted from 20 to 10 for consistency [cite: 62, 71]
+
 
     // Teks UI - Bahasa Indonesia
     const val APP_NAME = "VirtualsBlog"
@@ -100,14 +104,15 @@ object Constants {
     const val CHANGE_PASSWORD_TEXT = "Ubah Kata Sandi"
 
     // Teks Postingan
-    const val CREATE_POST_TEXT = "Buat Postingan"
-    const val EDIT_POST_TEXT = "Ubah Postingan"
-    const val DELETE_POST_TEXT = "Hapus Postingan"
+    const val CREATE_POST_TEXT = "Tulis Postingan Baru" // String used in CreatePostScreen title
+    const val EDIT_POST_TEXT = "Ubah Postingan" // New
+    const val DELETE_POST_TEXT = "Hapus Postingan" // New
     const val POST_TITLE_TEXT = "Judul Postingan"
     const val POST_CONTENT_TEXT = "Konten Postingan"
     const val POST_CATEGORY_TEXT = "Kategori"
     const val PUBLISH_TEXT = "Terbitkan"
     const val DRAFT_TEXT = "Simpan Draft"
+
 
     // Kategori Postingan
     const val CATEGORY_TECHNOLOGY = "Teknologi"
@@ -163,24 +168,25 @@ object Constants {
     const val ENTER_PASSWORD = "Masukkan kata sandi Anda"
     const val ENTER_NEW_PASSWORD = "Masukkan kata sandi baru"
     const val CONFIRM_PASSWORD_HINT = "Masukkan ulang kata sandi Anda"
-    const val POST_TITLE_HINT = "Masukkan judul yang menarik..."
-    const val POST_CONTENT_HINT = "Tulis konten postingan Anda di sini..."
+    const val POST_TITLE_HINT = "Masukkan judul yang menarik..." // Used in CreatePostScreen
+    const val POST_CONTENT_HINT = "Tulis konten postingan Anda di sini..." // Used in CreatePostScreen
     const val SEARCH_HINT = "Cari postingan..."
 
+
     // Image URLs
-    const val IMAGE_BASE_URL = "https://be-prakmob.kodingin.id"
-    const val PROFILE_IMAGE_PATH = "/uploads/photo-profile/"
-    
+    const val IMAGE_BASE_URL = "https://be-prakmob.kodingin.id" // [cite: 22]
+    const val PROFILE_IMAGE_PATH = "/uploads/photo-profile/" // [cite: 54]
+
     // Placeholder values
     const val DEFAULT_AVATAR = "default_avatar.png"
 
     // Image picker constants
-    const val MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+    const val MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB [cite: 54, 62, 71]
     const val IMAGE_QUALITY = 80
-    
+
     // Validation constants
-    const val MIN_TITLE_LENGTH = 3
-    const val MIN_CONTENT_LENGTH = 10
+    const val MIN_TITLE_LENGTH = 3 // [cite: 62, 71]
+    const val MIN_CONTENT_LENGTH = 10 // [cite: 62, 71]
     const val MAX_TITLE_LENGTH = 200
     const val MAX_CONTENT_LENGTH = 5000
 }

@@ -34,12 +34,12 @@ object BlogDestinations {
 
     // Auth-specific nested routes
     object Auth {
-        const val LOGIN = "auth/login"
-        const val REGISTER = "auth/register"
-        const val FORGOT_PASSWORD = "auth/forgot_password"
-        const val VERIFY_OTP = "auth/verify_otp"
-        const val RESET_PASSWORD = "auth/reset_password"
-        const val TERMS_AND_CONDITIONS = "auth/terms_and_conditions"
+        const val LOGIN = LOGIN_ROUTE
+        const val REGISTER = REGISTER_ROUTE
+        const val FORGOT_PASSWORD = FORGOT_PASSWORD_ROUTE
+        const val VERIFY_OTP = VERIFY_OTP_ROUTE
+        const val RESET_PASSWORD = RESET_PASSWORD_ROUTE
+        const val TERMS_AND_CONDITIONS = TERMS_AND_CONDITIONS_ROUTE
     }
 
     // Navigation arguments

@@ -13,12 +13,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.virtualsblog.project.domain.model.Comment
 import com.virtualsblog.project.util.DateUtil
+import com.virtualsblog.project.util.ImageUtil
 
 @Composable
 fun CommentItem(
     comment: Comment,
     currentUserId: String?,
     onDeleteClick: (() -> Unit)? = null,
+    onAvatarClick: ((String?) -> Unit)? = null, // Added callback for avatar click
     modifier: Modifier = Modifier
 ) {
     var showDropdown by remember { mutableStateOf(false) }
@@ -40,14 +42,15 @@ fun CommentItem(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Author Avatar
+                // Author Avatar - Made clickable
                 UserAvatar(
                     userName = comment.authorName,
                     imageUrl = comment.authorImage,
                     size = 36.dp,
                     showBorder = true,
                     borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                    borderWidth = 1.dp
+                    borderWidth = 1.dp,
+                    onClick = { onAvatarClick?.invoke(comment.authorImage) } // Invoke callback
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))

@@ -1,3 +1,4 @@
+// app/src/main/java/com/virtualsblog/project/domain/repository/BlogRepository.kt
 package com.virtualsblog.project.domain.repository
 
 import com.virtualsblog.project.domain.model.Category
@@ -19,6 +20,15 @@ interface BlogRepository {
         categoryId: String,
         photo: File
     ): Flow<Resource<Post>>
+
+    suspend fun updatePost(
+        postId: String,
+        title: String,
+        content: String,
+        photo: File? // Photo is optional for update
+    ): Flow<Resource<Post>>
+
+    suspend fun deletePost(postId: String): Flow<Resource<Post>>
 
     // COMMENT METHODS
     suspend fun createComment(
