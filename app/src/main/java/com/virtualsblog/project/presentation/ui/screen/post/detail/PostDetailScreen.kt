@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -39,6 +42,11 @@ import com.virtualsblog.project.preferences.UserPreferences
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.map
+import com.virtualsblog.project.presentation.ui.component.FullScreenImageViewer
+import com.virtualsblog.project.util.ImageUtil
+import com.virtualsblog.project.util.showToast
+import kotlin.math.ceil
+import kotlinx.coroutines.delay
 
 // Helper composable to get current user ID from UserPreferences
 @Composable
@@ -62,18 +70,75 @@ fun PostDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Get current user ID using the implemented function
-    val currentUserId = rememberCurrentUserId()
+    // Menggunakan currentUserId dari uiState yang sudah diinisialisasi di ViewModel utama
+    val currentUserId = uiState.currentUserId
 
-    // Animation for content
-    val animationProgress by animateFloatAsState(
-        targetValue = if (uiState.post != null) 1f else 0f,
-        animationSpec = tween(300),
-        label = "content_animation"
-    )
+    // State for managing full-screen image view
+    var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
+
+    // State for delete dialog
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(postId) {
         viewModel.loadPost(postId)
+    }
+
+    // LaunchedEffect untuk delete success dan error
+    LaunchedEffect(uiState.deletePostSuccess) {
+        if (uiState.deletePostSuccess) {
+            context.showToast("Postingan berhasil dihapus")
+
+            // Add a small delay to ensure the toast is shown
+            delay(500)
+
+            // Reset the success flag before navigating
+            viewModel.resetDeleteSuccessFlag()
+
+            // Navigate back to previous screen
+            onNavigateBack()
+        }
+    }
+
+    LaunchedEffect(uiState.deletePostError) {
+        uiState.deletePostError?.let { errorMessage ->
+            context.showToast(errorMessage)
+            // Clear the error after showing toast
+            delay(100)
+            viewModel.clearError()
+        }
+    }
+
+    // Show FullScreenImageViewer when fullScreenImageUrl is not null
+    if (fullScreenImageUrl != null) {
+        FullScreenImageViewer(
+            imageUrl = fullScreenImageUrl,
+            onDismiss = { fullScreenImageUrl = null }
+        )
+    }
+
+    // Dialog konfirmasi hapus
+    if (showDeleteDialog && uiState.post != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Hapus Postingan") },
+            text = { Text("Apakah Anda yakin ingin menghapus postingan \"${uiState.post?.title}\"? Tindakan ini tidak dapat diurungkan.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteCurrentPost()
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Hapus")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
     }
 
     Column(
@@ -104,12 +169,14 @@ fun PostDetailScreen(
                     }
                 },
                 actions = {
+                    // Tombol Share
                     IconButton(onClick = { /* TODO: Share functionality */ }) {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = "Bagikan"
                         )
                     }
+                    // Tombol Bookmark
                     if (uiState.post != null) {
                         IconButton(onClick = { /* TODO: Bookmark functionality */ }) {
                             Icon(
@@ -118,19 +185,74 @@ fun PostDetailScreen(
                             )
                         }
                     }
+
+                    // Menu Edit dan Delete untuk author
+                    val postData = uiState.post
+                    if (postData != null && postData.authorId == currentUserId) {
+                        var menuExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { menuExpanded = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "Opsi Lainnya"
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit Postingan") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onNavigateToEdit(postId)
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Edit Postingan"
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Hapus Postingan", color = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        showDeleteDialog = true
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Hapus Postingan",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                modifier = Modifier.padding(top = 8.dp) // Added top margin for status bar
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
 
+        // Animation for content
+        val animationProgress by animateFloatAsState(
+            targetValue = if (uiState.post != null && !uiState.isDeletingPost) 1f else 0f,
+            animationSpec = tween(300),
+            label = "content_animation"
+        )
+
         when {
-            uiState.isLoading -> {
-                EnhancedLoadingState()
+            // Kombinasikan loading state untuk memuat post dan proses hapus
+            uiState.isLoading || uiState.isDeletingPost -> {
+                EnhancedLoadingState(message = if (uiState.isDeletingPost) "Menghapus postingan..." else "Memuat postingan...")
             }
-            uiState.error != null -> {
+            // Tampilkan error hanya jika tidak sedang dalam proses hapus dan ada error umum
+            uiState.error != null && !uiState.isDeletingPost -> {
                 EnhancedErrorState(
                     error = uiState.error!!,
                     onRetry = { viewModel.loadPost(postId) },
@@ -138,6 +260,7 @@ fun PostDetailScreen(
                 )
             }
             uiState.post != null -> {
+                val postDetail = uiState.post!!
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -145,10 +268,13 @@ fun PostDetailScreen(
                         .graphicsLayer { alpha = animationProgress }
                 ) {
                     // Hero Image Section (if available)
-                    if (!uiState.post!!.image.isNullOrEmpty()) {
+                    if (!postDetail.image.isNullOrEmpty()) {
                         HeroImageSection(
-                            imageUrl = uiState.post!!.image!!,
-                            title = uiState.post!!.title
+                            imageUrl = postDetail.image!!,
+                            title = postDetail.title,
+                            onImageClick = {
+                                fullScreenImageUrl = ImageUtil.getFullImageUrl(postDetail.image)
+                            }
                         )
                     }
 
@@ -159,14 +285,19 @@ fun PostDetailScreen(
                     ) {
                         // Enhanced Author Section
                         EnhancedAuthorSection(
-                            post = uiState.post!!,
+                            post = postDetail,
                             onToggleLike = { viewModel.toggleLike() },
-                            isLikeLoading = uiState.isLikeLoading
+                            isLikeLoading = uiState.isLikeLoading,
+                            onAvatarClick = {
+                                postDetail.authorImage?.let {
+                                    fullScreenImageUrl = ImageUtil.getProfileImageUrl(it)
+                                }
+                            }
                         )
 
                         // Enhanced Title
                         Text(
-                            text = uiState.post!!.title,
+                            text = postDetail.title,
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground,
@@ -174,11 +305,11 @@ fun PostDetailScreen(
                         )
 
                         // Enhanced Content
-                        EnhancedContentSection(content = uiState.post!!.content)
+                        EnhancedContentSection(content = postDetail.content)
 
                         // Enhanced Actions
                         EnhancedActionsSection(
-                            post = uiState.post!!,
+                            post = postDetail,
                             onLikeClick = { viewModel.toggleLike() },
                             onCommentClick = { /* Scroll to comments section */ },
                             onShareClick = { /* TODO: Share functionality */ },
@@ -199,10 +330,23 @@ fun PostDetailScreen(
                                 viewModel.deleteComment(commentId)
                             },
                             currentUserId = currentUserId,
-                            isCommentLoading = uiState.isCommentLoading
+                            isCommentLoading = uiState.isCommentLoading,
+                            onCommentAvatarClick = { commenterImageUrl ->
+                                commenterImageUrl?.let {
+                                    fullScreenImageUrl = ImageUtil.getProfileImageUrl(it)
+                                }
+                            }
                         )
                     }
                 }
+            }
+            // Fallback jika post null, tidak loading, tidak ada error umum, dan proses delete belum sukses
+            else -> {
+                EnhancedErrorState(
+                    error = "Postingan tidak dapat ditemukan atau telah dihapus.",
+                    onRetry = { viewModel.loadPost(postId) },
+                    onNavigateBack = onNavigateBack
+                )
             }
         }
     }
@@ -211,7 +355,8 @@ fun PostDetailScreen(
 @Composable
 private fun HeroImageSection(
     imageUrl: String,
-    title: String
+    title: String,
+    onImageClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -219,12 +364,9 @@ private fun HeroImageSection(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = 300.dp)
+            .clickable(onClick = onImageClick)
     ) {
-        val fullImageUrl = if (imageUrl.startsWith("http")) {
-            imageUrl
-        } else {
-            "https://be-prakmob.kodingin.id$imageUrl"
-        }
+        val fullImageUrl = ImageUtil.getFullImageUrl(imageUrl)
 
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -233,7 +375,7 @@ private fun HeroImageSection(
                 .placeholder(android.R.drawable.ic_menu_gallery)
                 .error(android.R.drawable.ic_menu_gallery)
                 .build(),
-            contentDescription = "Hero Image",
+            contentDescription = "Hero Image: $title",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
@@ -260,7 +402,8 @@ private fun HeroImageSection(
 private fun EnhancedAuthorSection(
     post: Post,
     onToggleLike: () -> Unit,
-    isLikeLoading: Boolean = false
+    isLikeLoading: Boolean = false,
+    onAvatarClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -274,14 +417,14 @@ private fun EnhancedAuthorSection(
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Enhanced Author Avatar
             UserAvatar(
                 userName = post.author,
                 imageUrl = post.authorImage,
                 size = 56.dp,
                 showBorder = true,
                 borderColor = MaterialTheme.colorScheme.primary,
-                borderWidth = 2.dp
+                borderWidth = 2.dp,
+                onClick = onAvatarClick
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -300,7 +443,6 @@ private fun EnhancedAuthorSection(
                     fontWeight = FontWeight.Medium
                 )
 
-                // Enhanced publication date
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 4.dp)
@@ -321,10 +463,7 @@ private fun EnhancedAuthorSection(
                 }
             }
 
-            // Category and Quick Like
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
+            Column(horizontalAlignment = Alignment.End) {
                 if (post.category.isNotEmpty()) {
                     Surface(
                         color = MaterialTheme.colorScheme.secondaryContainer,
@@ -342,19 +481,12 @@ private fun EnhancedAuthorSection(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Quick like button with loading state
                 FilledIconButton(
                     onClick = onToggleLike,
                     enabled = !isLikeLoading,
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = if (post.isLiked)
-                            MaterialTheme.colorScheme.error
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (post.isLiked)
-                            MaterialTheme.colorScheme.onError
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = if (post.isLiked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (post.isLiked) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
                     if (isLikeLoading) {
@@ -417,7 +549,6 @@ private fun EnhancedActionsSection(
                 .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // Enhanced Like Button with loading
             EnhancedActionButton(
                 icon = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 text = "${formatCount(post.likes)} Suka",
@@ -427,7 +558,6 @@ private fun EnhancedActionsSection(
                 isLoading = isLikeLoading
             )
 
-            // Enhanced Comment Button
             EnhancedActionButton(
                 icon = Icons.Default.ModeComment,
                 text = "${formatCount(post.comments)} Komentar",
@@ -436,7 +566,6 @@ private fun EnhancedActionsSection(
                 onClick = onCommentClick
             )
 
-            // Enhanced Share Button
             EnhancedActionButton(
                 icon = Icons.Default.Share,
                 text = "Bagikan",
@@ -450,7 +579,7 @@ private fun EnhancedActionsSection(
 
 @Composable
 private fun EnhancedActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     text: String,
     isActive: Boolean,
     activeColor: Color,
@@ -459,12 +588,13 @@ private fun EnhancedActionButton(
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (isActive) activeColor.copy(alpha = 0.1f) else Color.Transparent,
-        label = "action_bg"
+        animationSpec = tween(durationMillis = 200),
+        label = "action_button_bg_color_anim"
     )
-
     val contentColor by animateColorAsState(
         targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "action_color"
+        animationSpec = tween(durationMillis = 200),
+        label = "action_button_content_color_anim"
     )
 
     Column(
@@ -472,24 +602,29 @@ private fun EnhancedActionButton(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
-            .clickable(enabled = !isLoading) { onClick() }
-            .padding(12.dp)
+            .clickable(enabled = !isLoading, onClick = onClick)
+            .padding(vertical = 8.dp, horizontal = 12.dp)
     ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                strokeWidth = 2.dp,
-                color = contentColor
-            )
-        } else {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(24.dp)
-            )
+        Box(
+            modifier = Modifier.size(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = contentColor
+                )
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
@@ -509,8 +644,22 @@ private fun CommentsSection(
     onDeleteComment: (String) -> Unit,
     currentUserId: String?,
     isCommentLoading: Boolean,
+    onCommentAvatarClick: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isCommentsExpanded by remember { mutableStateOf(true) }
+    var currentCommentPage by remember { mutableStateOf(0) }
+    val commentsPerPage = 5
+    val totalCommentPages = ceil(comments.size.toDouble() / commentsPerPage).toInt()
+
+    val startIndex = currentCommentPage * commentsPerPage
+    val endIndex = minOf((currentCommentPage + 1) * commentsPerPage, comments.size)
+    val commentsToShow = if (comments.isNotEmpty() && startIndex < comments.size) {
+        comments.subList(startIndex, minOf(endIndex, comments.size))
+    } else {
+        emptyList()
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -522,9 +671,11 @@ private fun CommentsSection(
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
-            // Comments Header
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isCommentsExpanded = !isCommentsExpanded }
+                    .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -534,61 +685,70 @@ private fun CommentsSection(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                Icon(
+                    imageVector = if (isCommentsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (isCommentsExpanded) "Sembunyikan" else "Tampilkan",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Comment Input
-            CommentInput(
-                value = commentText,
-                onValueChange = onCommentTextChange,
-                onSendClick = onSendComment,
-                isLoading = isCommentLoading,
-                placeholder = "Tulis komentar Anda..."
-            )
-
-            if (comments.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Comments List
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    comments.forEach { comment ->
-                        CommentItem(
-                            comment = comment,
-                            currentUserId = currentUserId,
-                            onDeleteClick = if (currentUserId == comment.authorId) {
-                                { onDeleteComment(comment.id) }
-                            } else null
-                        )
-                    }
-                }
-            } else {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Empty state
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "💭",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
+            AnimatedVisibility(
+                visible = isCommentsExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Belum ada komentar",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    CommentInput(
+                        value = commentText,
+                        onValueChange = onCommentTextChange,
+                        onSendClick = {
+                            onSendComment()
+                            currentCommentPage = 0
+                        },
+                        isLoading = isCommentLoading,
+                        placeholder = "Tulis komentar Anda..."
                     )
-                    Text(
-                        text = "Jadilah yang pertama berkomentar!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+
+                    if (comments.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            commentsToShow.forEach { comment ->
+                                CommentItem(
+                                    comment = comment,
+                                    currentUserId = currentUserId,
+                                    onDeleteClick = if (currentUserId == comment.authorId) { { onDeleteComment(comment.id) } } else null,
+                                    onAvatarClick = { onCommentAvatarClick(comment.authorImage) }
+                                )
+                            }
+                        }
+                        if (totalCommentPages > 1) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = { if (currentCommentPage > 0) currentCommentPage-- },
+                                    enabled = currentCommentPage > 0
+                                ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Sebelumnya") }
+                                Text("Halaman ${currentCommentPage + 1}/$totalCommentPages", style = MaterialTheme.typography.bodySmall)
+                                IconButton(
+                                    onClick = { if (currentCommentPage < totalCommentPages - 1) currentCommentPage++ },
+                                    enabled = currentCommentPage < totalCommentPages - 1
+                                ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Selanjutnya") }
+                            }
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("💭", style = MaterialTheme.typography.headlineMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Belum ada komentar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text("Jadilah yang pertama berkomentar!", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                        }
+                    }
                 }
             }
         }
@@ -596,7 +756,7 @@ private fun CommentsSection(
 }
 
 @Composable
-private fun EnhancedLoadingState() {
+private fun EnhancedLoadingState(message: String = "Memuat...") {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -610,7 +770,7 @@ private fun EnhancedLoadingState() {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Memuat postingan...",
+                text = message,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -649,7 +809,7 @@ private fun EnhancedErrorState(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Postingan Tidak Ditemukan",
+                    text = "Oops! Terjadi Kesalahan",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
@@ -685,12 +845,8 @@ private fun EnhancedErrorState(
 
 fun formatCount(count: Int): String {
     return when {
-        count >= 1000 -> {
-            val inK = count / 1000
-            "$inK K"
-        }
-        else -> {
-            count.toString()
-        }
+        count >= 1_000_000 -> "${count / 1_000_000}M"
+        count >= 1_000 -> "${count / 1_000}K"
+        else -> count.toString()
     }
 }

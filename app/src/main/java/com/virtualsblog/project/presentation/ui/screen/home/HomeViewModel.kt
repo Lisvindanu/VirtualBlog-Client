@@ -8,6 +8,7 @@ import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.usecase.blog.GetPostsForHomeUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetTotalPostsCountUseCase
 import com.virtualsblog.project.domain.usecase.blog.ToggleLikeUseCase
+import com.virtualsblog.project.util.NavigationState
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,8 @@ class HomeViewModel @Inject constructor(
     private val userDao: UserDao,
     private val getPostsForHomeUseCase: GetPostsForHomeUseCase,
     private val getTotalPostsCountUseCase: GetTotalPostsCountUseCase,
-    private val toggleLikeUseCase: ToggleLikeUseCase // Added for like functionality
+    private val toggleLikeUseCase: ToggleLikeUseCase,
+    private val navigationState: NavigationState // ADDED
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -33,6 +35,19 @@ class HomeViewModel @Inject constructor(
         checkAuthStatus()
         loadPosts()
         loadTotalPostsCount()
+        observeNavigationState()
+    }
+    private fun observeNavigationState() {
+        viewModelScope.launch {
+            // Simple polling approach - check every 500ms if refresh is needed
+            while (true) {
+                kotlinx.coroutines.delay(500)
+                if (navigationState.shouldRefreshHome) {
+                    navigationState.setRefreshHome(false)
+                    forceRefreshPosts()
+                }
+            }
+        }
     }
 
     private fun checkAuthStatus() {
@@ -64,7 +79,7 @@ class HomeViewModel @Inject constructor(
                     is Resource.Success -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            isRefreshing = false, // Stop refreshing
+                            isRefreshing = false,
                             posts = resource.data ?: emptyList(),
                             error = null
                         )
@@ -72,7 +87,7 @@ class HomeViewModel @Inject constructor(
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            isRefreshing = false, // Stop refreshing
+                            isRefreshing = false,
                             error = resource.message ?: "Gagal memuat postingan"
                         )
                     }
@@ -102,10 +117,44 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // FIXED: Improved refresh function with better error handling
     fun refreshPosts() {
-        // Set refreshing state
-        _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
-        checkAuthStatus()
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+
+            try {
+                // Refresh authentication status
+                checkAuthStatus()
+
+                // Refresh posts data
+                loadPosts()
+
+                // Refresh total posts count
+                loadTotalPostsCount()
+
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isRefreshing = false,
+                    error = "Gagal merefresh data: ${e.localizedMessage}"
+                )
+            }
+        }
+    }
+
+    // FIXED: Function to handle post removal from home screen
+    fun removePostFromList(postId: String) {
+        val currentPosts = _uiState.value.posts
+        val updatedPosts = currentPosts.filterNot { it.id == postId }
+        val newTotalCount = maxOf(0, _uiState.value.totalPostsCount - 1)
+
+        _uiState.value = _uiState.value.copy(
+            posts = updatedPosts,
+            totalPostsCount = newTotalCount
+        )
+    }
+
+    // ADDED: Force refresh posts after navigation back from detail
+    fun forceRefreshPosts() {
         loadPosts()
         loadTotalPostsCount()
     }
@@ -114,7 +163,6 @@ class HomeViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
-    // NEW: Toggle like functionality for home posts
     fun togglePostLike(postId: String) {
         viewModelScope.launch {
             toggleLikeUseCase(postId).collect { resource ->
@@ -136,7 +184,6 @@ class HomeViewModel @Inject constructor(
                     is Resource.Error -> {
                         // Handle error - could show toast or snackbar
                         // For now, we'll silently fail to avoid disrupting UX
-                        // You can add error handling here if needed
                     }
                     is Resource.Loading -> {
                         // Optional: Could show loading state for individual post
