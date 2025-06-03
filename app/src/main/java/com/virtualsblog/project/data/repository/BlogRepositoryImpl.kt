@@ -291,6 +291,7 @@ class BlogRepositoryImpl @Inject constructor(
         postId: String,
         title: String,
         content: String,
+        categoryId: String, // <<< ADDED PARAMETER
         photo: File?
     ): Flow<Resource<Post>> = flow {
         emit(Resource.Loading())
@@ -303,6 +304,7 @@ class BlogRepositoryImpl @Inject constructor(
 
             val titleBody = title.toRequestBody("text/plain".toMediaTypeOrNull())
             val contentBody = content.toRequestBody("text/plain".toMediaTypeOrNull())
+            val categoryIdBody = categoryId.toRequestBody("text/plain".toMediaTypeOrNull()) // <<< CREATE REQUEST BODY
             var photoPart: MultipartBody.Part? = null
 
             if (photo != null) {
@@ -334,7 +336,8 @@ class BlogRepositoryImpl @Inject constructor(
                 authorization = "${Constants.BEARER_PREFIX}$token",
                 title = titleBody,
                 content = contentBody,
-                photo = photoPart // Pass null if photo is not being updated
+                categoryId = categoryIdBody, // <<< PASS TO API
+                photo = photoPart
             )
 
             if (response.isSuccessful) {

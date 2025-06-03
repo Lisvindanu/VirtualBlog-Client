@@ -15,20 +15,23 @@ class UpdatePostUseCase @Inject constructor(
         postId: String,
         title: String,
         content: String,
+        categoryId: String, // <<< ADDED PARAMETER
         photo: File?
     ): Flow<Resource<Post>> {
         if (postId.isBlank()) {
             return kotlinx.coroutines.flow.flow { emit(Resource.Error("Post ID tidak boleh kosong.")) }
         }
-        // API validation for title is min 3, content min 10
-        if (title.trim().length < 3) { // Matching API doc for edit
+        if (categoryId.isBlank()) { // Basic check
+            return kotlinx.coroutines.flow.flow { emit(Resource.Error("ID Kategori tidak boleh kosong untuk update.")) }
+        }
+        if (title.trim().length < 3) {
             return kotlinx.coroutines.flow.flow { emit(Resource.Error("Judul minimal 3 karakter.")) }
         }
-        if (content.trim().length < 10) { // Matching API doc for edit
+        if (content.trim().length < 10) {
             return kotlinx.coroutines.flow.flow { emit(Resource.Error("Konten minimal 10 karakter.")) }
         }
         photo?.let {
-            if (it.length() > Constants.MAX_IMAGE_SIZE) { // MAX_IMAGE_SIZE is 10MB
+            if (it.length() > Constants.MAX_IMAGE_SIZE) {
                 return kotlinx.coroutines.flow.flow { emit(Resource.Error("Ukuran gambar maksimal 10MB.")) }
             }
             val allowedExtensions = listOf("jpg", "jpeg", "png")
@@ -37,6 +40,6 @@ class UpdatePostUseCase @Inject constructor(
                 return kotlinx.coroutines.flow.flow { emit(Resource.Error("Tipe file gambar tidak valid (JPG, JPEG, PNG).")) }
             }
         }
-        return repository.updatePost(postId, title.trim(), content.trim(), photo)
+        return repository.updatePost(postId, title.trim(), content.trim(), categoryId, photo)
     }
 }

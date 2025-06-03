@@ -14,12 +14,13 @@ object PostMapper {
             title = response.title,
             content = response.content,
             author = response.author.fullname,
-            authorId = response.authorId, // Added authorId mapping
+            authorId = response.authorId,
             authorUsername = response.author.username,
             authorImage = response.author.image,
             createdAt = response.createdAt,
             updatedAt = response.updatedAt,
             category = response.category.name,
+            categoryId = response.categoryId, // <<< ENSURE THIS MAPPING IS PRESENT
             likes = response.count?.Like ?: 0,
             comments = response.count?.Comment ?: 0,
             isLiked = response.liked,
@@ -39,10 +40,11 @@ object PostMapper {
             title = response.title,
             content = response.content,
             author = response.author.fullname,
-            authorId = response.authorId, // Added authorId mapping
+            authorId = response.authorId,
             authorUsername = response.author.username,
             authorImage = response.author.image,
             category = response.category.name,
+            categoryId = response.categoryId, // <<< ENSURE THIS MAPPING IS PRESENT
             createdAt = response.createdAt,
             updatedAt = response.updatedAt,
             likes = response.count?.Like ?: 0,

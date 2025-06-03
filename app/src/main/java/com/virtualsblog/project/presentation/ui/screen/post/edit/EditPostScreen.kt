@@ -84,7 +84,7 @@ fun EditPostScreen(
                     },
                     actions = {
                         Button(
-                            onClick = { viewModel.updatePost() },
+                            onClick = { viewModel.updatePost(context) },
                             enabled = !uiState.isUpdatingPost && !uiState.isLoadingPost &&
                                     uiState.title.isNotBlank() && uiState.content.isNotBlank(),
                             modifier = Modifier.padding(end = 12.dp)

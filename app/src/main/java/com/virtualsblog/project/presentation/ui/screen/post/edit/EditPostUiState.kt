@@ -16,5 +16,6 @@ data class EditPostUiState(
     val contentError: String? = null,
     val imageError: String? = null,
     val generalError: String? = null,
-    val updateSuccess: Boolean = false
+    val updateSuccess: Boolean = false,
+    val currentCategoryId: String? = null, // <<< ADDED
 )

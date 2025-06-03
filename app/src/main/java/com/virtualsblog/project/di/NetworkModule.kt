@@ -44,8 +44,9 @@ object NetworkModule {
             val originalRequest = chain.request()
             val requestBuilder = originalRequest.newBuilder()
                 .header("X-API-KEY", Constants.API_KEY)
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
+                // REMOVED: .header("Content-Type", "application/json")
+                // Let Retrofit handle Content-Type based on annotations (@Body, @Multipart, etc.)
+                .header("Accept", "application/json") // Accept header is generally fine
 
             chain.proceed(requestBuilder.build())
         }
@@ -58,8 +59,8 @@ object NetworkModule {
         apiKeyInterceptor: Interceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(apiKeyInterceptor) // API Key interceptor first
-            .addInterceptor(loggingInterceptor) // Logging interceptor second
+            .addInterceptor(apiKeyInterceptor)
+            .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

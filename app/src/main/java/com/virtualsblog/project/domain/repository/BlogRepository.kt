@@ -25,6 +25,7 @@ interface BlogRepository {
         postId: String,
         title: String,
         content: String,
+        categoryId: String,
         photo: File? // Photo is optional for update
     ): Flow<Resource<Post>>
 
