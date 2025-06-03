@@ -1,4 +1,5 @@
 package com.virtualsblog.project.data.remote.dto.request
 
-class CommentRequest {
-}
+data class CreateCommentRequest(
+    val comment: String
+)

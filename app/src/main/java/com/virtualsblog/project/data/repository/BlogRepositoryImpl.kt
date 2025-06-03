@@ -1,9 +1,12 @@
 package com.virtualsblog.project.data.repository
 
 import com.virtualsblog.project.data.mapper.CategoryMapper
+import com.virtualsblog.project.data.mapper.CommentMapper
 import com.virtualsblog.project.data.mapper.PostMapper
 import com.virtualsblog.project.data.remote.api.BlogApi
+import com.virtualsblog.project.data.remote.dto.request.CreateCommentRequest
 import com.virtualsblog.project.domain.model.Category
+import com.virtualsblog.project.domain.model.Comment
 import com.virtualsblog.project.domain.model.Post
 import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.repository.BlogRepository
@@ -186,7 +189,6 @@ class BlogRepositoryImpl @Inject constructor(
 
             val response = blogApi.getCategories(
                 authorization = "${Constants.BEARER_PREFIX}$token",
-                apiKey = Constants.API_KEY
             )
 
             if (response.isSuccessful) {
@@ -262,7 +264,6 @@ class BlogRepositoryImpl @Inject constructor(
 
             // API call
             val response = blogApi.createPost(
-                apiKey = Constants.API_KEY,
                 authorization = "Bearer $token",
                 title = titleBody,
                 content = contentBody,
@@ -332,4 +333,125 @@ class BlogRepositoryImpl @Inject constructor(
             emit(Resource.Error(errorMessage))
         }
     }
+
+    override suspend fun createComment(
+        postId: String,
+        content: String
+    ): Flow<Resource<Comment>> = flow {
+        try {
+            emit(Resource.Loading())
+
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.createComment(
+                postId = postId,
+                authorization = "${Constants.BEARER_PREFIX}$token",
+                request = CreateCommentRequest(content.trim())
+            )
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val comment = CommentMapper.mapResponseToDomain(body.data)
+                    emit(Resource.Success(comment))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Gagal membuat komentar"))
+                }
+            } else {
+                val errorMessage = when (response.code()) {
+                    400 -> "Data komentar tidak valid"
+                    401 -> Constants.ERROR_UNAUTHORIZED
+                    404 -> "Postingan tidak ditemukan"
+                    422 -> "Komentar tidak boleh kosong"
+                    else -> "Error: ${response.code()} - ${response.message()}"
+                }
+                emit(Resource.Error(errorMessage))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+        }
+    }
+
+    override suspend fun deleteComment(
+        commentId: String
+    ): Flow<Resource<Comment>> = flow {
+        try {
+            emit(Resource.Loading())
+
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.deleteComment(
+                commentId = commentId,
+                authorization = "${Constants.BEARER_PREFIX}$token"
+            )
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val comment = CommentMapper.mapResponseToDomain(body.data)
+                    emit(Resource.Success(comment))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Gagal menghapus komentar"))
+                }
+            } else {
+                val errorMessage = when (response.code()) {
+                    401 -> Constants.ERROR_UNAUTHORIZED
+                    403 -> "Tidak memiliki izin untuk menghapus komentar ini"
+                    404 -> "Komentar tidak ditemukan"
+                    else -> "Error: ${response.code()} - ${response.message()}"
+                }
+                emit(Resource.Error(errorMessage))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+        }
+    }
+
+    override suspend fun toggleLike(
+        postId: String
+    ): Flow<Resource<Pair<Boolean, Int>>> = flow {
+        try {
+            emit(Resource.Loading())
+
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.toggleLike(
+                postId = postId,
+                authorization = "${Constants.BEARER_PREFIX}$token"
+            )
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val isLiked = body.data.liked
+                    val totalLikes = body.data.totalLikes
+                    emit(Resource.Success(Pair(isLiked, totalLikes)))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Gagal toggle like"))
+                }
+            } else {
+                val errorMessage = when (response.code()) {
+                    401 -> Constants.ERROR_UNAUTHORIZED
+                    404 -> "Postingan tidak ditemukan"
+                    else -> "Error: ${response.code()} - ${response.message()}"
+                }
+                emit(Resource.Error(errorMessage))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+        }
+    }
+
 }

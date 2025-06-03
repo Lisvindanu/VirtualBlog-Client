@@ -32,7 +32,6 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun login(username: String, password: String): Resource<Pair<User, String>> {
         return try {
             val response = api.login(
-                apiKey = Constants.API_KEY,
                 request = LoginRequest(username, password)
             )
 
@@ -91,7 +90,6 @@ class AuthRepositoryImpl @Inject constructor(
     ): Resource<User> {
         return try {
             val response = api.register(
-                apiKey = Constants.API_KEY,
                 request = RegisterRequest(fullname, email, username, password, confirmPassword)
             )
 
@@ -142,7 +140,6 @@ class AuthRepositoryImpl @Inject constructor(
             }
 
             val response = api.changePassword(
-                apiKey = Constants.API_KEY,
                 token = "Bearer $token",
                 request = ChangePasswordRequest(prevPassword, password, confirmPassword)
             )
@@ -189,7 +186,6 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun forgetPassword(email: String): Resource<String> {
         return try {
             val response = api.forgetPassword(
-                apiKey = Constants.API_KEY,
                 request = ForgetPasswordRequest(email)
             )
 
@@ -215,7 +211,6 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun verifyOtp(email: String, otp: String): Resource<String> {
         return try {
             val response = api.verifyOtp(
-                apiKey = Constants.API_KEY,
                 request = VerifyOtpRequest(email, otp)
             )
 
@@ -246,7 +241,6 @@ class AuthRepositoryImpl @Inject constructor(
     ): Resource<User> {
         return try {
             val response = api.resetPassword(
-                apiKey = Constants.API_KEY,
                 request = ResetPasswordRequest(tokenId, otp, password, confirmPassword)
             )
 

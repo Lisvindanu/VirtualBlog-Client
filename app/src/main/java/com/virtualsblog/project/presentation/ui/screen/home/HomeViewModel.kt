@@ -7,6 +7,7 @@ import com.virtualsblog.project.data.mapper.UserMapper
 import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.usecase.blog.GetPostsForHomeUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetTotalPostsCountUseCase
+import com.virtualsblog.project.domain.usecase.blog.ToggleLikeUseCase
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +22,8 @@ class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userDao: UserDao,
     private val getPostsForHomeUseCase: GetPostsForHomeUseCase,
-    private val getTotalPostsCountUseCase: GetTotalPostsCountUseCase
+    private val getTotalPostsCountUseCase: GetTotalPostsCountUseCase,
+    private val toggleLikeUseCase: ToggleLikeUseCase // Added for like functionality
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -110,5 +112,38 @@ class HomeViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    // NEW: Toggle like functionality for home posts
+    fun togglePostLike(postId: String) {
+        viewModelScope.launch {
+            toggleLikeUseCase(postId).collect { resource ->
+                when (resource) {
+                    is Resource.Success -> {
+                        val (isLiked, totalLikes) = resource.data!!
+                        val updatedPosts = _uiState.value.posts.map { post ->
+                            if (post.id == postId) {
+                                post.copy(
+                                    isLiked = isLiked,
+                                    likes = totalLikes
+                                )
+                            } else {
+                                post
+                            }
+                        }
+                        _uiState.value = _uiState.value.copy(posts = updatedPosts)
+                    }
+                    is Resource.Error -> {
+                        // Handle error - could show toast or snackbar
+                        // For now, we'll silently fail to avoid disrupting UX
+                        // You can add error handling here if needed
+                    }
+                    is Resource.Loading -> {
+                        // Optional: Could show loading state for individual post
+                        // For now, we'll keep it simple and not show loading
+                    }
+                }
+            }
+        }
     }
 }

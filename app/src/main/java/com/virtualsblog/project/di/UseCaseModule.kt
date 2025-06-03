@@ -12,6 +12,9 @@ import com.virtualsblog.project.domain.usecase.blog.GetPostsUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetPostsForHomeUseCase // Import GetPostsForHomeUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetTotalPostsCountUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetPostByIdUseCase
+import com.virtualsblog.project.domain.usecase.blog.ToggleLikeUseCase
+import com.virtualsblog.project.domain.usecase.comment.CreateCommentUseCase
+import com.virtualsblog.project.domain.usecase.comment.DeleteCommentUseCase
 
 import dagger.Module
 import dagger.Provides
@@ -114,5 +117,25 @@ object UseCaseModule {
     @Singleton
     fun provideGetPostByIdUseCase(repository: BlogRepository): GetPostByIdUseCase {
         return GetPostByIdUseCase(repository)
+    }
+
+    // Comment UseCases
+    @Provides
+    @Singleton
+    fun provideCreateCommentUseCase(repository: BlogRepository): CreateCommentUseCase {
+        return CreateCommentUseCase(repository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDeleteCommentUseCase(repository: BlogRepository): DeleteCommentUseCase {
+        return DeleteCommentUseCase(repository)
+    }
+
+    // Like UseCases
+    @Provides
+    @Singleton
+    fun provideToggleLikeUseCase(repository: BlogRepository): ToggleLikeUseCase {
+        return ToggleLikeUseCase(repository)
     }
 }

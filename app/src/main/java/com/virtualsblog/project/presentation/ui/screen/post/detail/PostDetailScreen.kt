@@ -29,9 +29,27 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.virtualsblog.project.R
+import com.virtualsblog.project.domain.model.Comment
 import com.virtualsblog.project.domain.model.Post
+import com.virtualsblog.project.presentation.ui.component.CommentInput
+import com.virtualsblog.project.presentation.ui.component.CommentItem
 import com.virtualsblog.project.presentation.ui.component.UserAvatar
 import com.virtualsblog.project.util.DateUtil
+import com.virtualsblog.project.preferences.UserPreferences
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.map
+
+// Helper composable to get current user ID from UserPreferences
+@Composable
+fun rememberCurrentUserId(): String? {
+    val viewModel: PostDetailViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+
+    // Collect current user ID from UserPreferences
+    val currentUserId by viewModel.getCurrentUserId().collectAsStateWithLifecycle(initialValue = null)
+
+    return currentUserId
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +61,10 @@ fun PostDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    
+
+    // Get current user ID using the implemented function
+    val currentUserId = rememberCurrentUserId()
+
     // Animation for content
     val animationProgress by animateFloatAsState(
         targetValue = if (uiState.post != null) 1f else 0f,
@@ -67,12 +88,12 @@ fun PostDetailScreen(
             shadowElevation = if (uiState.post != null) 4.dp else 0.dp
         ) {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         "Detail Postingan",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
-                    ) 
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -139,7 +160,8 @@ fun PostDetailScreen(
                         // Enhanced Author Section
                         EnhancedAuthorSection(
                             post = uiState.post!!,
-                            onToggleLike = { viewModel.toggleLike() }
+                            onToggleLike = { viewModel.toggleLike() },
+                            isLikeLoading = uiState.isLikeLoading
                         )
 
                         // Enhanced Title
@@ -158,12 +180,27 @@ fun PostDetailScreen(
                         EnhancedActionsSection(
                             post = uiState.post!!,
                             onLikeClick = { viewModel.toggleLike() },
-                            onCommentClick = { /* TODO: Show comments */ },
-                            onShareClick = { /* TODO: Share functionality */ }
+                            onCommentClick = { /* Scroll to comments section */ },
+                            onShareClick = { /* TODO: Share functionality */ },
+                            isLikeLoading = uiState.isLikeLoading
                         )
 
-                        // Comments Section Placeholder
-                        EnhancedCommentsPlaceholder()
+                        // Real Comments Section
+                        CommentsSection(
+                            comments = uiState.comments,
+                            commentText = uiState.commentText,
+                            onCommentTextChange = { viewModel.updateCommentText(it) },
+                            onSendComment = {
+                                if (uiState.commentText.isNotBlank()) {
+                                    viewModel.createComment(uiState.commentText)
+                                }
+                            },
+                            onDeleteComment = { commentId ->
+                                viewModel.deleteComment(commentId)
+                            },
+                            currentUserId = currentUserId,
+                            isCommentLoading = uiState.isCommentLoading
+                        )
                     }
                 }
             }
@@ -177,7 +214,7 @@ private fun HeroImageSection(
     title: String
 ) {
     val context = LocalContext.current
-    
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -188,7 +225,7 @@ private fun HeroImageSection(
         } else {
             "https://be-prakmob.kodingin.id$imageUrl"
         }
-        
+
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(fullImageUrl)
@@ -200,7 +237,7 @@ private fun HeroImageSection(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-        
+
         // Gradient overlay
         Box(
             modifier = Modifier
@@ -222,7 +259,8 @@ private fun HeroImageSection(
 @Composable
 private fun EnhancedAuthorSection(
     post: Post,
-    onToggleLike: () -> Unit
+    onToggleLike: () -> Unit,
+    isLikeLoading: Boolean = false
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -261,7 +299,7 @@ private fun EnhancedAuthorSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium
                 )
-                
+
                 // Enhanced publication date
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -301,27 +339,36 @@ private fun EnhancedAuthorSection(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Quick like button
+
+                // Quick like button with loading state
                 FilledIconButton(
                     onClick = onToggleLike,
+                    enabled = !isLikeLoading,
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = if (post.isLiked) 
-                            MaterialTheme.colorScheme.error 
-                        else 
+                        containerColor = if (post.isLiked)
+                            MaterialTheme.colorScheme.error
+                        else
                             MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (post.isLiked) 
-                            MaterialTheme.colorScheme.onError 
-                        else 
+                        contentColor = if (post.isLiked)
+                            MaterialTheme.colorScheme.onError
+                        else
                             MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
-                    Icon(
-                        imageVector = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "Like"
-                    )
+                    if (isLikeLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Like"
+                        )
+                    }
                 }
             }
         }
@@ -353,7 +400,8 @@ private fun EnhancedActionsSection(
     post: Post,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
-    onShareClick: () -> Unit
+    onShareClick: () -> Unit,
+    isLikeLoading: Boolean = false
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -369,13 +417,14 @@ private fun EnhancedActionsSection(
                 .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // Enhanced Like Button
+            // Enhanced Like Button with loading
             EnhancedActionButton(
                 icon = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 text = "${formatCount(post.likes)} Suka",
                 isActive = post.isLiked,
                 activeColor = MaterialTheme.colorScheme.error,
-                onClick = onLikeClick
+                onClick = onLikeClick,
+                isLoading = isLikeLoading
             )
 
             // Enhanced Comment Button
@@ -405,13 +454,14 @@ private fun EnhancedActionButton(
     text: String,
     isActive: Boolean,
     activeColor: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isLoading: Boolean = false
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (isActive) activeColor.copy(alpha = 0.1f) else Color.Transparent,
         label = "action_bg"
     )
-    
+
     val contentColor by animateColorAsState(
         targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "action_color"
@@ -422,15 +472,23 @@ private fun EnhancedActionButton(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
-            .clickable { onClick() }
+            .clickable(enabled = !isLoading) { onClick() }
             .padding(12.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = contentColor,
-            modifier = Modifier.size(24.dp)
-        )
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = contentColor
+            )
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(24.dp)
+            )
+        }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = text,
@@ -438,6 +496,102 @@ private fun EnhancedActionButton(
             color = contentColor,
             fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
         )
+    }
+}
+
+// Comments Section
+@Composable
+private fun CommentsSection(
+    comments: List<Comment>,
+    commentText: String,
+    onCommentTextChange: (String) -> Unit,
+    onSendComment: () -> Unit,
+    onDeleteComment: (String) -> Unit,
+    currentUserId: String?,
+    isCommentLoading: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+            // Comments Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "💬 Komentar (${comments.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Comment Input
+            CommentInput(
+                value = commentText,
+                onValueChange = onCommentTextChange,
+                onSendClick = onSendComment,
+                isLoading = isCommentLoading,
+                placeholder = "Tulis komentar Anda..."
+            )
+
+            if (comments.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Comments List
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    comments.forEach { comment ->
+                        CommentItem(
+                            comment = comment,
+                            currentUserId = currentUserId,
+                            onDeleteClick = if (currentUserId == comment.authorId) {
+                                { onDeleteComment(comment.id) }
+                            } else null
+                        )
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Empty state
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "💭",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Belum ada komentar",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Jadilah yang pertama berkomentar!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -525,43 +679,6 @@ private fun EnhancedErrorState(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun EnhancedCommentsPlaceholder() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        ),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Default.ChatBubbleOutline,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Komentar",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Fitur komentar akan segera hadir! 🚀",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }

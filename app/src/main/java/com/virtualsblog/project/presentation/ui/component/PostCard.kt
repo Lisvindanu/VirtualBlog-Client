@@ -39,19 +39,20 @@ import com.virtualsblog.project.util.DateUtil
 fun PostCard(
     post: Post,
     onClick: () -> Unit,
-    onLikeClick: ((String) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onLikeClick: ((String) -> Unit)? = null, // Real like handler
+    modifier: Modifier = Modifier,
+    isLikeLoading: Boolean = false // Add loading state for like
 ) {
     val context = LocalContext.current
     var isPressed by remember { mutableStateOf(false) }
-    
+
     // Animation states
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
         animationSpec = spring(dampingRatio = 0.4f),
         label = "card_scale"
     )
-    
+
     val elevation by animateFloatAsState(
         targetValue = if (isPressed) 1f else 4f,
         animationSpec = spring(dampingRatio = 0.4f),
@@ -114,7 +115,7 @@ fun PostCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                     }
-                    
+
                     // Enhanced time display
                     Row(
                         verticalAlignment = Alignment.CenterVertically
@@ -181,7 +182,7 @@ fun PostCard(
                         } else {
                             "https://be-prakmob.kodingin.id${post.image}"
                         }
-                        
+
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(fullImageUrl)
@@ -193,7 +194,7 @@ fun PostCard(
                             modifier = Modifier.fillMaxWidth(),
                             contentScale = ContentScale.Crop
                         )
-                        
+
                         // Gradient overlay for better text readability
                         Box(
                             modifier = Modifier
@@ -226,7 +227,7 @@ fun PostCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Enhanced Action Row
+            // UPDATED Enhanced Action Row with Real Like Functionality
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -236,16 +237,19 @@ fun PostCard(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // Enhanced Like Button
-                    ActionButton(
+                    // UPDATED Enhanced Like Button with Real Functionality
+                    EnhancedActionButton(
                         icon = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         text = formatCount(post.likes),
                         isActive = post.isLiked,
                         activeColor = MaterialTheme.colorScheme.error,
-                        onClick = { onLikeClick?.invoke(post.id) }
+                        isLoading = isLikeLoading,
+                        onClick = {
+                            onLikeClick?.invoke(post.id)
+                        }
                     )
 
-                    // Enhanced Comment Button
+                    // Enhanced Comment Button (unchanged)
                     ActionButton(
                         icon = Icons.Default.ModeComment,
                         text = formatCount(post.comments),
@@ -272,6 +276,56 @@ fun PostCard(
     }
 }
 
+// UPDATED Enhanced Action Button with Loading State
+@Composable
+private fun EnhancedActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    isActive: Boolean,
+    activeColor: Color,
+    onClick: () -> Unit,
+    isLoading: Boolean = false
+) {
+    val color by animateColorAsState(
+        targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "action_color"
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clickable {
+                if (!isLoading) {
+                    onClick()
+                }
+            }
+            .padding(4.dp)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = color
+            )
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = color
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
+        )
+    }
+}
+
+// Original ActionButton (for comment button)
 @Composable
 private fun ActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -284,7 +338,7 @@ private fun ActionButton(
         targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "action_color"
     )
-    
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

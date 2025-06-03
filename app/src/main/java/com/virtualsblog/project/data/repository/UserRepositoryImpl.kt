@@ -37,7 +37,6 @@ class UserRepositoryImpl @Inject constructor(
             }
 
             val response = api.getProfile(
-                apiKey = Constants.API_KEY,
                 token = "Bearer $token"
             )
 
@@ -101,7 +100,6 @@ class UserRepositoryImpl @Inject constructor(
             }
 
             val response = api.updateProfile(
-                apiKey = Constants.API_KEY,
                 token = "Bearer $token",
                 request = UpdateProfileRequest(fullname, email, username)
             )
@@ -159,7 +157,6 @@ class UserRepositoryImpl @Inject constructor(
             }
 
             val response = api.uploadProfilePicture(
-                apiKey = Constants.API_KEY,
                 token = "Bearer $token",
                 photo = photoPart
             )
