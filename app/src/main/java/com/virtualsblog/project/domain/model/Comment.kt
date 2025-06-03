@@ -5,6 +5,7 @@ data class Comment(
     val content: String,
     val authorId: String,
     val authorName: String,
+    val authorUsername: String,
     val authorImage: String? = null,
     val postId: String,
     val createdAt: String,
