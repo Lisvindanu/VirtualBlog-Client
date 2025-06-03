@@ -50,7 +50,8 @@ class EditPostViewModel @Inject constructor(
                                 post = post,
                                 title = post.title,
                                 content = post.content,
-                                currentImageUrl = post.image
+                                currentImageUrl = post.image,
+                                currentCategoryId = post.categoryId // Store original category ID
                             )
                         } ?: run {
                             _uiState.value = _uiState.value.copy(isLoadingPost = false, generalError = "Gagal memuat data postingan.")
@@ -60,7 +61,7 @@ class EditPostViewModel @Inject constructor(
                         _uiState.value = _uiState.value.copy(isLoadingPost = false, generalError = resource.message ?: "Error memuat postingan.")
                     }
                     is Resource.Loading -> {
-                        _uiState.value = _uiState.value.copy(isLoadingPost = true)
+                        // Handled by isLoadingPost
                     }
                 }
             }
@@ -91,7 +92,7 @@ class EditPostViewModel @Inject constructor(
                 }
 
                 val fileBytes = inputStream.use { it.readBytes() }
-                if (fileBytes.size > Constants.MAX_IMAGE_SIZE) { //
+                if (fileBytes.size > Constants.MAX_IMAGE_SIZE) {
                     _uiState.value = _uiState.value.copy(selectedImageFile = null, selectedImageUri = null, imageError = "Ukuran gambar maksimal 10MB.")
                     return@launch
                 }
@@ -113,7 +114,7 @@ class EditPostViewModel @Inject constructor(
     }
 
     private fun isValidImageType(mimeType: String): Boolean {
-        val allowedTypes = arrayOf("image/jpeg", "image/png", "image/jpg") //
+        val allowedTypes = arrayOf("image/jpeg", "image/png", "image/jpg")
         return allowedTypes.contains(mimeType.lowercase())
     }
 
@@ -125,21 +126,36 @@ class EditPostViewModel @Inject constructor(
         }
     }
 
-    fun updatePost() {
-        if (!validateForm()) return
+    fun updatePost(context: Context) {
+        if (!validateForm(context)) return
 
         val currentState = _uiState.value
+        val originalCategoryId = currentState.currentCategoryId // Use stored original category ID
+
+        if (originalCategoryId.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(generalError = "ID Kategori asli tidak ditemukan. Tidak dapat mengedit.")
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isUpdatingPost = true, generalError = null, updateSuccess = false)
             updatePostUseCase(
                 postId = postId,
                 title = currentState.title.trim(),
                 content = currentState.content.trim(),
+                categoryId = originalCategoryId, // Pass the original category ID
                 photo = currentState.selectedImageFile
             ).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        _uiState.value = _uiState.value.copy(isUpdatingPost = false, updateSuccess = true, post = resource.data)
+                        _uiState.value = _uiState.value.copy(
+                            isUpdatingPost = false,
+                            updateSuccess = true,
+                            post = resource.data, // Update with new post data
+                            // Optionally update currentImageUrl and currentCategoryId if they can change
+                            currentImageUrl = resource.data?.image,
+                            currentCategoryId = resource.data?.categoryId
+                        )
                     }
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(isUpdatingPost = false, generalError = resource.message ?: "Gagal memperbarui post.")
@@ -152,30 +168,41 @@ class EditPostViewModel @Inject constructor(
         }
     }
 
-    private fun validateForm(): Boolean {
+    private fun validateForm(context: Context): Boolean {
         var isValid = true
         val current = _uiState.value
 
-        if (current.title.trim().length < 3) { // API validation for title
+        if (current.title.trim().length < 3) {
             _uiState.value = _uiState.value.copy(titleError = "Judul minimal 3 karakter.")
             isValid = false
         } else {
             _uiState.value = _uiState.value.copy(titleError = null)
         }
 
-        if (current.content.trim().length < 10) { // API validation for content
+        if (current.content.trim().length < 10) {
             _uiState.value = _uiState.value.copy(contentError = "Konten minimal 10 karakter.")
             isValid = false
         } else {
             _uiState.value = _uiState.value.copy(contentError = null)
         }
 
+        // Photo validation (optional for edit, only validate if new one is selected)
         current.selectedImageFile?.let {
-            if (it.length() > Constants.MAX_IMAGE_SIZE) { //
+            if (it.length() > Constants.MAX_IMAGE_SIZE) {
                 _uiState.value = _uiState.value.copy(imageError = "Ukuran gambar maksimal 10MB.")
                 isValid = false
             } else {
-                _uiState.value = _uiState.value.copy(imageError = null)
+                // Get the mime type for validation
+                current.selectedImageUri?.let { uriString ->
+                    val uri = Uri.parse(uriString)
+                    val mimeType = context.contentResolver.getType(uri) ?: ""
+                    if (!isValidImageType(mimeType)) {
+                        _uiState.value = _uiState.value.copy(imageError = "Format gambar tidak didukung (JPG/PNG).")
+                        isValid = false
+                    } else {
+                        _uiState.value = _uiState.value.copy(imageError = null)
+                    }
+                }
             }
         }
         return isValid

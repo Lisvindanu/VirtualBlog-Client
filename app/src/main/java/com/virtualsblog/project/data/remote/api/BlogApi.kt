@@ -45,6 +45,7 @@ interface BlogApi {
         @Header("Authorization") authorization: String,
         @Part("title") title: RequestBody,
         @Part("content") content: RequestBody,
+        @Part("categoryId") categoryId: RequestBody,
         @Part photo: MultipartBody.Part? // Photo is optional for update
     ): Response<ApiResponse<PostResponse>> // Assuming response is similar to createPost
 
