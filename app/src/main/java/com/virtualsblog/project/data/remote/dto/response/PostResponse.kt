@@ -49,8 +49,9 @@ data class PostResponse(
     val category: CategoryResponse,
     @SerializedName("Comment")
     val comments: List<CommentResponse> = emptyList(),
+    // FIXED: Make count nullable - post baru mungkin belum ada count
     @SerializedName("_count")
-    val count: CountResponse,
+    val count: CountResponse? = null,
     @SerializedName("like")
     val liked: Boolean = false
 )
@@ -80,8 +81,9 @@ data class PostDetailResponse(
     val category: CategoryResponse,
     @SerializedName("Comment")
     val comments: List<CommentResponse> = emptyList(),
+    // FIXED: Make count nullable - detail post juga bisa null
     @SerializedName("_count")
-    val count: CountResponse,
+    val count: CountResponse? = null,
     @SerializedName("like")
     val liked: Boolean = false
 )
