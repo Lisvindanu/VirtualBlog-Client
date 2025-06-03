@@ -48,8 +48,7 @@ data class PostResponse(
     @SerializedName("category")
     val category: CategoryResponse,
     @SerializedName("Comment")
-    val comments: List<CommentResponse> = emptyList(),
-    // FIXED: Make count nullable - post baru mungkin belum ada count
+    val comments: List<CommentResponse>? = emptyList(), // Tetap nullable
     @SerializedName("_count")
     val count: CountResponse? = null,
     @SerializedName("like")
@@ -80,8 +79,7 @@ data class PostDetailResponse(
     @SerializedName("category")
     val category: CategoryResponse,
     @SerializedName("Comment")
-    val comments: List<CommentResponse> = emptyList(),
-    // FIXED: Make count nullable - detail post juga bisa null
+    val comments: List<CommentResponse>? = emptyList(), // Tetap nullable
     @SerializedName("_count")
     val count: CountResponse? = null,
     @SerializedName("like")
@@ -106,19 +104,20 @@ data class CountResponse(
     val Like: Int
 )
 
+// DTO untuk komentar yang ter-embed di dalam Post (dari GET /posts/{id})
 data class CommentResponse(
     @SerializedName("id")
     val id: String,
-    @SerializedName("content")
-    val content: String,
-    @SerializedName("authorId")
-    val authorId: String,
+    @SerializedName("content") // Sesuai log JSON GET /posts/{id}, fieldnya "content"
+    val content: String?,
+    @SerializedName("userId")   // Sesuai log JSON GET /posts/{id}, fieldnya "userId"
+    val authorId: String?,      // Nama variabel Kotlin bisa tetap authorId
     @SerializedName("postId")
     val postId: String,
     @SerializedName("createdAt")
     val createdAt: String,
     @SerializedName("updatedAt")
     val updatedAt: String,
-    @SerializedName("author")
-    val author: AuthorResponse? = null
+    @SerializedName("user")     // Sesuai log JSON GET /posts/{id}, fieldnya "user"
+    val author: AuthorResponse? // Nama variabel Kotlin bisa tetap author
 )
