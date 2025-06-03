@@ -40,6 +40,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.map
 import com.virtualsblog.project.presentation.ui.component.FullScreenImageViewer
+import com.virtualsblog.project.util.ImageUtil
+import kotlin.math.ceil
 
 // Helper composable to get current user ID from UserPreferences
 @Composable
@@ -66,6 +68,9 @@ fun PostDetailScreen(
     // Get current user ID using the implemented function
     val currentUserId = rememberCurrentUserId()
 
+    // State for managing full-screen image view
+    var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
+
     // Animation for content
     val animationProgress by animateFloatAsState(
         targetValue = if (uiState.post != null) 1f else 0f,
@@ -75,6 +80,14 @@ fun PostDetailScreen(
 
     LaunchedEffect(postId) {
         viewModel.loadPost(postId)
+    }
+
+    // Show FullScreenImageViewer when fullScreenImageUrl is not null
+    if (fullScreenImageUrl != null) {
+        FullScreenImageViewer(
+            imageUrl = fullScreenImageUrl,
+            onDismiss = { fullScreenImageUrl = null }
+        )
     }
 
     Column(
@@ -149,7 +162,10 @@ fun PostDetailScreen(
                     if (!uiState.post!!.image.isNullOrEmpty()) {
                         HeroImageSection(
                             imageUrl = uiState.post!!.image!!,
-                            title = uiState.post!!.title
+                            title = uiState.post!!.title,
+                            onImageClick = {
+                                fullScreenImageUrl = ImageUtil.getFullImageUrl(uiState.post!!.image)
+                            }
                         )
                     }
 
@@ -162,7 +178,10 @@ fun PostDetailScreen(
                         EnhancedAuthorSection(
                             post = uiState.post!!,
                             onToggleLike = { viewModel.toggleLike() },
-                            isLikeLoading = uiState.isLikeLoading
+                            isLikeLoading = uiState.isLikeLoading,
+                            onAvatarClick = {
+                                fullScreenImageUrl = ImageUtil.getProfileImageUrl(uiState.post!!.authorImage)
+                            }
                         )
 
                         // Enhanced Title
@@ -200,7 +219,10 @@ fun PostDetailScreen(
                                 viewModel.deleteComment(commentId)
                             },
                             currentUserId = currentUserId,
-                            isCommentLoading = uiState.isCommentLoading
+                            isCommentLoading = uiState.isCommentLoading,
+                            onCommentAvatarClick = { commenterImageUrl ->
+                                fullScreenImageUrl = ImageUtil.getProfileImageUrl(commenterImageUrl)
+                            }
                         )
                     }
                 }
@@ -212,7 +234,8 @@ fun PostDetailScreen(
 @Composable
 private fun HeroImageSection(
     imageUrl: String,
-    title: String
+    title: String,
+    onImageClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -220,12 +243,9 @@ private fun HeroImageSection(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = 300.dp)
+            .clickable(onClick = onImageClick) // Make image clickable
     ) {
-        val fullImageUrl = if (imageUrl.startsWith("http")) {
-            imageUrl
-        } else {
-            "https://be-prakmob.kodingin.id$imageUrl"
-        }
+        val fullImageUrl = ImageUtil.getFullImageUrl(imageUrl) // Use ImageUtil
 
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -234,7 +254,7 @@ private fun HeroImageSection(
                 .placeholder(android.R.drawable.ic_menu_gallery)
                 .error(android.R.drawable.ic_menu_gallery)
                 .build(),
-            contentDescription = "Hero Image",
+            contentDescription = "Hero Image: $title",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
@@ -261,7 +281,8 @@ private fun HeroImageSection(
 private fun EnhancedAuthorSection(
     post: Post,
     onToggleLike: () -> Unit,
-    isLikeLoading: Boolean = false
+    isLikeLoading: Boolean = false,
+    onAvatarClick: () -> Unit // Added callback for avatar click
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -275,14 +296,15 @@ private fun EnhancedAuthorSection(
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Enhanced Author Avatar
+            // Enhanced Author Avatar - Pass onAvatarClick to UserAvatar
             UserAvatar(
                 userName = post.author,
                 imageUrl = post.authorImage,
                 size = 56.dp,
                 showBorder = true,
                 borderColor = MaterialTheme.colorScheme.primary,
-                borderWidth = 2.dp
+                borderWidth = 2.dp,
+                onClick = onAvatarClick // Use the passed lambda
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -314,7 +336,7 @@ private fun EnhancedAuthorSection(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = DateUtil.formatDateForDetail(post.createdAt),
+                        text = DateUtil.formatDateForDetail(post.createdAt), //
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium
@@ -510,8 +532,23 @@ private fun CommentsSection(
     onDeleteComment: (String) -> Unit,
     currentUserId: String?,
     isCommentLoading: Boolean,
+    onCommentAvatarClick: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isCommentsExpanded by remember { mutableStateOf(true) } // Default expanded
+    var currentCommentPage by remember { mutableStateOf(0) }
+    val commentsPerPage = 10
+    val totalCommentPages = ceil(comments.size.toDouble() / commentsPerPage).toInt()
+
+    val startIndex = currentCommentPage * commentsPerPage
+    val endIndex = minOf((currentCommentPage + 1) * commentsPerPage, comments.size)
+    val commentsToShow = if (comments.isNotEmpty() && startIndex < endIndex) {
+        comments.subList(startIndex, endIndex)
+    } else {
+        emptyList()
+    }
+
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -523,9 +560,12 @@ private fun CommentsSection(
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
-            // Comments Header
+            // Comments Header - Clickable to expand/collapse
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isCommentsExpanded = !isCommentsExpanded }
+                    .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -535,66 +575,112 @@ private fun CommentsSection(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                Icon(
+                    imageVector = if (isCommentsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (isCommentsExpanded) "Sembunyikan komentar" else "Tampilkan komentar",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            AnimatedVisibility(
+                visible = isCommentsExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp)) // Adjusted spacer
 
-            // Comment Input
-            CommentInput(
-                value = commentText,
-                onValueChange = onCommentTextChange,
-                onSendClick = onSendComment,
-                isLoading = isCommentLoading,
-                placeholder = "Tulis komentar Anda..."
-            )
+                    // Comment Input
+                    CommentInput(
+                        value = commentText,
+                        onValueChange = onCommentTextChange,
+                        onSendClick = {
+                            onSendComment()
+                            // Reset to first page after sending comment
+                            currentCommentPage = 0
+                        },
+                        isLoading = isCommentLoading,
+                        placeholder = "Tulis komentar Anda..."
+                    )
 
-            if (comments.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
+                    if (comments.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                // Comments List
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    comments.forEach { comment ->
-                        CommentItem(
-                            comment = comment,
-                            currentUserId = currentUserId,
-                            onDeleteClick = if (currentUserId == comment.authorId) {
-                                { onDeleteComment(comment.id) }
-                            } else null
-                        )
+                        // Comments List
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            commentsToShow.forEach { comment ->
+                                CommentItem(
+                                    comment = comment,
+                                    currentUserId = currentUserId,
+                                    onDeleteClick = if (currentUserId == comment.authorId) {
+                                        { onDeleteComment(comment.id) }
+                                    } else null,
+                                    onAvatarClick = { onCommentAvatarClick(comment.authorImage) }
+                                )
+                            }
+                        }
+
+                        // Pagination Controls
+                        if (totalCommentPages > 1) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = { if (currentCommentPage > 0) currentCommentPage-- },
+                                    enabled = currentCommentPage > 0
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowLeft, "Komentar Sebelumnya")
+                                }
+                                Text(
+                                    text = "Halaman ${currentCommentPage + 1} dari $totalCommentPages",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                IconButton(
+                                    onClick = { if (currentCommentPage < totalCommentPages - 1) currentCommentPage++ },
+                                    enabled = currentCommentPage < totalCommentPages - 1
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowRight, "Komentar Selanjutnya")
+                                }
+                            }
+                        }
+
+                    } else { // Handles case when comments list is empty
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "💭",
+                                style = MaterialTheme.typography.headlineMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Belum ada komentar",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Jadilah yang pertama berkomentar!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                }
-            } else {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Empty state
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "💭",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Belum ada komentar",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Jadilah yang pertama berkomentar!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
                 }
             }
         }
     }
 }
+
 
 @Composable
 private fun EnhancedLoadingState() {
