@@ -1,3 +1,4 @@
+// app/src/main/java/com/virtualsblog/project/data/repository/BlogRepositoryImpl.kt
 package com.virtualsblog.project.data.repository
 
 import com.google.gson.Gson
@@ -5,6 +6,7 @@ import com.google.gson.reflect.TypeToken
 import com.virtualsblog.project.data.mapper.CategoryMapper
 import com.virtualsblog.project.data.mapper.CommentMapper
 import com.virtualsblog.project.data.mapper.PostMapper
+import com.virtualsblog.project.data.mapper.UserMapper
 import com.virtualsblog.project.data.remote.api.BlogApi
 import com.virtualsblog.project.data.remote.dto.request.CreateCommentRequest
 import com.virtualsblog.project.data.remote.dto.response.ApiResponse
@@ -13,6 +15,7 @@ import com.virtualsblog.project.data.remote.dto.response.ValidationError
 import com.virtualsblog.project.domain.model.Category
 import com.virtualsblog.project.domain.model.Comment
 import com.virtualsblog.project.domain.model.Post
+import com.virtualsblog.project.domain.model.SearchData
 import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.repository.BlogRepository
 import com.virtualsblog.project.util.Constants
@@ -43,7 +46,7 @@ class BlogRepositoryImpl @Inject constructor(
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
                 return@flow
             }
 
@@ -75,6 +78,102 @@ class BlogRepositoryImpl @Inject constructor(
             emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
         }
     }
+
+    override suspend fun search(keyword: String): Flow<Resource<SearchData>> = flow {
+        emit(Resource.Loading())
+        try {
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            if (keyword.isBlank()) {
+                emit(Resource.Error("Keyword pencarian tidak boleh kosong."))
+                return@flow
+            }
+
+            val response = blogApi.search(
+                keyword = keyword,
+                authorization = "${Constants.BEARER_PREFIX}$token"
+            )
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success && body.data != null) {
+                    val searchResponseData = body.data
+                    val domainUsers = searchResponseData.users.map { UserMapper.mapEntityToDomain(UserMapper.mapDomainToEntity( // Assuming UserResponse needs to be converted to UserEntity first for UserMapper.mapEntityToDomain
+                        com.virtualsblog.project.domain.model.User( // Manual mapping from UserResponse to domain.User
+                            id = it.id,
+                            username = it.username,
+                            fullname = it.fullname,
+                            email = it.email,
+                            image = it.image.ifEmpty { null },
+                            createdAt = it.createdAt,
+                            updatedAt = it.updatedAt
+                        )
+                    ))}
+                    val domainCategories = CategoryMapper.mapResponseListToDomain(searchResponseData.categories)
+                    val domainPosts = PostMapper.mapResponseListToDomain(searchResponseData.posts)
+
+                    emit(Resource.Success(SearchData(
+                        users = domainUsers,
+                        categories = domainCategories,
+                        posts = domainPosts
+                    )))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Gagal melakukan pencarian."))
+                }
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+        } catch (e: HttpException) {
+            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
+        } catch (e: IOException) {
+            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
+        }
+    }
+
+    // *** NEW FUNCTION IMPLEMENTATION ***
+    override suspend fun getPostsByCategoryId(categoryId: String): Flow<Resource<List<Post>>> = flow {
+        try {
+            emit(Resource.Loading())
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
+                return@flow
+            }
+
+            val response = blogApi.getPostsByCategoryId(
+                categoryId = categoryId,
+                authorization = "${Constants.BEARER_PREFIX}$token"
+            )
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val posts = PostMapper.mapResponseListToDomain(body.data)
+                    val sortedPosts = posts.sortedByDescending { post ->
+                        DateUtil.getTimestamp(post.createdAt)
+                    }
+                    emit(Resource.Success(sortedPosts))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Gagal memuat post dari kategori ini."))
+                }
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+        } catch (e: HttpException) {
+            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
+        } catch (e: IOException) {
+            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
+        }
+    }
+
 
     override suspend fun getPostsForHome(): Flow<Resource<List<Post>>> = flow {
         try {
@@ -154,7 +253,7 @@ class BlogRepositoryImpl @Inject constructor(
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
                 return@flow
             }
 
@@ -189,7 +288,7 @@ class BlogRepositoryImpl @Inject constructor(
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
                 return@flow
             }
 
@@ -228,7 +327,7 @@ class BlogRepositoryImpl @Inject constructor(
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
                 return@flow
             }
 
@@ -237,13 +336,13 @@ class BlogRepositoryImpl @Inject constructor(
                 return@flow
             }
             if (photo.length() > Constants.MAX_IMAGE_SIZE) {
-                emit(Resource.Error("Ukuran file maksimal 10MB"))
+                emit(Resource.Error("Ukuran file maksimal 10MB")) //
                 return@flow
             }
             val allowedExtensions = listOf("jpg", "jpeg", "png")
             val fileExtension = photo.extension.lowercase()
             if (!allowedExtensions.contains(fileExtension)) {
-                emit(Resource.Error("Tipe file tidak diizinkan. Gunakan JPG, JPEG, atau PNG"))
+                emit(Resource.Error("Tipe file tidak diizinkan. Gunakan JPG, JPEG, atau PNG")) //
                 return@flow
             }
             val mimeType = when (fileExtension) {
@@ -298,7 +397,7 @@ class BlogRepositoryImpl @Inject constructor(
         try {
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
                 return@flow
             }
 
@@ -313,13 +412,13 @@ class BlogRepositoryImpl @Inject constructor(
                     return@flow
                 }
                 if (photo.length() > Constants.MAX_IMAGE_SIZE) {
-                    emit(Resource.Error("Ukuran file baru maksimal 10MB."))
+                    emit(Resource.Error("Ukuran file baru maksimal 10MB.")) //
                     return@flow
                 }
                 val allowedExtensions = listOf("jpg", "jpeg", "png")
                 val fileExtension = photo.extension.lowercase()
                 if (!allowedExtensions.contains(fileExtension)) {
-                    emit(Resource.Error("Tipe file gambar baru tidak diizinkan (JPG, JPEG, PNG)."))
+                    emit(Resource.Error("Tipe file gambar baru tidak diizinkan (JPG, JPEG, PNG).")) //
                     return@flow
                 }
                 val mimeType = when (fileExtension) {
@@ -365,7 +464,7 @@ class BlogRepositoryImpl @Inject constructor(
         try {
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
                 return@flow
             }
 
@@ -406,7 +505,7 @@ class BlogRepositoryImpl @Inject constructor(
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
                 return@flow
             }
 
@@ -444,7 +543,7 @@ class BlogRepositoryImpl @Inject constructor(
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
                 return@flow
             }
 
@@ -483,7 +582,7 @@ class BlogRepositoryImpl @Inject constructor(
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
                 return@flow
             }
 
@@ -535,14 +634,13 @@ class BlogRepositoryImpl @Inject constructor(
             400 -> {
                 if (!errorBody.isNullOrEmpty()) {
                     try {
-                        // Attempt to parse specific error messages for 400 if backend provides them
                         val errorType = object : TypeToken<ApiResponse<List<ValidationError>>>() {}.type
                         val errorResponse: ApiResponse<List<ValidationError>> = gson.fromJson(errorBody, errorType)
                         errorResponse.data.firstOrNull()?.msg ?: errorResponse.message ?: "Permintaan tidak valid atau data input salah."
                     } catch (e: Exception) {
-                        // Fallback if error body parsing fails or format is different
                         if (errorBody.contains("File type not allowed", ignoreCase = true)) "Tipe file tidak diizinkan. Gunakan JPG, JPEG, atau PNG"
                         else if (errorBody.contains("photo wajib diisi", ignoreCase = true)) "Gambar wajib diupload"
+                        else if (errorBody.contains("Keyword pencarian wajib diisi", ignoreCase = true)) "Keyword pencarian wajib diisi" // [cite: 102]
                         else "Permintaan tidak valid atau data input salah."
                     }
                 } else {
@@ -570,12 +668,12 @@ class BlogRepositoryImpl @Inject constructor(
             500 -> {
                 if (!errorBody.isNullOrEmpty()) {
                     try {
-                        val errorType = object : TypeToken<ApiResponse<String>>() {}.type // Assuming data is a simple string for some 500 errors
+                        val errorType = object : TypeToken<ApiResponse<String>>() {}.type
                         val errorResponse: ApiResponse<String> = gson.fromJson(errorBody, errorType)
                         when {
                             errorResponse.data?.contains("File type not allowed", ignoreCase = true) == true -> "Tipe file tidak diizinkan. Gunakan JPG, JPEG, atau PNG"
                             errorResponse.data?.contains("Failed to upload file", ignoreCase = true) == true -> "Gagal mengunggah file ke server."
-                            else -> errorResponse.message ?: Constants.ERROR_UNKNOWN // Use the main message if data is not specific
+                            else -> errorResponse.message ?: Constants.ERROR_UNKNOWN
                         }
                     } catch (e: Exception) {
                         "Terjadi kesalahan pada server. Coba lagi nanti."

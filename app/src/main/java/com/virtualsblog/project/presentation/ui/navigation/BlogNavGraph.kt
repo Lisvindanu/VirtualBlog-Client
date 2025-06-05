@@ -21,6 +21,12 @@ import com.virtualsblog.project.presentation.ui.screen.post.detail.PostDetailScr
 import com.virtualsblog.project.presentation.ui.screen.post.edit.EditPostScreen
 import com.virtualsblog.project.presentation.ui.screen.post.list.PostListScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.changepassword.ChangePasswordScreen
+import com.virtualsblog.project.presentation.ui.screen.category.list.CategoriesScreen
+import com.virtualsblog.project.presentation.ui.screen.category.posts.CategoryPostsScreen
+import com.virtualsblog.project.presentation.ui.screen.search.SearchScreen // *** ADDED IMPORT FOR SEARCH SCREEN ***
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun BlogNavGraph(
@@ -140,7 +146,7 @@ fun BlogNavGraph(
             )
         }
 
-        // Layar Utama Aplikasi - TIDAK PERLU MAINVIEWMODEL DI PARAMETER
+        // Layar Utama Aplikasi
         composable(BlogDestinations.HOME_ROUTE) {
             HomeScreen(
                 onNavigateToProfile = {
@@ -153,7 +159,6 @@ fun BlogNavGraph(
                     navController.navigate(BlogDestinations.postDetailRoute(postId))
                 },
                 onNavigateToLogin = {
-                    // Clear navigation state when logging out
                     mainViewModel?.userLoggedOut()
                     navController.navigate(BlogDestinations.LOGIN_ROUTE) {
                         popUpTo(BlogDestinations.HOME_ROUTE) { inclusive = true }
@@ -161,8 +166,13 @@ fun BlogNavGraph(
                 },
                 onNavigateToAllPosts = {
                     navController.navigate(BlogDestinations.POST_LIST_ROUTE)
+                },
+                onNavigateToCategories = {
+                    navController.navigate(BlogDestinations.CATEGORIES_ROUTE)
+                },
+                onNavigateToSearch = { // *** ADDED NAVIGATION TO SEARCH ***
+                    navController.navigate(BlogDestinations.SEARCH_ROUTE)
                 }
-                // REMOVED: mainViewModel parameter - HomeScreen uses hiltViewModel() internally
             )
         }
 
@@ -172,7 +182,6 @@ fun BlogNavGraph(
                     navController.popBackStack()
                 },
                 onNavigateToLogin = {
-                    // Clear navigation state when logging out
                     mainViewModel?.userLoggedOut()
                     navController.navigate(BlogDestinations.LOGIN_ROUTE) {
                         popUpTo(0) { inclusive = true }
@@ -192,17 +201,13 @@ fun BlogNavGraph(
             )
         }
 
-        // Layar Buat Post
         composable(BlogDestinations.CREATE_POST_ROUTE) {
             CreatePostScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
                 onPostCreated = {
-                    // Signal that a new post was created
                     mainViewModel?.postCreated("new_post")
-
-                    // Navigate back to Home and ensure refresh
                     navController.navigate(BlogDestinations.HOME_ROUTE) {
                         popUpTo(BlogDestinations.CREATE_POST_ROUTE) { inclusive = true }
                         launchSingleTop = true
@@ -211,7 +216,6 @@ fun BlogNavGraph(
             )
         }
 
-        // Post List Screen
         composable(BlogDestinations.POST_LIST_ROUTE) {
             PostListScreen(
                 onNavigateToPostDetail = { postId ->
@@ -220,11 +224,9 @@ fun BlogNavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
-                // REMOVED: mainViewModel parameter - PostListScreen uses hiltViewModel() internally
             )
         }
 
-        // Post Detail Screen
         composable(
             route = BlogDestinations.POST_DETAIL_WITH_ID,
             arguments = listOf(
@@ -240,11 +242,9 @@ fun BlogNavGraph(
                 onNavigateToEdit = { id ->
                     navController.navigate(BlogDestinations.editPostRoute(id))
                 }
-                // REMOVED: mainViewModel parameter - PostDetailScreen uses hiltViewModel() internally
             )
         }
 
-        // Edit Post Screen
         composable(
             route = BlogDestinations.EDIT_POST_WITH_ID,
             arguments = listOf(
@@ -258,13 +258,65 @@ fun BlogNavGraph(
                     navController.popBackStack()
                 },
                 onPostUpdated = {
-                    // Signal that a post was updated
                     mainViewModel?.postUpdated(postId)
-
-                    // Navigate back to post detail and refresh data
                     navController.popBackStack()
                 }
-                // REMOVED: mainViewModel parameter - EditPostScreen uses hiltViewModel() internally
+            )
+        }
+
+        composable(BlogDestinations.CATEGORIES_ROUTE) {
+            CategoriesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCategoryPosts = { categoryId, categoryName ->
+                    val encodedCategoryName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
+                    navController.navigate(
+                        BlogDestinations.categoryPostsRoute(categoryId, encodedCategoryName)
+                    )
+                }
+            )
+        }
+
+        composable(
+            route = BlogDestinations.CATEGORY_POSTS_WITH_ID_AND_NAME,
+            arguments = listOf(
+                navArgument(BlogDestinations.Args.CATEGORY_ID) { type = NavType.StringType },
+                navArgument(BlogDestinations.Args.CATEGORY_NAME) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val categoryId = backStackEntry.arguments?.getString(BlogDestinations.Args.CATEGORY_ID) ?: ""
+            val encodedCategoryName = backStackEntry.arguments?.getString(BlogDestinations.Args.CATEGORY_NAME) ?: "Kategori"
+            val categoryName = URLDecoder.decode(encodedCategoryName, StandardCharsets.UTF_8.toString())
+
+            CategoryPostsScreen(
+                categoryName = categoryName,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPostDetail = { postId ->
+                    navController.navigate(BlogDestinations.postDetailRoute(postId))
+                }
+            )
+        }
+
+        // *** NEW COMPOSABLE FOR SEARCH SCREEN ***
+        composable(BlogDestinations.SEARCH_ROUTE) {
+            SearchScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPostDetail = { postId ->
+                    navController.navigate(BlogDestinations.postDetailRoute(postId))
+                },
+                onNavigateToUserProfile = { userId ->
+                    // Navigasi ke profil pengguna. Anda mungkin perlu membuat route khusus
+                    // jika ingin menampilkan profil pengguna lain, atau sesuaikan.
+                    // Untuk saat ini, navigasi ke profil pengguna saat ini jika userId cocok,
+                    // atau handle berbeda jika tidak.
+                    // Contoh sederhana:
+                    navController.navigate(BlogDestinations.PROFILE_ROUTE) // Sesuaikan jika perlu
+                },
+                onNavigateToCategoryPosts = { categoryId, categoryName ->
+                    val encodedCategoryName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
+                    navController.navigate(
+                        BlogDestinations.categoryPostsRoute(categoryId, encodedCategoryName)
+                    )
+                }
             )
         }
     }
