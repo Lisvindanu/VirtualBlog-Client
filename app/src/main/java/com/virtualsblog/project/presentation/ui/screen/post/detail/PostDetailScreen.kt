@@ -1,3 +1,4 @@
+// PostDetailScreen.kt - Updated dengan Dislike Confirmation
 package com.virtualsblog.project.presentation.ui.screen.post.detail
 
 import androidx.compose.animation.*
@@ -24,22 +25,18 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.virtualsblog.project.R
 import com.virtualsblog.project.domain.model.Comment
 import com.virtualsblog.project.domain.model.Post
 import com.virtualsblog.project.presentation.ui.component.CommentInput
 import com.virtualsblog.project.presentation.ui.component.CommentItem
 import com.virtualsblog.project.presentation.ui.component.UserAvatar
 import com.virtualsblog.project.util.DateUtil
-import com.virtualsblog.project.preferences.UserPreferences
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.map
 import com.virtualsblog.project.presentation.ui.component.FullScreenImageViewer
@@ -48,14 +45,11 @@ import com.virtualsblog.project.util.showToast
 import kotlin.math.ceil
 import kotlinx.coroutines.delay
 
-// Helper composable to get current user ID from UserPreferences
+// Helper composable tetap sama
 @Composable
 fun rememberCurrentUserId(): String? {
     val viewModel: PostDetailViewModel = androidx.hilt.navigation.compose.hiltViewModel()
-
-    // Collect current user ID from UserPreferences
     val currentUserId by viewModel.getCurrentUserId().collectAsStateWithLifecycle(initialValue = null)
-
     return currentUserId
 }
 
@@ -69,8 +63,6 @@ fun PostDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-
-    // Menggunakan currentUserId dari uiState yang sudah diinisialisasi di ViewModel utama
     val currentUserId = uiState.currentUserId
 
     // State for managing full-screen image view
@@ -78,6 +70,9 @@ fun PostDetailScreen(
 
     // State for delete dialog
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // NEW: State for dislike confirmation dialog
+    var showDislikeDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(postId) {
         viewModel.loadPost(postId)
@@ -87,14 +82,8 @@ fun PostDetailScreen(
     LaunchedEffect(uiState.deletePostSuccess) {
         if (uiState.deletePostSuccess) {
             context.showToast("Postingan berhasil dihapus")
-
-            // Add a small delay to ensure the toast is shown
             delay(500)
-
-            // Reset the success flag before navigating
             viewModel.resetDeleteSuccessFlag()
-
-            // Navigate back to previous screen
             onNavigateBack()
         }
     }
@@ -102,7 +91,6 @@ fun PostDetailScreen(
     LaunchedEffect(uiState.deletePostError) {
         uiState.deletePostError?.let { errorMessage ->
             context.showToast(errorMessage)
-            // Clear the error after showing toast
             delay(100)
             viewModel.clearError()
         }
@@ -116,7 +104,7 @@ fun PostDetailScreen(
         )
     }
 
-    // Dialog konfirmasi hapus
+    // Dialog konfirmasi hapus post
     if (showDeleteDialog && uiState.post != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -141,12 +129,60 @@ fun PostDetailScreen(
         )
     }
 
+    // NEW: Dialog konfirmasi dislike
+    if (showDislikeDialog) {
+        AlertDialog(
+            onDismissRequest = { showDislikeDialog = false },
+            title = {
+                Text(
+                    "Batalkan Like?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "Apakah Anda yakin ingin membatalkan like pada postingan ini?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.performDislike()
+                        showDislikeDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Ya, Batalkan Like")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDislikeDialog = false }
+                ) {
+                    Text("Batal")
+                }
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.HeartBroken,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Enhanced Top App Bar with gradient
+        // Enhanced Top App Bar
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.surface,
@@ -247,11 +283,9 @@ fun PostDetailScreen(
         )
 
         when {
-            // Kombinasikan loading state untuk memuat post dan proses hapus
             uiState.isLoading || uiState.isDeletingPost -> {
                 EnhancedLoadingState(message = if (uiState.isDeletingPost) "Menghapus postingan..." else "Memuat postingan...")
             }
-            // Tampilkan error hanya jika tidak sedang dalam proses hapus dan ada error umum
             uiState.error != null && !uiState.isDeletingPost -> {
                 EnhancedErrorState(
                     error = uiState.error!!,
@@ -286,7 +320,12 @@ fun PostDetailScreen(
                         // Enhanced Author Section
                         EnhancedAuthorSection(
                             post = postDetail,
-                            onToggleLike = { viewModel.toggleLike() },
+                            onToggleLike = {
+                                // PERMANENT LIKE SYSTEM
+                                viewModel.toggleLike {
+                                    showDislikeDialog = true
+                                }
+                            },
                             isLikeLoading = uiState.isLikeLoading,
                             onAvatarClick = {
                                 postDetail.authorImage?.let {
@@ -310,7 +349,12 @@ fun PostDetailScreen(
                         // Enhanced Actions
                         EnhancedActionsSection(
                             post = postDetail,
-                            onLikeClick = { viewModel.toggleLike() },
+                            onLikeClick = {
+                                // PERMANENT LIKE SYSTEM
+                                viewModel.toggleLike {
+                                    showDislikeDialog = true
+                                }
+                            },
                             onCommentClick = { /* Scroll to comments section */ },
                             onShareClick = { /* TODO: Share functionality */ },
                             isLikeLoading = uiState.isLikeLoading
@@ -340,7 +384,6 @@ fun PostDetailScreen(
                     }
                 }
             }
-            // Fallback jika post null, tidak loading, tidak ada error umum, dan proses delete belum sukses
             else -> {
                 EnhancedErrorState(
                     error = "Postingan tidak dapat ditemukan atau telah dihapus.",
@@ -352,6 +395,7 @@ fun PostDetailScreen(
     }
 }
 
+// Semua component helper tetap sama seperti sebelumnya...
 @Composable
 private fun HeroImageSection(
     imageUrl: String,
@@ -380,7 +424,6 @@ private fun HeroImageSection(
             contentScale = ContentScale.Crop
         )
 
-        // Gradient overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()

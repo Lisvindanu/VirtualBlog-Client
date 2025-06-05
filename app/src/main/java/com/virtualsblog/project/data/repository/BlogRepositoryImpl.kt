@@ -34,7 +34,7 @@ import javax.inject.Singleton
 class BlogRepositoryImpl @Inject constructor(
     private val blogApi: BlogApi,
     private val authRepository: AuthRepository,
-    private val gson: Gson // Added Gson for consistent error parsing
+    private val gson: Gson
 ) : BlogRepository {
 
     override suspend fun getAllPosts(): Flow<Resource<List<Post>>> = flow {
@@ -473,6 +473,8 @@ class BlogRepositoryImpl @Inject constructor(
         }
     }
 
+    // Excerpt from BlogRepositoryImpl.kt - Updated toggleLike method
+
     override suspend fun toggleLike(
         postId: String
     ): Flow<Resource<Pair<Boolean, Int>>> = flow {
@@ -493,9 +495,25 @@ class BlogRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success) {
-                    val isLiked = body.data.liked
-                    val totalLikes = body.data.totalLikes
-                    emit(Resource.Success(Pair(isLiked, totalLikes)))
+                    // FIXED: Analyze response to determine like status
+                    val message = body.message.lowercase()
+                    val isLiked = when {
+                        // API mengembalikan "Like berhasil ditambahkan" untuk like
+                        message.contains("ditambahkan") ||
+                                message.contains("berhasil") && !message.contains("dihapus") -> true
+                        // API mengembalikan "Like berhasil dihapus" untuk unlike
+                        message.contains("dihapus") ||
+                                message.contains("dibatalkan") ||
+                                message.contains("removed") -> false
+                        else -> {
+                            // Fallback: check if data exists (like created) or not (like deleted)
+                            body.data != null
+                        }
+                    }
+
+                    // FIXED: Return actual like status, let UI handle count
+                    // UI akan handle increment/decrement berdasarkan isLiked
+                    emit(Resource.Success(Pair(isLiked, -1))) // -1 indicates UI should handle count
                 } else {
                     emit(Resource.Error(body?.message ?: "Gagal toggle like"))
                 }

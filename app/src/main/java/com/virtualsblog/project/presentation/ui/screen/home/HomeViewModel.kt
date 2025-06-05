@@ -1,3 +1,4 @@
+// HomeViewModel.kt - Permanent Like System
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.lifecycle.ViewModel
@@ -11,6 +12,7 @@ import com.virtualsblog.project.domain.usecase.blog.ToggleLikeUseCase
 import com.virtualsblog.project.util.NavigationState
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +27,7 @@ class HomeViewModel @Inject constructor(
     private val getPostsForHomeUseCase: GetPostsForHomeUseCase,
     private val getTotalPostsCountUseCase: GetTotalPostsCountUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
-    private val navigationState: NavigationState // ADDED
+    private val navigationState: NavigationState
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -37,9 +39,9 @@ class HomeViewModel @Inject constructor(
         loadTotalPostsCount()
         observeNavigationState()
     }
+
     private fun observeNavigationState() {
         viewModelScope.launch {
-            // Simple polling approach - check every 500ms if refresh is needed
             while (true) {
                 kotlinx.coroutines.delay(500)
                 if (navigationState.shouldRefreshHome) {
@@ -106,32 +108,24 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        // Handle error jika diperlukan, tapi tidak perlu menampilkan error ke user
-                        // karena ini hanya untuk statistik
+                        // Handle error jika diperlukan
                     }
                     is Resource.Loading -> {
-                        // Loading state untuk total count tidak perlu ditampilkan
+                        // Loading state tidak perlu ditampilkan
                     }
                 }
             }
         }
     }
 
-    // FIXED: Improved refresh function with better error handling
     fun refreshPosts() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
 
             try {
-                // Refresh authentication status
                 checkAuthStatus()
-
-                // Refresh posts data
                 loadPosts()
-
-                // Refresh total posts count
                 loadTotalPostsCount()
-
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isRefreshing = false,
@@ -141,7 +135,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // FIXED: Function to handle post removal from home screen
     fun removePostFromList(postId: String) {
         val currentPosts = _uiState.value.posts
         val updatedPosts = currentPosts.filterNot { it.id == postId }
@@ -153,7 +146,6 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    // ADDED: Force refresh posts after navigation back from detail
     fun forceRefreshPosts() {
         loadPosts()
         loadTotalPostsCount()
@@ -163,33 +155,93 @@ class HomeViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
-    fun togglePostLike(postId: String) {
+    // NEW: Permanent Like System with Confirmation
+    fun togglePostLike(postId: String, onConfirmDislike: () -> Unit) {
+        val currentPosts = _uiState.value.posts
+        val postIndex = currentPosts.indexOfFirst { it.id == postId }
+        if (postIndex == -1) return
+
+        val currentPost = currentPosts[postIndex]
+        val wasLiked = currentPost.isLiked
+
+        // PERMANENT LIKE SYSTEM: Jika sudah liked, minta konfirmasi untuk dislike
+        if (wasLiked) {
+            onConfirmDislike()
+            return
+        }
+
+        // Jika belum liked, langsung like
+        performLike(postId)
+    }
+
+    fun performDislike(postId: String) {
+        performLike(postId) // Same API call, server handles toggle
+    }
+
+    private fun performLike(postId: String) {
+        val currentPosts = _uiState.value.posts
+        val postIndex = currentPosts.indexOfFirst { it.id == postId }
+        if (postIndex == -1) return
+
+        val currentPost = currentPosts[postIndex]
+
         viewModelScope.launch {
+            // Show loading state
+            _uiState.value = _uiState.value.copy(
+                likingPostIds = _uiState.value.likingPostIds + postId
+            )
+
             toggleLikeUseCase(postId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        val (isLiked, totalLikes) = resource.data!!
-                        val updatedPosts = _uiState.value.posts.map { post ->
-                            if (post.id == postId) {
-                                post.copy(
-                                    isLiked = isLiked,
-                                    likes = totalLikes
-                                )
-                            } else {
-                                post
-                            }
-                        }
-                        _uiState.value = _uiState.value.copy(posts = updatedPosts)
+                        // SUCCESS: Auto refresh untuk avoid bugs
+                        _uiState.value = _uiState.value.copy(
+                            likingPostIds = _uiState.value.likingPostIds - postId
+                        )
+
+                        // SILENT REFRESH: Reload data dari server
+                        silentRefreshAfterLike()
                     }
                     is Resource.Error -> {
-                        // Handle error - could show toast or snackbar
-                        // For now, we'll silently fail to avoid disrupting UX
+                        _uiState.value = _uiState.value.copy(
+                            likingPostIds = _uiState.value.likingPostIds - postId,
+                            error = resource.message
+                        )
                     }
                     is Resource.Loading -> {
-                        // Optional: Could show loading state for individual post
-                        // For now, we'll keep it simple and not show loading
+                        // Already handled by adding to likingPostIds
                     }
                 }
+            }
+        }
+    }
+
+    // SILENT REFRESH: Refresh tanpa loading indicator yang mengganggu
+    private fun silentRefreshAfterLike() {
+        viewModelScope.launch {
+            // Small delay untuk user experience
+            delay(300)
+
+            try {
+                getPostsForHomeUseCase().collect { resource ->
+                    when (resource) {
+                        is Resource.Success -> {
+                            // Update posts tanpa loading indicator
+                            _uiState.value = _uiState.value.copy(
+                                posts = resource.data ?: emptyList(),
+                                error = null
+                            )
+                        }
+                        is Resource.Error -> {
+                            // Ignore error untuk silent refresh
+                        }
+                        is Resource.Loading -> {
+                            // No loading indicator untuk silent refresh
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore errors for silent refresh
             }
         }
     }

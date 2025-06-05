@@ -1,3 +1,4 @@
+// PostDetailViewModel.kt - Permanent Like System
 package com.virtualsblog.project.presentation.ui.screen.post.detail
 
 import androidx.lifecycle.ViewModel
@@ -14,6 +15,7 @@ import com.virtualsblog.project.preferences.UserPreferences
 import com.virtualsblog.project.util.NavigationState
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -90,22 +92,38 @@ class PostDetailViewModel @Inject constructor(
         }
     }
 
-    fun toggleLike() {
+    // NEW: Permanent Like System for Post Detail
+    fun toggleLike(onConfirmDislike: () -> Unit) {
         val currentPost = _uiState.value.post ?: return
+        val wasLiked = currentPost.isLiked
+
+        // PERMANENT LIKE SYSTEM: Jika sudah liked, minta konfirmasi untuk dislike
+        if (wasLiked) {
+            onConfirmDislike()
+            return
+        }
+
+        // Jika belum liked, langsung like
+        performLike()
+    }
+
+    fun performDislike() {
+        performLike() // Same API call, server handles toggle
+    }
+
+    private fun performLike() {
+        val currentPost = _uiState.value.post ?: return
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLikeLoading = true)
+
             toggleLikeUseCase(currentPost.id).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        val (isLiked, totalLikes) = resource.data!!
-                        val updatedPost = currentPost.copy(
-                            isLiked = isLiked,
-                            likes = totalLikes
-                        )
-                        _uiState.value = _uiState.value.copy(
-                            post = updatedPost,
-                            isLikeLoading = false
-                        )
+                        _uiState.value = _uiState.value.copy(isLikeLoading = false)
+
+                        // SUCCESS: Auto refresh untuk avoid bugs
+                        silentRefreshAfterLike(currentPost.id)
                     }
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
@@ -117,6 +135,37 @@ class PostDetailViewModel @Inject constructor(
                         _uiState.value = _uiState.value.copy(isLikeLoading = true)
                     }
                 }
+            }
+        }
+    }
+
+    // SILENT REFRESH: Reload post data setelah like tanpa loading indicator
+    private fun silentRefreshAfterLike(postId: String) {
+        viewModelScope.launch {
+            // Small delay untuk user experience
+            delay(300)
+
+            try {
+                getPostByIdUseCase(postId).collect { resource ->
+                    when (resource) {
+                        is Resource.Success -> {
+                            val postData = resource.data
+                            _uiState.value = _uiState.value.copy(
+                                post = postData,
+                                comments = postData?.actualComments ?: emptyList(),
+                                error = null
+                            )
+                        }
+                        is Resource.Error -> {
+                            // Ignore error untuk silent refresh
+                        }
+                        is Resource.Loading -> {
+                            // No loading indicator untuk silent refresh
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore errors for silent refresh
             }
         }
     }
@@ -192,7 +241,6 @@ class PostDetailViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null, deletePostError = null)
     }
 
-
     fun deleteCurrentPost() {
         val postIdToDelete = _uiState.value.post?.id ?: return
         viewModelScope.launch {
@@ -207,7 +255,6 @@ class PostDetailViewModel @Inject constructor(
                 actualDeletePostUseCase(postIdToDelete).collect { resource ->
                     when (resource) {
                         is Resource.Success -> {
-                            // FIXED: Signal navigation state about deletion
                             navigationState.postDeleted(postIdToDelete)
 
                             _uiState.value = _uiState.value.copy(
@@ -243,9 +290,7 @@ class PostDetailViewModel @Inject constructor(
         }
     }
 
-
-
-fun resetDeleteSuccessFlag() {
+    fun resetDeleteSuccessFlag() {
         _uiState.value = _uiState.value.copy(deletePostSuccess = false)
     }
 }

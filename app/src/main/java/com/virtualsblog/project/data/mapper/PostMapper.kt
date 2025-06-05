@@ -1,4 +1,4 @@
-// app/src/main/java/com/virtualsblog/project/data/mapper/PostMapper.kt
+// PostMapper.kt - Updated untuk memastikan like status tersimpan
 package com.virtualsblog.project.data.mapper
 
 import com.virtualsblog.project.data.remote.dto.response.PostDetailResponse
@@ -20,10 +20,11 @@ object PostMapper {
             createdAt = response.createdAt,
             updatedAt = response.updatedAt,
             category = response.category.name,
-            categoryId = response.categoryId, // <<< ENSURE THIS MAPPING IS PRESENT
+            categoryId = response.categoryId,
             likes = response.count?.Like ?: 0,
             comments = response.count?.Comment ?: 0,
-            isLiked = response.liked,
+            // FIXED: Pastikan like status dari server digunakan
+            isLiked = response.liked, // Ini sangat penting untuk persistent like state
             image = response.image,
             slug = response.slug,
             actualComments = CommentMapper.mapEmbeddedCommentResponseListToDomain(response.comments ?: emptyList())
@@ -44,12 +45,13 @@ object PostMapper {
             authorUsername = response.author.username,
             authorImage = response.author.image,
             category = response.category.name,
-            categoryId = response.categoryId, // <<< ENSURE THIS MAPPING IS PRESENT
+            categoryId = response.categoryId,
             createdAt = response.createdAt,
             updatedAt = response.updatedAt,
             likes = response.count?.Like ?: 0,
             comments = response.count?.Comment ?: 0,
-            isLiked = response.liked,
+            // FIXED: Pastikan like status dari server digunakan
+            isLiked = response.liked, // Ini sangat penting untuk persistent like state
             image = response.image,
             slug = response.slug,
             actualComments = CommentMapper.mapEmbeddedCommentResponseListToDomain(response.comments ?: emptyList())

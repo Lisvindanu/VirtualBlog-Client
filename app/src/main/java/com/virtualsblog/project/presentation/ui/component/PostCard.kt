@@ -1,8 +1,8 @@
+// PostCard.kt - Updated untuk Permanent Like System
 package com.virtualsblog.project.presentation.ui.component
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -39,9 +40,9 @@ import com.virtualsblog.project.util.DateUtil
 fun PostCard(
     post: Post,
     onClick: () -> Unit,
-    onLikeClick: ((String) -> Unit)? = null, // Real like handler
+    onLikeClick: ((String) -> Unit)? = null, // Updated callback signature
     modifier: Modifier = Modifier,
-    isLikeLoading: Boolean = false // Add loading state for like
+    isLikeLoading: Boolean = false
 ) {
     val context = LocalContext.current
     var isPressed by remember { mutableStateOf(false) }
@@ -227,7 +228,7 @@ fun PostCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // UPDATED Enhanced Action Row with Real Like Functionality
+            // UPDATED Enhanced Action Row with Permanent Like System
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -237,12 +238,9 @@ fun PostCard(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // UPDATED Enhanced Like Button with Real Functionality
-                    EnhancedActionButton(
-                        icon = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        text = formatCount(post.likes),
-                        isActive = post.isLiked,
-                        activeColor = MaterialTheme.colorScheme.error,
+                    // UPDATED Enhanced Like Button dengan Permanent Like System
+                    PermanentLikeButton(
+                        post = post,
                         isLoading = isLikeLoading,
                         onClick = {
                             onLikeClick?.invoke(post.id)
@@ -276,30 +274,34 @@ fun PostCard(
     }
 }
 
-// UPDATED Enhanced Action Button with Loading State
+// NEW: Permanent Like Button Component
 @Composable
-private fun EnhancedActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String,
-    isActive: Boolean,
-    activeColor: Color,
-    onClick: () -> Unit,
-    isLoading: Boolean = false
+private fun PermanentLikeButton(
+    post: Post,
+    isLoading: Boolean,
+    onClick: () -> Unit
 ) {
     val color by animateColorAsState(
-        targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "action_color"
+        targetValue = if (post.isLiked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "like_color"
+    )
+
+    // VISUAL FEEDBACK: Jika sudah liked, tampilkan differently
+    val backgroundColor by animateColorAsState(
+        targetValue = if (post.isLiked)
+            MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+        else
+            Color.Transparent,
+        label = "like_bg_color"
     )
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clickable {
-                if (!isLoading) {
-                    onClick()
-                }
-            }
-            .padding(4.dp)
+            .clip(MaterialTheme.shapes.small)
+            .background(backgroundColor)
+            .clickable(enabled = !isLoading) { onClick() }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         if (isLoading) {
             CircularProgressIndicator(
@@ -309,7 +311,7 @@ private fun EnhancedActionButton(
             )
         } else {
             Icon(
-                imageVector = icon,
+                imageVector = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
                 tint = color
@@ -317,11 +319,21 @@ private fun EnhancedActionButton(
         }
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = text,
+            text = formatCount(post.likes),
             style = MaterialTheme.typography.labelMedium,
             color = color,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
+            fontWeight = if (post.isLiked) FontWeight.Bold else FontWeight.Medium
         )
+
+        // PERMANENT INDICATOR: Tanda bahwa like ini permanen
+        if (post.isLiked) {
+            Spacer(modifier = Modifier.width(4.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.error,
+                shape = CircleShape,
+                modifier = Modifier.size(6.dp)
+            ) {}
+        }
     }
 }
 
