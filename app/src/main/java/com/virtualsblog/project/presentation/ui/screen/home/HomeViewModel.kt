@@ -1,8 +1,8 @@
-// HomeViewModel.kt - Permanent Like System
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.virtualsblog.project.data.local.CacheManager
 import com.virtualsblog.project.data.local.dao.UserDao
 import com.virtualsblog.project.data.mapper.UserMapper
 import com.virtualsblog.project.domain.repository.AuthRepository
@@ -27,7 +27,8 @@ class HomeViewModel @Inject constructor(
     private val getPostsForHomeUseCase: GetPostsForHomeUseCase,
     private val getTotalPostsCountUseCase: GetTotalPostsCountUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
-    private val navigationState: NavigationState
+    private val navigationState: NavigationState,
+    private val cacheManager: CacheManager // Added cache manager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -38,6 +39,15 @@ class HomeViewModel @Inject constructor(
         loadPosts()
         loadTotalPostsCount()
         observeNavigationState()
+
+        // Clear expired cache on init
+        viewModelScope.launch {
+            try {
+                cacheManager.clearExpiredCache()
+            } catch (e: Exception) {
+                // Ignore cache clear errors
+            }
+        }
     }
 
     private fun observeNavigationState() {
@@ -76,7 +86,9 @@ class HomeViewModel @Inject constructor(
             getPostsForHomeUseCase().collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {
-                        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+                        if (_uiState.value.posts.isEmpty()) {
+                            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+                        }
                     }
                     is Resource.Success -> {
                         _uiState.value = _uiState.value.copy(
@@ -87,11 +99,20 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            error = resource.message ?: "Gagal memuat postingan"
-                        )
+                        // Only show error if we don't have cached data
+                        if (_uiState.value.posts.isEmpty()) {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                isRefreshing = false,
+                                error = resource.message ?: "Gagal memuat postingan"
+                            )
+                        } else {
+                            // We have cached data, just stop loading/refreshing
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                isRefreshing = false
+                            )
+                        }
                     }
                 }
             }
@@ -108,7 +129,7 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        // Handle error jika diperlukan
+                        // Handle error jika diperlukan - keep existing count
                     }
                     is Resource.Loading -> {
                         // Loading state tidak perlu ditampilkan
@@ -155,7 +176,7 @@ class HomeViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
-    // NEW: Permanent Like System with Confirmation
+    // Permanent Like System with offline support
     fun togglePostLike(postId: String, onConfirmDislike: () -> Unit) {
         val currentPosts = _uiState.value.posts
         val postIndex = currentPosts.indexOfFirst { it.id == postId }
@@ -164,46 +185,55 @@ class HomeViewModel @Inject constructor(
         val currentPost = currentPosts[postIndex]
         val wasLiked = currentPost.isLiked
 
-        // PERMANENT LIKE SYSTEM: Jika sudah liked, minta konfirmasi untuk dislike
         if (wasLiked) {
             onConfirmDislike()
             return
         }
 
-        // Jika belum liked, langsung like
         performLike(postId)
     }
 
     fun performDislike(postId: String) {
-        performLike(postId) // Same API call, server handles toggle
+        performLike(postId)
     }
 
     private fun performLike(postId: String) {
-        val currentPosts = _uiState.value.posts
-        val postIndex = currentPosts.indexOfFirst { it.id == postId }
-        if (postIndex == -1) return
-
-        val currentPost = currentPosts[postIndex]
+        val currentPost = _uiState.value.posts.find { it.id == postId } ?: return
 
         viewModelScope.launch {
-            // Show loading state
             _uiState.value = _uiState.value.copy(
                 likingPostIds = _uiState.value.likingPostIds + postId
             )
 
+            // Optimistic UI update for better UX
+            val updatedPosts = _uiState.value.posts.map { post ->
+                if (post.id == postId) {
+                    post.copy(
+                        isLiked = !post.isLiked,
+                        likes = if (!post.isLiked) post.likes + 1 else maxOf(0, post.likes - 1)
+                    )
+                } else post
+            }
+            _uiState.value = _uiState.value.copy(posts = updatedPosts)
+
             toggleLikeUseCase(postId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        // SUCCESS: Auto refresh untuk avoid bugs
                         _uiState.value = _uiState.value.copy(
                             likingPostIds = _uiState.value.likingPostIds - postId
                         )
-
-                        // SILENT REFRESH: Reload data dari server
+                        // The repository handles cache updates
                         silentRefreshAfterLike()
                     }
                     is Resource.Error -> {
+                        // Revert optimistic update on error
+                        val revertedPosts = _uiState.value.posts.map { post ->
+                            if (post.id == postId) {
+                                currentPost
+                            } else post
+                        }
                         _uiState.value = _uiState.value.copy(
+                            posts = revertedPosts,
                             likingPostIds = _uiState.value.likingPostIds - postId,
                             error = resource.message
                         )
@@ -216,17 +246,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // SILENT REFRESH: Refresh tanpa loading indicator yang mengganggu
     private fun silentRefreshAfterLike() {
         viewModelScope.launch {
-            // Small delay untuk user experience
             delay(300)
-
             try {
                 getPostsForHomeUseCase().collect { resource ->
                     when (resource) {
                         is Resource.Success -> {
-                            // Update posts tanpa loading indicator
                             _uiState.value = _uiState.value.copy(
                                 posts = resource.data ?: emptyList(),
                                 error = null
@@ -242,6 +268,33 @@ class HomeViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 // Ignore errors for silent refresh
+            }
+        }
+    }
+
+    // Cache management functions
+    fun clearCache() {
+        viewModelScope.launch {
+            try {
+                cacheManager.clearAllCache()
+                // Reload data after clearing cache
+                loadPosts()
+                loadTotalPostsCount()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Gagal membersihkan cache: ${e.localizedMessage}"
+                )
+            }
+        }
+    }
+
+    fun getCacheInfo() {
+        viewModelScope.launch {
+            try {
+                val cacheInfo = cacheManager.getCacheInfo()
+                // You can emit this info if needed
+            } catch (e: Exception) {
+                // Handle error if needed
             }
         }
     }

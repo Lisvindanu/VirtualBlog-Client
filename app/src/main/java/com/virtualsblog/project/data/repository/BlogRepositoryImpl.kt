@@ -1,28 +1,20 @@
-// app/src/main/java/com/virtualsblog/project/data/repository/BlogRepositoryImpl.kt
 package com.virtualsblog.project.data.repository
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.virtualsblog.project.data.mapper.CategoryMapper
-import com.virtualsblog.project.data.mapper.CommentMapper
-import com.virtualsblog.project.data.mapper.PostMapper
-import com.virtualsblog.project.data.mapper.UserMapper
+import com.virtualsblog.project.data.local.dao.*
+import com.virtualsblog.project.data.mapper.*
 import com.virtualsblog.project.data.remote.api.BlogApi
 import com.virtualsblog.project.data.remote.dto.request.CreateCommentRequest
 import com.virtualsblog.project.data.remote.dto.response.ApiResponse
-import com.virtualsblog.project.data.remote.dto.response.PostResponse
 import com.virtualsblog.project.data.remote.dto.response.ValidationError
-import com.virtualsblog.project.domain.model.Category
-import com.virtualsblog.project.domain.model.Comment
-import com.virtualsblog.project.domain.model.Post
-import com.virtualsblog.project.domain.model.SearchData
+import com.virtualsblog.project.domain.model.*
 import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.repository.BlogRepository
 import com.virtualsblog.project.util.Constants
 import com.virtualsblog.project.util.DateUtil
 import com.virtualsblog.project.util.Resource
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -37,30 +29,304 @@ import javax.inject.Singleton
 class BlogRepositoryImpl @Inject constructor(
     private val blogApi: BlogApi,
     private val authRepository: AuthRepository,
-    private val gson: Gson
+    private val gson: Gson,
+    // Room DAOs
+    private val postDao: PostDao,
+    private val categoryDao: CategoryDao,
+    private val commentDao: CommentDao
 ) : BlogRepository {
 
-    override suspend fun getPostsByAuthorId(authorId: String): Flow<Resource<List<Post>>> = flow {
+    companion object {
+        private const val CACHE_TIMEOUT = 5 * 60 * 1000L // 5 minutes
+    }
+
+    // Cache-first strategy for posts
+    override suspend fun getAllPosts(): Flow<Resource<List<Post>>> = flow {
         try {
             emit(Resource.Loading())
+
+            // First emit cached data
+            val cachedPosts = postDao.getAllPosts().first()
+            if (cachedPosts.isNotEmpty()) {
+                emit(Resource.Success(PostMapper.mapEntityListToDomain(cachedPosts)))
+            }
+
+            // Then fetch from network
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
                 emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
-            val response = blogApi.getPostsByAuthorId(
-                authorId = authorId,
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
+            val response = blogApi.getAllPosts("${Constants.BEARER_PREFIX}$token")
 
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success) {
                     val posts = PostMapper.mapResponseListToDomain(body.data)
-                    val sortedPosts = posts.sortedByDescending { post ->
-                        DateUtil.getTimestamp(post.createdAt)
-                    }
+
+                    // Cache the posts
+                    val postEntities = PostMapper.mapResponseListToEntity(body.data, isCached = true)
+                    postDao.deleteAllPosts()
+                    postDao.insertPosts(postEntities)
+
+                    // Sort and emit
+                    val sortedPosts = posts.sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                    emit(Resource.Success(sortedPosts))
+                } else {
+                    emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
+                }
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+        } catch (e: HttpException) {
+            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
+        } catch (e: IOException) {
+            // Network error - return cached data if available
+            val cachedPosts = postDao.getAllPosts().first()
+            if (cachedPosts.isNotEmpty()) {
+                emit(Resource.Success(PostMapper.mapEntityListToDomain(cachedPosts)))
+            } else {
+                emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
+        }
+    }
+
+    override suspend fun getPostsForHome(): Flow<Resource<List<Post>>> = flow {
+        try {
+            emit(Resource.Loading())
+
+            // First emit cached data
+            val cachedPosts = postDao.getPostsForHome(Constants.HOME_POSTS_LIMIT).first()
+            if (cachedPosts.isNotEmpty()) {
+                emit(Resource.Success(PostMapper.mapEntityListToDomain(cachedPosts)))
+            }
+
+            // Then fetch from network
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.getAllPosts("${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val posts = PostMapper.mapResponseListToDomain(body.data)
+
+                    // Cache the posts
+                    val postEntities = PostMapper.mapResponseListToEntity(body.data, isCached = true)
+                    postDao.deleteAllPosts()
+                    postDao.insertPosts(postEntities)
+
+                    // Sort and limit for home
+                    val sortedPosts = posts.sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                    val limitedPosts = sortedPosts.take(Constants.HOME_POSTS_LIMIT)
+                    emit(Resource.Success(limitedPosts))
+                } else {
+                    emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
+                }
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+        } catch (e: Exception) {
+            // Network error - return cached data if available
+            val cachedPosts = postDao.getPostsForHome(Constants.HOME_POSTS_LIMIT).first()
+            if (cachedPosts.isNotEmpty()) {
+                emit(Resource.Success(PostMapper.mapEntityListToDomain(cachedPosts)))
+            } else {
+                emit(Resource.Error("Network error: ${e.localizedMessage}"))
+            }
+        }
+    }
+
+    override suspend fun getPostById(postId: String): Flow<Resource<Post>> = flow {
+        try {
+            emit(Resource.Loading())
+
+            // First check local cache
+            val cachedPost = postDao.getPostById(postId)
+            if (cachedPost != null) {
+                // Load comments for the post
+                val cachedComments = commentDao.getCommentsByPostId(postId).first()
+                val post = PostMapper.mapEntityToDomain(cachedPost).copy(
+                    actualComments = CommentMapper.mapEntityListToDomain(cachedComments)
+                )
+                emit(Resource.Success(post))
+            }
+
+            // Then fetch from network
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.getPostById(postId, "${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val post = PostMapper.mapDetailResponseToDomain(body.data)
+
+                    // Cache the post
+                    val postEntity = PostMapper.mapDomainToEntity(post, isCached = true)
+                    postDao.insertPost(postEntity)
+
+                    // Cache comments
+                    val commentEntities = CommentMapper.mapDomainListToEntity(post.actualComments)
+                    commentDao.deleteCommentsByPostId(postId)
+                    commentDao.insertComments(commentEntities)
+
+                    emit(Resource.Success(post))
+                } else {
+                    emit(Resource.Error(body?.message ?: Constants.ERROR_POST_NOT_FOUND))
+                }
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+        } catch (e: Exception) {
+            // Network error - return cached data if available
+            val cachedPost = postDao.getPostById(postId)
+            if (cachedPost != null) {
+                val cachedComments = commentDao.getCommentsByPostId(postId).first()
+                val post = PostMapper.mapEntityToDomain(cachedPost).copy(
+                    actualComments = CommentMapper.mapEntityListToDomain(cachedComments)
+                )
+                emit(Resource.Success(post))
+            } else {
+                emit(Resource.Error("Post not found: ${e.localizedMessage}"))
+            }
+        }
+    }
+
+    override suspend fun getCategories(): Flow<Resource<List<Category>>> = flow {
+        try {
+            emit(Resource.Loading())
+
+            // First emit cached data
+            val cachedCategories = categoryDao.getAllCategories().first()
+            if (cachedCategories.isNotEmpty()) {
+                emit(Resource.Success(CategoryMapper.mapEntityListToDomain(cachedCategories)))
+            }
+
+            // Then fetch from network
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.getCategories("${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val categories = CategoryMapper.mapResponseListToDomain(body.data)
+
+                    // Cache categories
+                    val categoryEntities = CategoryMapper.mapResponseListToEntity(body.data)
+                    categoryDao.deleteAllCategories()
+                    categoryDao.insertCategories(categoryEntities)
+
+                    emit(Resource.Success(categories))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Gagal memuat kategori"))
+                }
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+        } catch (e: Exception) {
+            // Network error - return cached data if available
+            val cachedCategories = categoryDao.getAllCategories().first()
+            if (cachedCategories.isNotEmpty()) {
+                emit(Resource.Success(CategoryMapper.mapEntityListToDomain(cachedCategories)))
+            } else {
+                emit(Resource.Error("Network error: ${e.localizedMessage}"))
+            }
+        }
+    }
+
+    override suspend fun getPostsByCategoryId(categoryId: String): Flow<Resource<List<Post>>> = flow {
+        try {
+            emit(Resource.Loading())
+
+            // First emit cached data
+            val cachedPosts = postDao.getPostsByCategoryId(categoryId).first()
+            if (cachedPosts.isNotEmpty()) {
+                emit(Resource.Success(PostMapper.mapEntityListToDomain(cachedPosts)))
+            }
+
+            // Then fetch from network
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.getPostsByCategoryId(categoryId, "${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val posts = PostMapper.mapResponseListToDomain(body.data)
+
+                    // Cache only posts from this category
+                    val postEntities = PostMapper.mapResponseListToEntity(body.data, isCached = true)
+                    postEntities.forEach { postDao.insertPost(it) }
+
+                    val sortedPosts = posts.sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                    emit(Resource.Success(sortedPosts))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Gagal memuat post dari kategori ini."))
+                }
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+        } catch (e: Exception) {
+            // Network error - return cached data if available
+            val cachedPosts = postDao.getPostsByCategoryId(categoryId).first()
+            if (cachedPosts.isNotEmpty()) {
+                emit(Resource.Success(PostMapper.mapEntityListToDomain(cachedPosts)))
+            } else {
+                emit(Resource.Error("Network error: ${e.localizedMessage}"))
+            }
+        }
+    }
+
+    override suspend fun getPostsByAuthorId(authorId: String): Flow<Resource<List<Post>>> = flow {
+        try {
+            emit(Resource.Loading())
+
+            // First emit cached data
+            val cachedPosts = postDao.getPostsByAuthorId(authorId).first()
+            if (cachedPosts.isNotEmpty()) {
+                emit(Resource.Success(PostMapper.mapEntityListToDomain(cachedPosts)))
+            }
+
+            // Then fetch from network
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.getPostsByAuthorId(authorId, "${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val posts = PostMapper.mapResponseListToDomain(body.data)
+
+                    // Cache posts from this author
+                    val postEntities = PostMapper.mapResponseListToEntity(body.data, isCached = true)
+                    postEntities.forEach { postDao.insertPost(it) }
+
+                    val sortedPosts = posts.sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
                     emit(Resource.Success(sortedPosts))
                 } else {
                     emit(Resource.Error(body?.message ?: "Gagal memuat postingan dari author ini."))
@@ -68,93 +334,102 @@ class BlogRepositoryImpl @Inject constructor(
             } else {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
         } catch (e: Exception) {
-            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
+            // Network error - return cached data if available
+            val cachedPosts = postDao.getPostsByAuthorId(authorId).first()
+            if (cachedPosts.isNotEmpty()) {
+                emit(Resource.Success(PostMapper.mapEntityListToDomain(cachedPosts)))
+            } else {
+                emit(Resource.Error("Network error: ${e.localizedMessage}"))
+            }
         }
     }
 
-
-    override suspend fun getAllPosts(): Flow<Resource<List<Post>>> = flow {
+    override suspend fun getTotalPostsCount(): Flow<Resource<Int>> = flow {
         try {
             emit(Resource.Loading())
 
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
-                return@flow
+            // First emit cached count
+            val cachedCount = postDao.getTotalPostsCount().first()
+            if (cachedCount > 0) {
+                emit(Resource.Success(cachedCount))
             }
 
-            val response = blogApi.getAllPosts(
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
-
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null && body.success) {
-                    val posts = PostMapper.mapResponseListToDomain(body.data)
-                    // Sort posts by creation date descending (newest first)
-                    val sortedPosts = posts.sortedByDescending { post ->
-                        DateUtil.getTimestamp(post.createdAt)
-                    }
-                    emit(Resource.Success(sortedPosts))
-                } else {
-                    emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
-                }
-            } else {
-                // Using the new generic error handler
-                emit(handleHttpError(response.code(), response.errorBody()?.string()))
-            }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
-        } catch (e: Exception) {
-            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
-        }
-    }
-
-
-
-    override suspend fun search(keyword: String): Flow<Resource<SearchData>> = flow {
-        emit(Resource.Loading())
-        try {
+            // Then fetch from network for accurate count
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
                 emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
-            if (keyword.isBlank()) {
-                emit(Resource.Error("Keyword pencarian tidak boleh kosong."))
+            val response = blogApi.getAllPosts("${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    emit(Resource.Success(body.data.size))
+                } else {
+                    emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
+                }
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+        } catch (e: Exception) {
+            // Network error - return cached count if available
+            val cachedCount = postDao.getTotalPostsCount().first()
+            if (cachedCount > 0) {
+                emit(Resource.Success(cachedCount))
+            } else {
+                emit(Resource.Error("Network error: ${e.localizedMessage}"))
+            }
+        }
+    }
+
+    override suspend fun search(keyword: String): Flow<Resource<SearchData>> = flow {
+        emit(Resource.Loading())
+        try {
+            // First search in local cache
+            val cachedPosts = postDao.searchPosts(keyword).first()
+            if (cachedPosts.isNotEmpty()) {
+                val posts = PostMapper.mapEntityListToDomain(cachedPosts)
+                val searchData = SearchData(
+                    users = emptyList(), // Users not cached locally
+                    categories = emptyList(), // Categories handled separately
+                    posts = posts
+                )
+                emit(Resource.Success(searchData))
+            }
+
+            // Then search on network
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
-            val response = blogApi.search(
-                keyword = keyword,
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
+            val response = blogApi.search(keyword, "${Constants.BEARER_PREFIX}$token")
 
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success && body.data != null) {
                     val searchResponseData = body.data
-                    val domainUsers = searchResponseData.users.map { UserMapper.mapEntityToDomain(UserMapper.mapDomainToEntity( // Assuming UserResponse needs to be converted to UserEntity first for UserMapper.mapEntityToDomain
-                        com.virtualsblog.project.domain.model.User( // Manual mapping from UserResponse to domain.User
-                            id = it.id,
-                            username = it.username,
-                            fullname = it.fullname,
-                            email = it.email,
-                            image = it.image.ifEmpty { null },
-                            createdAt = it.createdAt,
-                            updatedAt = it.updatedAt
+                    val domainUsers = searchResponseData.users.map { userResponse ->
+                        com.virtualsblog.project.domain.model.User(
+                            id = userResponse.id,
+                            username = userResponse.username,
+                            fullname = userResponse.fullname,
+                            email = userResponse.email,
+                            image = userResponse.image.ifEmpty { null },
+                            createdAt = userResponse.createdAt,
+                            updatedAt = userResponse.updatedAt
                         )
-                    ))}
+                    }
                     val domainCategories = CategoryMapper.mapResponseListToDomain(searchResponseData.categories)
                     val domainPosts = PostMapper.mapResponseListToDomain(searchResponseData.posts)
+
+                    // Cache search results
+                    val postEntities = PostMapper.mapResponseListToEntity(searchResponseData.posts, isCached = true)
+                    postEntities.forEach { postDao.insertPost(it) }
 
                     emit(Resource.Success(SearchData(
                         users = domainUsers,
@@ -167,192 +442,20 @@ class BlogRepositoryImpl @Inject constructor(
             } else {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
         } catch (e: Exception) {
-            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
-        }
-    }
-
-    // *** NEW FUNCTION IMPLEMENTATION ***
-    override suspend fun getPostsByCategoryId(categoryId: String): Flow<Resource<List<Post>>> = flow {
-        try {
-            emit(Resource.Loading())
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
-                return@flow
-            }
-
-            val response = blogApi.getPostsByCategoryId(
-                categoryId = categoryId,
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
-
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null && body.success) {
-                    val posts = PostMapper.mapResponseListToDomain(body.data)
-                    val sortedPosts = posts.sortedByDescending { post ->
-                        DateUtil.getTimestamp(post.createdAt)
-                    }
-                    emit(Resource.Success(sortedPosts))
-                } else {
-                    emit(Resource.Error(body?.message ?: "Gagal memuat post dari kategori ini."))
-                }
+            // Network error - return cached search results
+            val cachedPosts = postDao.searchPosts(keyword).first()
+            if (cachedPosts.isNotEmpty()) {
+                val posts = PostMapper.mapEntityListToDomain(cachedPosts)
+                val searchData = SearchData(
+                    users = emptyList(),
+                    categories = emptyList(),
+                    posts = posts
+                )
+                emit(Resource.Success(searchData))
             } else {
-                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+                emit(Resource.Error("Network error: ${e.localizedMessage}"))
             }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
-        } catch (e: Exception) {
-            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
-        }
-    }
-
-
-    override suspend fun getPostsForHome(): Flow<Resource<List<Post>>> = flow {
-        try {
-            emit(Resource.Loading())
-
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
-                return@flow
-            }
-
-            val response = blogApi.getAllPosts(
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
-
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null && body.success) {
-                    val posts = PostMapper.mapResponseListToDomain(body.data)
-                    val sortedPosts = posts.sortedByDescending { post ->
-                        DateUtil.getTimestamp(post.createdAt)
-                    }
-                    val limitedPosts = sortedPosts.take(Constants.HOME_POSTS_LIMIT)
-                    emit(Resource.Success(limitedPosts))
-                } else {
-                    emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
-                }
-            } else {
-                emit(handleHttpError(response.code(), response.errorBody()?.string()))
-            }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
-        } catch (e: Exception) {
-            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
-        }
-    }
-
-    override suspend fun getTotalPostsCount(): Flow<Resource<Int>> = flow {
-        try {
-            emit(Resource.Loading())
-
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
-                return@flow
-            }
-
-            val response = blogApi.getAllPosts(
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
-
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null && body.success) {
-                    emit(Resource.Success(body.data.size))
-                } else {
-                    emit(Resource.Error(body?.message ?: Constants.ERROR_FAILED_LOAD_POST))
-                }
-            } else {
-                // Changed to use generic error handler
-                emit(handleHttpError(response.code(), response.errorBody()?.string()))
-            }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
-        } catch (e: Exception) {
-            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
-        }
-    }
-
-    override suspend fun getPostById(postId: String): Flow<Resource<Post>> = flow {
-        try {
-            emit(Resource.Loading())
-
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
-                return@flow
-            }
-
-            val response = blogApi.getPostById(
-                postId = postId,
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
-
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null && body.success) {
-                    val post = PostMapper.mapDetailResponseToDomain(body.data)
-                    emit(Resource.Success(post))
-                } else {
-                    emit(Resource.Error(body?.message ?: Constants.ERROR_POST_NOT_FOUND))
-                }
-            } else {
-                emit(handleHttpError(response.code(), response.errorBody()?.string()))
-            }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
-        } catch (e: Exception) {
-            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
-        }
-    }
-
-    override suspend fun getCategories(): Flow<Resource<List<Category>>> = flow {
-        try {
-            emit(Resource.Loading())
-
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
-                return@flow
-            }
-
-            val response = blogApi.getCategories(
-                authorization = "${Constants.BEARER_PREFIX}$token",
-            )
-
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null && body.success) {
-                    val categories: List<Category> = CategoryMapper.mapResponseListToDomain(body.data)
-                    emit(Resource.Success(categories))
-                } else {
-                    emit(Resource.Error(body?.message ?: "Gagal memuat kategori"))
-                }
-            } else {
-                emit(handleHttpError(response.code(), response.errorBody()?.string()))
-            }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
-        } catch (e: Exception) {
-            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
         }
     }
 
@@ -367,28 +470,31 @@ class BlogRepositoryImpl @Inject constructor(
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
+            // Validate file
             if (!photo.exists() || photo.length() == 0L) {
                 emit(Resource.Error("File gambar tidak valid"))
                 return@flow
             }
             if (photo.length() > Constants.MAX_IMAGE_SIZE) {
-                emit(Resource.Error("Ukuran file maksimal 10MB")) //
+                emit(Resource.Error("Ukuran file maksimal 10MB"))
                 return@flow
             }
+
             val allowedExtensions = listOf("jpg", "jpeg", "png")
             val fileExtension = photo.extension.lowercase()
             if (!allowedExtensions.contains(fileExtension)) {
-                emit(Resource.Error("Tipe file tidak diizinkan. Gunakan JPG, JPEG, atau PNG")) //
+                emit(Resource.Error("Tipe file tidak diizinkan. Gunakan JPG, JPEG, atau PNG"))
                 return@flow
             }
+
             val mimeType = when (fileExtension) {
                 "jpg", "jpeg" -> "image/jpeg"
                 "png" -> "image/png"
-                else -> "application/octet-stream" // Fallback to prevent crash, API might reject
+                else -> "application/octet-stream"
             }
 
             val titleBody = title.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -409,6 +515,11 @@ class BlogRepositoryImpl @Inject constructor(
                 val body = response.body()
                 if (body != null && body.success) {
                     val post = PostMapper.mapResponseToDomain(body.data)
+
+                    // Cache the new post
+                    val postEntity = PostMapper.mapDomainToEntity(post, isCached = true)
+                    postDao.insertPost(postEntity)
+
                     emit(Resource.Success(post))
                 } else {
                     emit(Resource.Error(body?.message ?: "Gagal membuat postingan"))
@@ -416,34 +527,29 @@ class BlogRepositoryImpl @Inject constructor(
             } else {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
         } catch (e: Exception) {
             emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
         }
     }
 
-    // --- New Methods for Update and Delete Post ---
     override suspend fun updatePost(
         postId: String,
         title: String,
         content: String,
-        categoryId: String, // <<< ADDED PARAMETER
+        categoryId: String,
         photo: File?
     ): Flow<Resource<Post>> = flow {
         emit(Resource.Loading())
         try {
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
             val titleBody = title.toRequestBody("text/plain".toMediaTypeOrNull())
             val contentBody = content.toRequestBody("text/plain".toMediaTypeOrNull())
-            val categoryIdBody = categoryId.toRequestBody("text/plain".toMediaTypeOrNull()) // <<< CREATE REQUEST BODY
+            val categoryIdBody = categoryId.toRequestBody("text/plain".toMediaTypeOrNull())
             var photoPart: MultipartBody.Part? = null
 
             if (photo != null) {
@@ -452,13 +558,13 @@ class BlogRepositoryImpl @Inject constructor(
                     return@flow
                 }
                 if (photo.length() > Constants.MAX_IMAGE_SIZE) {
-                    emit(Resource.Error("Ukuran file baru maksimal 10MB.")) //
+                    emit(Resource.Error("Ukuran file baru maksimal 10MB."))
                     return@flow
                 }
                 val allowedExtensions = listOf("jpg", "jpeg", "png")
                 val fileExtension = photo.extension.lowercase()
                 if (!allowedExtensions.contains(fileExtension)) {
-                    emit(Resource.Error("Tipe file gambar baru tidak diizinkan (JPG, JPEG, PNG).")) //
+                    emit(Resource.Error("Tipe file gambar baru tidak diizinkan (JPG, JPEG, PNG)."))
                     return@flow
                 }
                 val mimeType = when (fileExtension) {
@@ -475,7 +581,7 @@ class BlogRepositoryImpl @Inject constructor(
                 authorization = "${Constants.BEARER_PREFIX}$token",
                 title = titleBody,
                 content = contentBody,
-                categoryId = categoryIdBody, // <<< PASS TO API
+                categoryId = categoryIdBody,
                 photo = photoPart
             )
 
@@ -483,6 +589,11 @@ class BlogRepositoryImpl @Inject constructor(
                 val body = response.body()
                 if (body != null && body.success) {
                     val updatedPost = PostMapper.mapResponseToDomain(body.data)
+
+                    // Update cached post
+                    val postEntity = PostMapper.mapDomainToEntity(updatedPost, isCached = true)
+                    postDao.updatePost(postEntity)
+
                     emit(Resource.Success(updatedPost))
                 } else {
                     emit(Resource.Error(body?.message ?: Constants.ERROR_POST_UPDATE_FAILED))
@@ -490,10 +601,6 @@ class BlogRepositoryImpl @Inject constructor(
             } else {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
         } catch (e: Exception) {
             emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
         }
@@ -504,20 +611,21 @@ class BlogRepositoryImpl @Inject constructor(
         try {
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
-            val response = blogApi.deletePost(
-                postId = postId,
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
+            val response = blogApi.deletePost(postId, "${Constants.BEARER_PREFIX}$token")
 
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success) {
-                    // API docs state it returns the deleted post data
                     val deletedPostData = PostMapper.mapResponseToDomain(body.data)
+
+                    // Remove from cache
+                    postDao.deletePostById(postId)
+                    commentDao.deleteCommentsByPostId(postId)
+
                     emit(Resource.Success(deletedPostData))
                 } else {
                     emit(Resource.Error(body?.message ?: Constants.ERROR_POST_DELETE_FAILED))
@@ -525,16 +633,10 @@ class BlogRepositoryImpl @Inject constructor(
             } else {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
         } catch (e: Exception) {
             emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
         }
     }
-    // --- End of New Methods ---
-
 
     override suspend fun createComment(
         postId: String,
@@ -545,7 +647,7 @@ class BlogRepositoryImpl @Inject constructor(
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
@@ -559,6 +661,17 @@ class BlogRepositoryImpl @Inject constructor(
                 val body = response.body()
                 if (body != null && body.success) {
                     val comment = CommentMapper.mapResponseToDomain(body.data)
+
+                    // Cache the new comment
+                    val commentEntity = CommentMapper.mapDomainToEntity(comment)
+                    commentDao.insertComment(commentEntity)
+
+                    // Update post comment count
+                    val cachedPost = postDao.getPostById(postId)
+                    if (cachedPost != null) {
+                        postDao.updatePostComments(postId, cachedPost.comments + 1)
+                    }
+
                     emit(Resource.Success(comment))
                 } else {
                     emit(Resource.Error(body?.message ?: "Gagal membuat komentar"))
@@ -566,36 +679,42 @@ class BlogRepositoryImpl @Inject constructor(
             } else {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
         } catch (e: Exception) {
             emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
         }
     }
 
-    override suspend fun deleteComment(
-        commentId: String
-    ): Flow<Resource<Comment>> = flow {
+    override suspend fun deleteComment(commentId: String): Flow<Resource<Comment>> = flow {
         try {
             emit(Resource.Loading())
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
-            val response = blogApi.deleteComment(
-                commentId = commentId,
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
+            // Get comment before deletion to update post count
+            val commentToDelete = commentDao.getCommentById(commentId)
+
+            val response = blogApi.deleteComment(commentId, "${Constants.BEARER_PREFIX}$token")
 
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success) {
                     val comment = CommentMapper.mapResponseToDomain(body.data)
+
+                    // Remove from cache
+                    commentDao.deleteCommentById(commentId)
+
+                    // Update post comment count
+                    if (commentToDelete != null) {
+                        val cachedPost = postDao.getPostById(commentToDelete.postId)
+                        if (cachedPost != null) {
+                            postDao.updatePostComments(commentToDelete.postId, maxOf(0, cachedPost.comments - 1))
+                        }
+                    }
+
                     emit(Resource.Success(comment))
                 } else {
                     emit(Resource.Error(body?.message ?: "Gagal menghapus komentar"))
@@ -603,71 +722,56 @@ class BlogRepositoryImpl @Inject constructor(
             } else {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
         } catch (e: Exception) {
             emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
         }
     }
 
-
-    override suspend fun toggleLike(
-        postId: String
-    ): Flow<Resource<Pair<Boolean, Int>>> = flow {
+    override suspend fun toggleLike(postId: String): Flow<Resource<Pair<Boolean, Int>>> = flow {
         try {
             emit(Resource.Loading())
 
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED)) //
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
-            val response = blogApi.toggleLike(
-                postId = postId,
-                authorization = "${Constants.BEARER_PREFIX}$token"
-            )
+            val response = blogApi.toggleLike(postId, "${Constants.BEARER_PREFIX}$token")
 
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success) {
-                    // FIXED: Analyze response to determine like status
                     val message = body.message.lowercase()
                     val isLiked = when {
-                        // API mengembalikan "Like berhasil ditambahkan" untuk like
                         message.contains("ditambahkan") ||
                                 message.contains("berhasil") && !message.contains("dihapus") -> true
-                        // API mengembalikan "Like berhasil dihapus" untuk unlike
                         message.contains("dihapus") ||
                                 message.contains("dibatalkan") ||
                                 message.contains("removed") -> false
-                        else -> {
-                            // Fallback: check if data exists (like created) or not (like deleted)
-                            body.data != null
-                        }
+                        else -> body.data != null
                     }
 
-                    // FIXED: Return actual like status, let UI handle count
-                    // UI akan handle increment/decrement berdasarkan isLiked
-                    emit(Resource.Success(Pair(isLiked, -1))) // -1 indicates UI should handle count
+                    // Update cached post
+                    val cachedPost = postDao.getPostById(postId)
+                    if (cachedPost != null) {
+                        val newLikeCount = if (isLiked) cachedPost.likes + 1 else maxOf(0, cachedPost.likes - 1)
+                        postDao.updatePostLikes(postId, newLikeCount, isLiked)
+                    }
+
+                    emit(Resource.Success(Pair(isLiked, -1)))
                 } else {
                     emit(Resource.Error(body?.message ?: "Gagal toggle like"))
                 }
             } else {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
-        } catch (e: HttpException) {
-            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
-        } catch (e: IOException) {
-            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
         } catch (e: Exception) {
             emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
         }
     }
 
-    // Generic HTTP error handler for BlogRepository, consistent with previous suggestions
+    // Generic HTTP error handler
     private fun <T> handleHttpError(code: Int, errorBody: String?): Resource<T> {
         val specificMessage = when (code) {
             400 -> {
@@ -679,7 +783,7 @@ class BlogRepositoryImpl @Inject constructor(
                     } catch (e: Exception) {
                         if (errorBody.contains("File type not allowed", ignoreCase = true)) "Tipe file tidak diizinkan. Gunakan JPG, JPEG, atau PNG"
                         else if (errorBody.contains("photo wajib diisi", ignoreCase = true)) "Gambar wajib diupload"
-                        else if (errorBody.contains("Keyword pencarian wajib diisi", ignoreCase = true)) "Keyword pencarian wajib diisi" // [cite: 102]
+                        else if (errorBody.contains("Keyword pencarian wajib diisi", ignoreCase = true)) "Keyword pencarian wajib diisi"
                         else "Permintaan tidak valid atau data input salah."
                     }
                 } else {
