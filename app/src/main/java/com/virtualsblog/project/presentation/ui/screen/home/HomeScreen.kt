@@ -24,6 +24,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.virtualsblog.project.presentation.ui.component.PostCard
 import com.virtualsblog.project.presentation.ui.component.UserAvatar
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -435,7 +437,7 @@ private fun EnhancedStatisticsCard(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 EnhancedStatItem(
-                    icon = Icons.Default.Article,
+                    icon = Icons.AutoMirrored.Filled.Article,
                     title = "Total Post",
                     value = formatCount(totalPosts),
                     color = MaterialTheme.colorScheme.primary,
@@ -536,7 +538,7 @@ private fun EnhancedSectionHeader(
             Text("Lihat Semua")
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
-                imageVector = Icons.Default.ArrowForward,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp)
             )

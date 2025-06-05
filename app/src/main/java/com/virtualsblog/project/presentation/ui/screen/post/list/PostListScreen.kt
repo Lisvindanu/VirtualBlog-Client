@@ -17,6 +17,7 @@ import com.virtualsblog.project.presentation.ui.component.PostCard
 import com.virtualsblog.project.presentation.ui.component.LoadingIndicator
 import com.virtualsblog.project.presentation.ui.component.ErrorMessage
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -52,7 +53,7 @@ fun PostListScreen(
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack, 
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Kembali"
                             )
                         }

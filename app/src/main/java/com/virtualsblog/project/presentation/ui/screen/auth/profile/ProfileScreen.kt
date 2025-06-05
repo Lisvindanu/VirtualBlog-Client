@@ -11,7 +11,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -19,10 +18,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Email
@@ -44,8 +43,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.virtualsblog.project.presentation.ui.component.LoadingIndicator
-import com.virtualsblog.project.presentation.ui.component.ErrorMessage
 import com.virtualsblog.project.presentation.ui.component.UserAvatar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,7 +124,7 @@ fun ProfileScreen(
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Kembali",
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
@@ -461,7 +458,7 @@ fun ProfileScreen(
                                 .weight(1f)
                                 .height(52.dp),
                             shape = RoundedCornerShape(12.dp),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
+                            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy( // MODIFIED HERE
                                 width = 1.5.dp,
                                 brush = Brush.horizontalGradient(
                                     listOf(
@@ -576,7 +573,7 @@ fun ProfileScreen(
                     )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ExitToApp,
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
@@ -609,7 +606,7 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ExitToApp,
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.size(24.dp)
@@ -929,7 +926,7 @@ private fun ActionButtonsSection(
                 )
             ) {
                 Icon(
-                    imageVector = Icons.Default.ExitToApp,
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
