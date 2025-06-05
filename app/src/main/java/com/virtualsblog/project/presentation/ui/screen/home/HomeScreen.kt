@@ -29,6 +29,9 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -45,6 +48,24 @@ fun HomeScreen(
         refreshing = uiState.isRefreshing,
         onRefresh = { viewModel.refreshPosts() }
     )
+
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    // Force refresh when coming back from other screens
+                    viewModel.forceRefreshPosts()
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(uiState.isLoggedIn, uiState.isLoading) {
         if (!uiState.isLoading && !uiState.isLoggedIn) {
@@ -129,7 +150,10 @@ fun HomeScreen(
                                 PostCard(
                                     post = post,
                                     onClick = { onNavigateToPostDetail(post.id) },
-                                    onLikeClick = { /* TODO: Handle like */ },
+                                    onLikeClick = {
+                                        viewModel.togglePostLike(post.id)
+                                    },
+                                    isLikeLoading = uiState.likingPostIds.contains(post.id), // Per-post loading state
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -166,7 +190,7 @@ private fun EnhancedTopAppBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 40.dp, bottom = 16.dp), // Increased top margin from 24dp to 40dp
+                .padding(start = 16.dp, end = 16.dp, top = 40.dp, bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -194,7 +218,7 @@ private fun EnhancedTopAppBar(
                 FilledIconButton(
                     onClick = onSearchClick,
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary, // Using primary indigo
+                        containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
@@ -224,7 +248,7 @@ private fun EnhancedFloatingActionButton(
 ) {
     ExtendedFloatingActionButton(
         onClick = onClick,
-        containerColor = MaterialTheme.colorScheme.primary, // Using primary indigo
+        containerColor = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary,
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -263,7 +287,7 @@ private fun EnhancedWelcomeHeader(username: String) {
                         )
                     )
             )
-            
+
             Column(
                 modifier = Modifier.padding(24.dp)
             ) {
@@ -311,14 +335,14 @@ private fun EnhancedStatisticsCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 TextButton(onClick = onViewAllPosts) {
                     Text("Lihat Semua")
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -376,9 +400,9 @@ private fun EnhancedStatItem(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         Text(
             text = value,
             style = MaterialTheme.typography.titleLarge,
@@ -417,7 +441,7 @@ private fun EnhancedSectionHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
+
         FilledTonalButton(
             onClick = onViewAll,
             shape = RoundedCornerShape(12.dp)
@@ -520,7 +544,7 @@ private fun EnhancedErrorState(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = error, // Non-null assertion karena sudah dicek
+                    text = error,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )

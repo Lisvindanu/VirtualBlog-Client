@@ -46,6 +46,7 @@ import com.virtualsblog.project.presentation.ui.component.FullScreenImageViewer
 import com.virtualsblog.project.util.ImageUtil
 import com.virtualsblog.project.util.showToast
 import kotlin.math.ceil
+import kotlinx.coroutines.delay
 
 // Helper composable to get current user ID from UserPreferences
 @Composable
@@ -86,14 +87,23 @@ fun PostDetailScreen(
     LaunchedEffect(uiState.deletePostSuccess) {
         if (uiState.deletePostSuccess) {
             context.showToast("Postingan berhasil dihapus")
+
+            // Add a small delay to ensure the toast is shown
+            delay(500)
+
+            // Reset the success flag before navigating
             viewModel.resetDeleteSuccessFlag()
+
+            // Navigate back to previous screen
             onNavigateBack()
         }
     }
 
     LaunchedEffect(uiState.deletePostError) {
-        uiState.deletePostError?.let {
-            context.showToast(it)
+        uiState.deletePostError?.let { errorMessage ->
+            context.showToast(errorMessage)
+            // Clear the error after showing toast
+            delay(100)
             viewModel.clearError()
         }
     }

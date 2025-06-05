@@ -2,7 +2,6 @@
 package com.virtualsblog.project.data.remote.api
 
 import com.virtualsblog.project.data.remote.dto.request.CreateCommentRequest
-// import com.virtualsblog.project.data.remote.dto.request.EditPostRequest // Will be implicitly handled by Multipart
 import com.virtualsblog.project.data.remote.dto.response.*
 import com.virtualsblog.project.util.Constants
 import okhttp3.MultipartBody
@@ -47,13 +46,13 @@ interface BlogApi {
         @Part("content") content: RequestBody,
         @Part("categoryId") categoryId: RequestBody,
         @Part photo: MultipartBody.Part? // Photo is optional for update
-    ): Response<ApiResponse<PostResponse>> // Assuming response is similar to createPost
+    ): Response<ApiResponse<PostResponse>>
 
     @DELETE("posts/{id}")
     suspend fun deletePost(
         @Path("id") postId: String,
         @Header("Authorization") authorization: String
-    ): Response<ApiResponse<PostResponse>> // API docs say it returns the deleted post data
+    ): Response<ApiResponse<PostResponse>>
 
     // COMMENT ENDPOINTS
     @POST("posts/{id}/comments")
@@ -69,10 +68,10 @@ interface BlogApi {
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
     ): Response<CommentApiResponse>
 
-    // LIKE ENDPOINTS
+    // UPDATED: Like endpoint with correct response type
     @POST("posts/{id}/likes")
     suspend fun toggleLike(
         @Path("id") postId: String,
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
-    ): Response<LikeToggleResponse>
+    ): Response<LikeToggleResponse> // Uses the updated response structure
 }

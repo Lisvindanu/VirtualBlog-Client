@@ -11,23 +11,21 @@ data class CommentApiResponse(
     @SerializedName("message")
     val message: String,
     @SerializedName("data")
-    val data: CommentDetailResponse // Objek data ini yang fieldnya perlu disesuaikan
+    val data: CommentDetailResponse
 )
 
 // DTO untuk objek data di dalam CommentApiResponse (respons setelah create comment)
 data class CommentDetailResponse(
     @SerializedName("id")
     val id: String,
-    @SerializedName("content") // Menggunakan "content" sesuai log JSON dari POST /comments
-    val content: String?,      // Tetap nullable untuk keamanan jika API bisa mengirim null
+    @SerializedName("content")
+    val content: String?,
     @SerializedName("userId")
-    val userId: String?,      // Dibuat nullable untuk keamanan, mapper akan handle
+    val userId: String?,
     @SerializedName("postId")
     val postId: String,
     @SerializedName("user")
-    val user: CommentUserResponse, // Detail user yang membuat komentar
-    // Field "post" dari JSON respons create comment tidak perlu ada di DTO ini
-    // jika tidak digunakan langsung untuk mapping ke Comment domain model.
+    val user: CommentUserResponse,
     @SerializedName("createdAt")
     val createdAt: String,
     @SerializedName("updatedAt")
@@ -52,7 +50,7 @@ data class CommentUserResponse(
     val updatedAt: String
 )
 
-// LikeToggleResponse dan LikeDataResponse (tidak berubah dari sebelumnya)
+// UPDATED: Like Response berdasarkan API aktual
 data class LikeToggleResponse(
     @SerializedName("status")
     val status: Int,
@@ -61,9 +59,25 @@ data class LikeToggleResponse(
     @SerializedName("message")
     val message: String,
     @SerializedName("data")
-    val data: LikeDataResponse
+    val data: LikeEntityResponse // Changed to actual response structure
 )
 
+// UPDATED: Response data untuk like berdasarkan API aktual
+data class LikeEntityResponse(
+    @SerializedName("id")
+    val id: String,
+    @SerializedName("postId")
+    val postId: String,
+    @SerializedName("userId")
+    val userId: String,
+    @SerializedName("createdAt")
+    val createdAt: String,
+    @SerializedName("updatedAt")
+    val updatedAt: String
+)
+
+// DEPRECATED: Struktur ini sesuai dokumentasi tapi tidak sesuai response aktual
+// Tetap disimpan jika API berubah sesuai dokumentasi
 data class LikeDataResponse(
     @SerializedName("liked")
     val liked: Boolean,
