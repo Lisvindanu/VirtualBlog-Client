@@ -1,4 +1,4 @@
-// PostDetailViewModel.kt - Permanent Like System
+// PostDetailViewModel.kt - Fixed Delete Navigation
 package com.virtualsblog.project.presentation.ui.screen.post.detail
 
 import androidx.lifecycle.ViewModel
@@ -63,7 +63,8 @@ class PostDetailViewModel @Inject constructor(
                 comments = emptyList(),
                 post = null,
                 deletePostSuccess = false,
-                deletePostError = null
+                deletePostError = null,
+                postJustDeleted = false
             )
 
             getPostByIdUseCase(postId).collect { resource ->
@@ -248,6 +249,7 @@ class PostDetailViewModel @Inject constructor(
                 isDeletingPost = true,
                 deletePostError = null,
                 deletePostSuccess = false,
+                postJustDeleted = false, // <<< DITAMBAHKAN: Reset flag ini saat memulai delete
                 error = null
             )
 
@@ -256,11 +258,11 @@ class PostDetailViewModel @Inject constructor(
                     when (resource) {
                         is Resource.Success -> {
                             navigationState.postDeleted(postIdToDelete)
-
                             _uiState.value = _uiState.value.copy(
                                 isDeletingPost = false,
                                 deletePostSuccess = true,
-                                post = null,
+                                postJustDeleted = true, // <<< DIUBAH: Set flag ini menandakan post baru saja dihapus
+                                post = null, // Kosongkan post
                                 comments = emptyList(),
                                 error = null
                             )
@@ -269,13 +271,15 @@ class PostDetailViewModel @Inject constructor(
                             _uiState.value = _uiState.value.copy(
                                 isDeletingPost = false,
                                 deletePostError = resource.message ?: "Gagal menghapus postingan.",
-                                deletePostSuccess = false
+                                deletePostSuccess = false,
+                                postJustDeleted = false // <<< DITAMBAHKAN: Pastikan false jika error
                             )
                         }
                         is Resource.Loading -> {
                             _uiState.value = _uiState.value.copy(
                                 isDeletingPost = true,
-                                deletePostError = null
+                                deletePostError = null,
+                                postJustDeleted = false // <<< DITAMBAHKAN: Pastikan false saat loading
                             )
                         }
                     }
@@ -284,13 +288,23 @@ class PostDetailViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isDeletingPost = false,
                     deletePostError = "Terjadi kesalahan tidak terduga: ${e.localizedMessage}",
-                    deletePostSuccess = false
+                    deletePostSuccess = false,
+                    postJustDeleted = false // <<< DITAMBAHKAN: Pastikan false jika exception
                 )
             }
         }
     }
 
     fun resetDeleteSuccessFlag() {
-        _uiState.value = _uiState.value.copy(deletePostSuccess = false)
+        _uiState.value = _uiState.value.copy(
+            deletePostSuccess = false,
+            postJustDeleted = false // <<< DITAMBAHKAN: Reset juga flag postJustDeleted
+        )
+    }
+
+    // Fungsi ini mungkin tidak lagi diperlukan jika navigasi terjadi sebelum screen di-dispose
+    // Namun, bisa berguna jika ada logika lain yang perlu di-reset setelah navigasi dari screen ini.
+    fun acknowledgePostDeletionHandled() {
+        _uiState.value = _uiState.value.copy(postJustDeleted = false)
     }
 }

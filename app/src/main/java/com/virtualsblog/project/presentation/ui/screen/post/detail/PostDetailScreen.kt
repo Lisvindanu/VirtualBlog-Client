@@ -82,9 +82,9 @@ fun PostDetailScreen(
     LaunchedEffect(uiState.deletePostSuccess) {
         if (uiState.deletePostSuccess) {
             context.showToast("Postingan berhasil dihapus")
-            delay(500)
-            viewModel.resetDeleteSuccessFlag()
+            // Navigasi dipanggil SEGERA.
             onNavigateBack()
+            viewModel.resetDeleteSuccessFlag() // Reset flag setelah navigasi diinisiasi
         }
     }
 
@@ -286,7 +286,18 @@ fun PostDetailScreen(
             uiState.isLoading || uiState.isDeletingPost -> {
                 EnhancedLoadingState(message = if (uiState.isDeletingPost) "Menghapus postingan..." else "Memuat postingan...")
             }
-            uiState.error != null && !uiState.isDeletingPost -> {
+            uiState.postJustDeleted -> { // <<< KONDISI BARU: Untuk post yang baru saja dihapus
+                EnhancedLoadingState(message = "Postingan berhasil dihapus. Mengarahkan kembali...")
+                // Navigasi sudah dihandle oleh LaunchedEffect(uiState.deletePostSuccess)
+            }
+            uiState.deletePostError != null -> { // Menampilkan error spesifik untuk delete
+                EnhancedErrorState(
+                    error = uiState.deletePostError!!,
+                    onRetry = { viewModel.loadPost(postId) }, // Atau tindakan lain yang sesuai
+                    onNavigateBack = onNavigateBack
+                )
+            }
+            uiState.error != null -> { // Menampilkan error umum lainnya (bukan error delete)
                 EnhancedErrorState(
                     error = uiState.error!!,
                     onRetry = { viewModel.loadPost(postId) },
@@ -294,7 +305,7 @@ fun PostDetailScreen(
                 )
             }
             uiState.post != null -> {
-                val postDetail = uiState.post!!
+                val postDetail = uiState.post!! // Aman menggunakan !! karena sudah dicek null
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -384,9 +395,9 @@ fun PostDetailScreen(
                     }
                 }
             }
-            else -> {
+            else -> { // Fallback jika post null tapi bukan karena baru dihapus atau error spesifik delete (misal, error load awal atau postId tidak valid)
                 EnhancedErrorState(
-                    error = "Postingan tidak dapat ditemukan atau telah dihapus.",
+                    error = "Postingan tidak dapat ditemukan.", // Pesan yang lebih generik
                     onRetry = { viewModel.loadPost(postId) },
                     onNavigateBack = onNavigateBack
                 )

@@ -1,4 +1,3 @@
-// app/src/main/java/com/virtualsblog/project/presentation/ui/screen/post/detail/PostDetailUiState.kt
 package com.virtualsblog.project.presentation.ui.screen.post.detail
 
 import com.virtualsblog.project.domain.model.Comment
@@ -16,6 +15,6 @@ data class PostDetailUiState(
     val isDeletingPost: Boolean = false,
     val deletePostError: String? = null,
     val deletePostSuccess: Boolean = false,
-    // Edit states (if needed directly here, or handled by EditScreen)
+    val postJustDeleted: Boolean = false,
     val currentUserId: String? = null // To check authorship
 )
