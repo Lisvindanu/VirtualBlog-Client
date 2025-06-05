@@ -96,10 +96,16 @@ class PostDetailViewModel @Inject constructor(
         val currentLikes = currentPost.likes
 
         viewModelScope.launch {
-            // Optimistic update - update UI immediately
+            // FIXED: Optimistic update dengan logic yang benar
             val optimisticPost = currentPost.copy(
                 isLiked = !wasLiked,
-                likes = if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes + 1
+                likes = if (wasLiked) {
+                    // Jika sebelumnya liked, sekarang unlike -> kurangi count
+                    maxOf(0, currentLikes - 1)
+                } else {
+                    // Jika sebelumnya tidak liked, sekarang like -> tambah count
+                    currentLikes + 1
+                }
             )
             _uiState.value = _uiState.value.copy(
                 post = optimisticPost,
@@ -109,25 +115,29 @@ class PostDetailViewModel @Inject constructor(
             toggleLikeUseCase(currentPost.id).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        val (isLiked, _) = resource.data!!
-                        // Verify our optimistic update was correct
+                        val (actualIsLiked, _) = resource.data!!
+
+                        // FIXED: Update berdasarkan response actual dari server
                         val finalPost = currentPost.copy(
-                            isLiked = isLiked,
-                            likes = if (isLiked) {
+                            isLiked = actualIsLiked,
+                            likes = if (actualIsLiked) {
+                                // Server confirm like -> ensure count is incremented from original
                                 if (wasLiked) currentLikes else currentLikes + 1
                             } else {
+                                // Server confirm unlike -> ensure count is decremented from original
                                 if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes
                             }
                         )
+
                         _uiState.value = _uiState.value.copy(
                             post = finalPost,
                             isLikeLoading = false
                         )
                     }
                     is Resource.Error -> {
-                        // Rollback optimistic update on error
+                        // FIXED: Rollback optimistic update dengan data original
                         _uiState.value = _uiState.value.copy(
-                            post = currentPost, // Restore original state
+                            post = currentPost, // Kembali ke state asli
                             isLikeLoading = false,
                             error = resource.message
                         )

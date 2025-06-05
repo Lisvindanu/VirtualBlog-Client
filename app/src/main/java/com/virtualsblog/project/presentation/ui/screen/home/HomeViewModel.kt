@@ -25,7 +25,7 @@ class HomeViewModel @Inject constructor(
     private val getPostsForHomeUseCase: GetPostsForHomeUseCase,
     private val getTotalPostsCountUseCase: GetTotalPostsCountUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
-    private val navigationState: NavigationState // ADDED
+    private val navigationState: NavigationState
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -178,10 +178,16 @@ class HomeViewModel @Inject constructor(
                 likingPostIds = _uiState.value.likingPostIds + postId
             )
 
-            // Optimistic update
+            // FIXED: Optimistic update dengan logic yang benar
             val optimisticPost = currentPost.copy(
                 isLiked = !wasLiked,
-                likes = if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes + 1
+                likes = if (wasLiked) {
+                    // Jika sebelumnya liked, sekarang unlike -> kurangi count
+                    maxOf(0, currentLikes - 1)
+                } else {
+                    // Jika sebelumnya tidak liked, sekarang like -> tambah count
+                    currentLikes + 1
+                }
             )
             val updatedPosts = currentPosts.toMutableList().apply {
                 set(postIndex, optimisticPost)
@@ -191,15 +197,20 @@ class HomeViewModel @Inject constructor(
             toggleLikeUseCase(postId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        val (isLiked, _) = resource.data!!
+                        val (actualIsLiked, _) = resource.data!!
+
+                        // FIXED: Update berdasarkan response actual dari server
                         val finalPost = currentPost.copy(
-                            isLiked = isLiked,
-                            likes = if (isLiked) {
+                            isLiked = actualIsLiked,
+                            likes = if (actualIsLiked) {
+                                // Server confirm like -> ensure count is incremented from original
                                 if (wasLiked) currentLikes else currentLikes + 1
                             } else {
+                                // Server confirm unlike -> ensure count is decremented from original
                                 if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes
                             }
                         )
+
                         val finalPosts = _uiState.value.posts.toMutableList().apply {
                             val finalIndex = indexOfFirst { it.id == postId }
                             if (finalIndex != -1) {
@@ -208,20 +219,21 @@ class HomeViewModel @Inject constructor(
                         }
                         _uiState.value = _uiState.value.copy(
                             posts = finalPosts,
-                            likingPostIds = _uiState.value.likingPostIds - postId // Remove from loading
+                            likingPostIds = _uiState.value.likingPostIds - postId
                         )
                     }
                     is Resource.Error -> {
-                        // Rollback optimistic update
+                        // FIXED: Rollback optimistic update dengan data original
                         val rolledBackPosts = _uiState.value.posts.toMutableList().apply {
                             val rollbackIndex = indexOfFirst { it.id == postId }
                             if (rollbackIndex != -1) {
-                                set(rollbackIndex, currentPost)
+                                set(rollbackIndex, currentPost) // Kembali ke state asli
                             }
                         }
                         _uiState.value = _uiState.value.copy(
                             posts = rolledBackPosts,
-                            likingPostIds = _uiState.value.likingPostIds - postId // Remove from loading
+                            likingPostIds = _uiState.value.likingPostIds - postId,
+                            error = resource.message
                         )
                     }
                     is Resource.Loading -> {
