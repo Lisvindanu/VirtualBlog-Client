@@ -92,23 +92,42 @@ class PostDetailViewModel @Inject constructor(
 
     fun toggleLike() {
         val currentPost = _uiState.value.post ?: return
+        val wasLiked = currentPost.isLiked
+        val currentLikes = currentPost.likes
+
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLikeLoading = true)
+            // Optimistic update - update UI immediately
+            val optimisticPost = currentPost.copy(
+                isLiked = !wasLiked,
+                likes = if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes + 1
+            )
+            _uiState.value = _uiState.value.copy(
+                post = optimisticPost,
+                isLikeLoading = true
+            )
+
             toggleLikeUseCase(currentPost.id).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        val (isLiked, totalLikes) = resource.data!!
-                        val updatedPost = currentPost.copy(
+                        val (isLiked, _) = resource.data!!
+                        // Verify our optimistic update was correct
+                        val finalPost = currentPost.copy(
                             isLiked = isLiked,
-                            likes = totalLikes
+                            likes = if (isLiked) {
+                                if (wasLiked) currentLikes else currentLikes + 1
+                            } else {
+                                if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes
+                            }
                         )
                         _uiState.value = _uiState.value.copy(
-                            post = updatedPost,
+                            post = finalPost,
                             isLikeLoading = false
                         )
                     }
                     is Resource.Error -> {
+                        // Rollback optimistic update on error
                         _uiState.value = _uiState.value.copy(
+                            post = currentPost, // Restore original state
                             isLikeLoading = false,
                             error = resource.message
                         )

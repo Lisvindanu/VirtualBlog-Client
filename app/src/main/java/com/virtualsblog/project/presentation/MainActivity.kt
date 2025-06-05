@@ -1,5 +1,5 @@
 package com.virtualsblog.project.presentation
-
+//kenapa ya anak 23 kelas ini pada takut maju
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent

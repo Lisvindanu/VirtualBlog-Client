@@ -164,30 +164,68 @@ class HomeViewModel @Inject constructor(
     }
 
     fun togglePostLike(postId: String) {
+        val currentPosts = _uiState.value.posts
+        val postIndex = currentPosts.indexOfFirst { it.id == postId }
+        if (postIndex == -1) return
+
+        val currentPost = currentPosts[postIndex]
+        val wasLiked = currentPost.isLiked
+        val currentLikes = currentPost.likes
+
         viewModelScope.launch {
+            // Add to liking set for loading state
+            _uiState.value = _uiState.value.copy(
+                likingPostIds = _uiState.value.likingPostIds + postId
+            )
+
+            // Optimistic update
+            val optimisticPost = currentPost.copy(
+                isLiked = !wasLiked,
+                likes = if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes + 1
+            )
+            val updatedPosts = currentPosts.toMutableList().apply {
+                set(postIndex, optimisticPost)
+            }
+            _uiState.value = _uiState.value.copy(posts = updatedPosts)
+
             toggleLikeUseCase(postId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        val (isLiked, totalLikes) = resource.data!!
-                        val updatedPosts = _uiState.value.posts.map { post ->
-                            if (post.id == postId) {
-                                post.copy(
-                                    isLiked = isLiked,
-                                    likes = totalLikes
-                                )
+                        val (isLiked, _) = resource.data!!
+                        val finalPost = currentPost.copy(
+                            isLiked = isLiked,
+                            likes = if (isLiked) {
+                                if (wasLiked) currentLikes else currentLikes + 1
                             } else {
-                                post
+                                if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes
+                            }
+                        )
+                        val finalPosts = _uiState.value.posts.toMutableList().apply {
+                            val finalIndex = indexOfFirst { it.id == postId }
+                            if (finalIndex != -1) {
+                                set(finalIndex, finalPost)
                             }
                         }
-                        _uiState.value = _uiState.value.copy(posts = updatedPosts)
+                        _uiState.value = _uiState.value.copy(
+                            posts = finalPosts,
+                            likingPostIds = _uiState.value.likingPostIds - postId // Remove from loading
+                        )
                     }
                     is Resource.Error -> {
-                        // Handle error - could show toast or snackbar
-                        // For now, we'll silently fail to avoid disrupting UX
+                        // Rollback optimistic update
+                        val rolledBackPosts = _uiState.value.posts.toMutableList().apply {
+                            val rollbackIndex = indexOfFirst { it.id == postId }
+                            if (rollbackIndex != -1) {
+                                set(rollbackIndex, currentPost)
+                            }
+                        }
+                        _uiState.value = _uiState.value.copy(
+                            posts = rolledBackPosts,
+                            likingPostIds = _uiState.value.likingPostIds - postId // Remove from loading
+                        )
                     }
                     is Resource.Loading -> {
-                        // Optional: Could show loading state for individual post
-                        // For now, we'll keep it simple and not show loading
+                        // Already handled by adding to likingPostIds
                     }
                 }
             }

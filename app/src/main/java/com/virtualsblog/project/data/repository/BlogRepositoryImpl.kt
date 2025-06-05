@@ -473,6 +473,8 @@ class BlogRepositoryImpl @Inject constructor(
         }
     }
 
+    // Excerpt from BlogRepositoryImpl.kt - Updated toggleLike method
+
     override suspend fun toggleLike(
         postId: String
     ): Flow<Resource<Pair<Boolean, Int>>> = flow {
@@ -493,9 +495,19 @@ class BlogRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success) {
-                    val isLiked = body.data.liked
-                    val totalLikes = body.data.totalLikes
-                    emit(Resource.Success(Pair(isLiked, totalLikes)))
+                    // Determine if user liked or unliked based on response message
+                    val message = body.message.lowercase()
+                    val isLiked = when {
+                        message.contains("berhasil dikirim") ||
+                                message.contains("ditambahkan") ||
+                                message.contains("berhasil") -> true
+                        message.contains("dihapus") ||
+                                message.contains("dibatalkan") -> false
+                        else -> true // Default assume liked if API returns success
+                    }
+
+                    // Return status, let UI handle count increment/decrement
+                    emit(Resource.Success(Pair(isLiked, 0))) // 0 indicates count handled by UI
                 } else {
                     emit(Resource.Error(body?.message ?: "Gagal toggle like"))
                 }

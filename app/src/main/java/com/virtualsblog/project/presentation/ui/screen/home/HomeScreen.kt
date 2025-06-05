@@ -150,7 +150,10 @@ fun HomeScreen(
                                 PostCard(
                                     post = post,
                                     onClick = { onNavigateToPostDetail(post.id) },
-                                    onLikeClick = { postId -> viewModel.togglePostLike(postId) },
+                                    onLikeClick = {
+                                        viewModel.togglePostLike(post.id)
+                                    },
+                                    isLikeLoading = uiState.likingPostIds.contains(post.id), // Per-post loading state
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
