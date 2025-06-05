@@ -1,3 +1,4 @@
+// HomeScreen.kt - Updated with Dislike Confirmation
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.compose.animation.*
@@ -9,11 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,13 +46,15 @@ fun HomeScreen(
         onRefresh = { viewModel.refreshPosts() }
     )
 
+    // STATE: Dialog konfirmasi dislike
+    var showDislikeDialog by remember { mutableStateOf(false) }
+    var postToDislike by remember { mutableStateOf<String?>(null) }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
-                    // Force refresh when coming back from other screens
                     viewModel.forceRefreshPosts()
                 }
                 else -> {}
@@ -71,6 +70,63 @@ fun HomeScreen(
         if (!uiState.isLoading && !uiState.isLoggedIn) {
             onNavigateToLogin()
         }
+    }
+
+    // DIALOG: Konfirmasi Dislike
+    if (showDislikeDialog && postToDislike != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDislikeDialog = false
+                postToDislike = null
+            },
+            title = {
+                Text(
+                    "Batalkan Like?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "Apakah Anda yakin ingin membatalkan like pada postingan ini?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        postToDislike?.let { postId ->
+                            viewModel.performDislike(postId)
+                        }
+                        showDislikeDialog = false
+                        postToDislike = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Ya, Batalkan Like")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDislikeDialog = false
+                        postToDislike = null
+                    }
+                ) {
+                    Text("Batal")
+                }
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.HeartBroken,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        )
     }
 
     Scaffold(
@@ -150,10 +206,15 @@ fun HomeScreen(
                                 PostCard(
                                     post = post,
                                     onClick = { onNavigateToPostDetail(post.id) },
-                                    onLikeClick = {
-                                        viewModel.togglePostLike(post.id)
+                                    onLikeClick = { postId ->
+                                        // PERMANENT LIKE SYSTEM
+                                        viewModel.togglePostLike(postId) {
+                                            // Callback untuk konfirmasi dislike
+                                            postToDislike = postId
+                                            showDislikeDialog = true
+                                        }
                                     },
-                                    isLikeLoading = uiState.likingPostIds.contains(post.id), // Per-post loading state
+                                    isLikeLoading = uiState.likingPostIds.contains(post.id),
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -175,6 +236,7 @@ fun HomeScreen(
     }
 }
 
+// Enhanced components tetap sama seperti sebelumnya...
 @Composable
 private fun EnhancedTopAppBar(
     username: String,
@@ -214,7 +276,6 @@ private fun EnhancedTopAppBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Search Button with primary indigo color
                 FilledIconButton(
                     onClick = onSearchClick,
                     colors = IconButtonDefaults.filledIconButtonColors(
@@ -228,7 +289,6 @@ private fun EnhancedTopAppBar(
                     )
                 }
 
-                // Profile Avatar
                 UserAvatar(
                     userName = username.ifEmpty { "User" },
                     imageUrl = userImageUrl,
@@ -264,6 +324,7 @@ private fun EnhancedFloatingActionButton(
     }
 }
 
+// Tambahan component lainnya tetap sama...
 @Composable
 private fun EnhancedWelcomeHeader(username: String) {
     Card(
@@ -274,7 +335,6 @@ private fun EnhancedWelcomeHeader(username: String) {
         shape = RoundedCornerShape(20.dp)
     ) {
         Box {
-            // Gradient background
             Box(
                 modifier = Modifier
                     .fillMaxSize()
