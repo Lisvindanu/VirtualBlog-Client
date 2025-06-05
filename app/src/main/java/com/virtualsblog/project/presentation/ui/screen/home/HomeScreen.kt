@@ -1,4 +1,4 @@
-// HomeScreen.kt - Updated with Dislike Confirmation
+// HomeScreen.kt - Updated with Dislike Confirmation & Categories Navigation
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.compose.animation.*
@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Category // *** NEW IMPORT FOR CATEGORY ICON ***
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +39,8 @@ fun HomeScreen(
     onNavigateToPostDetail: (String) -> Unit,
     onNavigateToLogin: () -> Unit,
     onNavigateToAllPosts: () -> Unit,
+    onNavigateToCategories: () -> Unit, // *** NEW PARAMETER ***
+    onNavigateToSearch: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -135,7 +138,8 @@ fun HomeScreen(
                 username = uiState.username,
                 userImageUrl = uiState.userImageUrl,
                 onProfileClick = onNavigateToProfile,
-                onSearchClick = { /* TODO: Implementasi pencarian */ }
+                onSearchClick = onNavigateToSearch,
+                onCategoriesClick = onNavigateToCategories // *** PASS NAVIGATION HERE ***
             )
         },
         floatingActionButton = {
@@ -179,15 +183,16 @@ fun HomeScreen(
                         item {
                             EnhancedStatisticsCard(
                                 totalPosts = uiState.totalPostsCount,
-                                totalUsers = 42,
-                                onViewAllPosts = onNavigateToAllPosts
+                                totalUsers = 42, // Placeholder
+                                onViewAllPosts = onNavigateToAllPosts,
+                                onViewCategories = onNavigateToCategories // *** ADDED CATEGORIES NAVIGATION ***
                             )
                         }
 
                         // Enhanced Section Header
                         item {
                             EnhancedSectionHeader(
-                                title = "📝 Postingan Terbaru",
+                                title = "✨ Postingan Terbaru",
                                 subtitle = "Tarik ke bawah untuk refresh",
                                 onViewAll = onNavigateToAllPosts
                             )
@@ -236,13 +241,13 @@ fun HomeScreen(
     }
 }
 
-// Enhanced components tetap sama seperti sebelumnya...
 @Composable
 private fun EnhancedTopAppBar(
     username: String,
     userImageUrl: String?,
     onProfileClick: () -> Unit,
-    onSearchClick: () -> Unit
+    onSearchClick: () -> Unit,
+    onCategoriesClick: () -> Unit // *** NEW PARAMETER ***
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -276,15 +281,29 @@ private fun EnhancedTopAppBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                FilledIconButton(
-                    onClick = onSearchClick,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                // *** ADDED CATEGORIES BUTTON ***
+                IconButton(
+                    onClick = onCategoriesClick,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = Color.Transparent, // Or primary if preferred
+                        contentColor = MaterialTheme.colorScheme.primary // Or onPrimary
                     )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        imageVector = Icons.Outlined.Category,
+                        contentDescription = "Kategori"
+                    )
+                }
+
+                IconButton( // Changed from FilledIconButton to IconButton for consistency
+                    onClick = onSearchClick, // Uses the passed lambda
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Search, // Using Filled.Search icon
                         contentDescription = "Cari"
                     )
                 }
@@ -324,7 +343,7 @@ private fun EnhancedFloatingActionButton(
     }
 }
 
-// Tambahan component lainnya tetap sama...
+// Tambahan component lainnya tetap sama seperti sebelumnya...
 @Composable
 private fun EnhancedWelcomeHeader(username: String) {
     Card(
@@ -372,7 +391,8 @@ private fun EnhancedWelcomeHeader(username: String) {
 private fun EnhancedStatisticsCard(
     totalPosts: Int,
     totalUsers: Int,
-    onViewAllPosts: () -> Unit
+    onViewAllPosts: () -> Unit,
+    onViewCategories: () -> Unit // *** NEW PARAMETER ***
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -396,8 +416,15 @@ private fun EnhancedStatisticsCard(
                     fontWeight = FontWeight.Bold
                 )
 
-                TextButton(onClick = onViewAllPosts) {
-                    Text("Lihat Semua")
+                // *** UPDATED TO INCLUDE CATEGORIES BUTTON ***
+                Row {
+                    TextButton(onClick = onViewCategories) {
+                        Text("Kategori")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = onViewAllPosts) {
+                        Text("Semua Post")
+                    }
                 }
             }
 
@@ -423,7 +450,7 @@ private fun EnhancedStatisticsCard(
                 EnhancedStatItem(
                     icon = Icons.Default.People,
                     title = "Pengguna Aktif",
-                    value = formatCount(totalUsers),
+                    value = formatCount(totalUsers), // Placeholder, replace with actual data if available
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.weight(1f)
                 )

@@ -4,6 +4,7 @@ package com.virtualsblog.project.domain.repository
 import com.virtualsblog.project.domain.model.Category
 import com.virtualsblog.project.domain.model.Comment
 import com.virtualsblog.project.domain.model.Post
+import com.virtualsblog.project.domain.model.SearchData
 import com.virtualsblog.project.util.Resource
 import kotlinx.coroutines.flow.Flow
 import java.io.File
@@ -14,6 +15,12 @@ interface BlogRepository {
     suspend fun getTotalPostsCount(): Flow<Resource<Int>>
     suspend fun getPostById(postId: String): Flow<Resource<Post>>
     suspend fun getCategories(): Flow<Resource<List<Category>>>
+
+
+    suspend fun getPostsByCategoryId(categoryId: String): Flow<Resource<List<Post>>>
+
+    suspend fun search(keyword: String): Flow<Resource<SearchData>>
+
     suspend fun createPost(
         title: String,
         content: String,
