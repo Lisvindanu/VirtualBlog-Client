@@ -17,6 +17,8 @@ import com.virtualsblog.project.domain.usecase.blog.CreatePostUseCase // Make su
 import com.virtualsblog.project.domain.usecase.blog.UpdatePostUseCase // New
 import com.virtualsblog.project.domain.usecase.blog.DeletePostUseCase // New
 import com.virtualsblog.project.domain.usecase.blog.GetCategoriesUseCase // Make sure this is imported
+import com.virtualsblog.project.domain.usecase.blog.GetPostsByCategoryIdUseCase // *** NEW IMPORT ***
+import com.virtualsblog.project.domain.usecase.blog.SearchUseCase
 import com.virtualsblog.project.domain.usecase.comment.CreateCommentUseCase
 import com.virtualsblog.project.domain.usecase.comment.DeleteCommentUseCase
 
@@ -103,6 +105,14 @@ object UseCaseModule {
     @Singleton
     fun provideGetCategoriesUseCase(repository: BlogRepository): GetCategoriesUseCase = GetCategoriesUseCase(repository) // Ensure this exists
 
+    // *** NEW USE CASE PROVIDER ***
+    @Provides
+    @Singleton
+    fun provideGetPostsByCategoryIdUseCase(repository: BlogRepository): GetPostsByCategoryIdUseCase = GetPostsByCategoryIdUseCase(repository)
+
+    @Provides
+    @Singleton
+    fun provideSearchUseCase(repository: BlogRepository): SearchUseCase = SearchUseCase(repository)
 
     // New Blog UseCases for Edit and Delete
     @Provides

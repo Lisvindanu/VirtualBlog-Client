@@ -27,6 +27,19 @@ interface BlogApi {
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
     ): Response<CategoriesApiResponse>
 
+    @GET("categories/{id}")
+    suspend fun getPostsByCategoryId(
+        @Path("id") categoryId: String,
+        @Header(Constants.HEADER_AUTHORIZATION) authorization: String
+    ): Response<PostsApiResponse>
+
+    // *** NEW SEARCH FUNCTION ***
+    @GET("search")
+    suspend fun search(
+        @Query("keyword") keyword: String,
+        @Header(Constants.HEADER_AUTHORIZATION) authorization: String
+    ): Response<ApiResponse<SearchResponseData>> //
+
     @Multipart
     @POST("posts")
     suspend fun createPost(
@@ -45,7 +58,7 @@ interface BlogApi {
         @Part("title") title: RequestBody,
         @Part("content") content: RequestBody,
         @Part("categoryId") categoryId: RequestBody,
-        @Part photo: MultipartBody.Part? // Photo is optional for update
+        @Part photo: MultipartBody.Part?
     ): Response<ApiResponse<PostResponse>>
 
     @DELETE("posts/{id}")
@@ -54,7 +67,6 @@ interface BlogApi {
         @Header("Authorization") authorization: String
     ): Response<ApiResponse<PostResponse>>
 
-    // COMMENT ENDPOINTS
     @POST("posts/{id}/comments")
     suspend fun createComment(
         @Path("id") postId: String,
@@ -68,10 +80,9 @@ interface BlogApi {
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
     ): Response<CommentApiResponse>
 
-    // UPDATED: Like endpoint with correct response type
     @POST("posts/{id}/likes")
     suspend fun toggleLike(
         @Path("id") postId: String,
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
-    ): Response<LikeToggleResponse> // Uses the updated response structure
+    ): Response<LikeToggleResponse>
 }

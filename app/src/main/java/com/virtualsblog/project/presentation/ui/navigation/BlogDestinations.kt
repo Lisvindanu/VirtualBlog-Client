@@ -19,18 +19,30 @@ object BlogDestinations {
     const val POST_DETAIL_ROUTE = "post_detail"
     const val EDIT_POST_ROUTE = "edit_post"
     const val TERMS_AND_CONDITIONS_ROUTE = "terms_and_conditions"
+    // *** NEW ROUTES ***
+    const val CATEGORIES_ROUTE = "categories"
+    const val CATEGORY_POSTS_ROUTE = "category_posts"
+    const val SEARCH_ROUTE = "search" // *** NEW ROUTE ***
+
+
 
     // Routes with parameters
     const val VERIFY_OTP_WITH_EMAIL = "$VERIFY_OTP_ROUTE/{${Args.EMAIL}}"
     const val RESET_PASSWORD_WITH_PARAMS = "$RESET_PASSWORD_ROUTE/{${Args.TOKEN_ID}}/{${Args.OTP}}"
     const val POST_DETAIL_WITH_ID = "$POST_DETAIL_ROUTE/{${Args.POST_ID}}"
     const val EDIT_POST_WITH_ID = "$EDIT_POST_ROUTE/{${Args.POST_ID}}"
+    // *** NEW ROUTE WITH PARAMETERS ***
+    const val CATEGORY_POSTS_WITH_ID_AND_NAME = "$CATEGORY_POSTS_ROUTE/{${Args.CATEGORY_ID}}/{${Args.CATEGORY_NAME}}"
+
 
     // Helper functions to create routes with parameters
     fun verifyOtpRoute(email: String) = "$VERIFY_OTP_ROUTE/$email"
     fun resetPasswordRoute(tokenId: String, otp: String) = "$RESET_PASSWORD_ROUTE/$tokenId/$otp"
     fun postDetailRoute(postId: String) = "$POST_DETAIL_ROUTE/$postId"
     fun editPostRoute(postId: String) = "$EDIT_POST_ROUTE/$postId"
+    // *** NEW HELPER FUNCTION ***
+    fun categoryPostsRoute(categoryId: String, categoryName: String) = "$CATEGORY_POSTS_ROUTE/$categoryId/$categoryName"
+
 
     // Auth-specific nested routes
     object Auth {
@@ -48,5 +60,8 @@ object BlogDestinations {
         const val TOKEN_ID = "tokenId"
         const val OTP = "otp"
         const val POST_ID = "postId"
+        // *** NEW ARGS ***
+        const val CATEGORY_ID = "categoryId"
+        const val CATEGORY_NAME = "categoryName"
     }
 }
