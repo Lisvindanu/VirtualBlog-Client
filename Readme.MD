@@ -139,7 +139,7 @@ Aplikasi ini menggunakan Clean Architecture dengan MVVM Pattern:
 
 ## 📋 Prerequisites
 
-- **Android Studio** Giraffe | 2022.3.1 atau lebih baru (direkomendasikan Iguana atau Koala)
+- **Android Studio** Meerkat  | 2024.3.2 
 - **Gradle** 8.14.1
 - **Android SDK** API level 24 (minimum) - 35 (target)
 - **JDK** 17 atau lebih baru
