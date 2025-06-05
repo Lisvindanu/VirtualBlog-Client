@@ -13,12 +13,14 @@ import com.virtualsblog.project.domain.usecase.blog.GetPostsForHomeUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetTotalPostsCountUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetPostByIdUseCase
 import com.virtualsblog.project.domain.usecase.blog.ToggleLikeUseCase
-import com.virtualsblog.project.domain.usecase.blog.CreatePostUseCase // Make sure this is imported
-import com.virtualsblog.project.domain.usecase.blog.UpdatePostUseCase // New
-import com.virtualsblog.project.domain.usecase.blog.DeletePostUseCase // New
-import com.virtualsblog.project.domain.usecase.blog.GetCategoriesUseCase // Make sure this is imported
-import com.virtualsblog.project.domain.usecase.blog.GetPostsByCategoryIdUseCase // *** NEW IMPORT ***
+import com.virtualsblog.project.domain.usecase.blog.CreatePostUseCase
+import com.virtualsblog.project.domain.usecase.blog.UpdatePostUseCase
+import com.virtualsblog.project.domain.usecase.blog.DeletePostUseCase
+import com.virtualsblog.project.domain.usecase.blog.GetCategoriesUseCase
+import com.virtualsblog.project.domain.usecase.blog.GetPostsByCategoryIdUseCase
 import com.virtualsblog.project.domain.usecase.blog.SearchUseCase
+// *** NEW IMPORT FOR GetPostsByAuthorIdUseCase ***
+import com.virtualsblog.project.domain.usecase.blog.GetPostsByAuthorIdUseCase
 import com.virtualsblog.project.domain.usecase.comment.CreateCommentUseCase
 import com.virtualsblog.project.domain.usecase.comment.DeleteCommentUseCase
 
@@ -99,22 +101,25 @@ object UseCaseModule {
 
     @Provides
     @Singleton
-    fun provideCreatePostUseCase(repository: BlogRepository): CreatePostUseCase = CreatePostUseCase(repository) // Ensure this exists
+    fun provideCreatePostUseCase(repository: BlogRepository): CreatePostUseCase = CreatePostUseCase(repository)
 
     @Provides
     @Singleton
-    fun provideGetCategoriesUseCase(repository: BlogRepository): GetCategoriesUseCase = GetCategoriesUseCase(repository) // Ensure this exists
+    fun provideGetCategoriesUseCase(repository: BlogRepository): GetCategoriesUseCase = GetCategoriesUseCase(repository)
 
-    // *** NEW USE CASE PROVIDER ***
     @Provides
     @Singleton
     fun provideGetPostsByCategoryIdUseCase(repository: BlogRepository): GetPostsByCategoryIdUseCase = GetPostsByCategoryIdUseCase(repository)
+
+    // *** NEW PROVIDER FOR GetPostsByAuthorIdUseCase ***
+    @Provides
+    @Singleton
+    fun provideGetPostsByAuthorIdUseCase(repository: BlogRepository): GetPostsByAuthorIdUseCase = GetPostsByAuthorIdUseCase(repository)
 
     @Provides
     @Singleton
     fun provideSearchUseCase(repository: BlogRepository): SearchUseCase = SearchUseCase(repository)
 
-    // New Blog UseCases for Edit and Delete
     @Provides
     @Singleton
     fun provideUpdatePostUseCase(repository: BlogRepository): UpdatePostUseCase = UpdatePostUseCase(repository)

@@ -2,28 +2,30 @@ package com.virtualsblog.project.presentation.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.navigation.NavType
 import com.virtualsblog.project.presentation.MainViewModel
-import com.virtualsblog.project.presentation.ui.screen.auth.login.LoginScreen
-import com.virtualsblog.project.presentation.ui.screen.auth.register.RegisterScreen
-import com.virtualsblog.project.presentation.ui.screen.auth.profile.ProfileScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.changepassword.ChangePasswordScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.forgotpassword.ForgotPasswordScreen
-import com.virtualsblog.project.presentation.ui.screen.auth.verifyotp.VerifyOtpScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.login.LoginScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.profile.ProfileScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.register.RegisterScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.resetpassword.ResetPasswordScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.terms.TermsAndConditionsScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.verifyotp.VerifyOtpScreen
+import com.virtualsblog.project.presentation.ui.screen.category.list.CategoriesScreen
+import com.virtualsblog.project.presentation.ui.screen.category.posts.CategoryPostsScreen
 import com.virtualsblog.project.presentation.ui.screen.home.HomeScreen
-import com.virtualsblog.project.presentation.ui.screen.splash.SplashScreen
 import com.virtualsblog.project.presentation.ui.screen.post.create.CreatePostScreen
 import com.virtualsblog.project.presentation.ui.screen.post.detail.PostDetailScreen
 import com.virtualsblog.project.presentation.ui.screen.post.edit.EditPostScreen
 import com.virtualsblog.project.presentation.ui.screen.post.list.PostListScreen
-import com.virtualsblog.project.presentation.ui.screen.auth.changepassword.ChangePasswordScreen
-import com.virtualsblog.project.presentation.ui.screen.category.list.CategoriesScreen
-import com.virtualsblog.project.presentation.ui.screen.category.posts.CategoryPostsScreen
-import com.virtualsblog.project.presentation.ui.screen.search.SearchScreen // *** ADDED IMPORT FOR SEARCH SCREEN ***
+import com.virtualsblog.project.presentation.ui.screen.search.SearchScreen
+import com.virtualsblog.project.presentation.ui.screen.splash.SplashScreen
+// *** NEW IMPORT FOR AUTHOR POSTS SCREEN ***
+import com.virtualsblog.project.presentation.ui.screen.authorposts.AuthorPostsScreen
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -37,7 +39,7 @@ fun BlogNavGraph(
         navController = navController,
         startDestination = BlogDestinations.SPLASH_ROUTE
     ) {
-        // Layar Splash
+
         composable(BlogDestinations.SPLASH_ROUTE) {
             SplashScreen(
                 onNavigateToLogin = {
@@ -53,7 +55,6 @@ fun BlogNavGraph(
             )
         }
 
-        // Layar Autentikasi
         composable(BlogDestinations.LOGIN_ROUTE) {
             LoginScreen(
                 onNavigateToRegister = {
@@ -85,6 +86,7 @@ fun BlogNavGraph(
                 }
             )
         }
+
 
         composable(BlogDestinations.TERMS_AND_CONDITIONS_ROUTE) {
             TermsAndConditionsScreen(
@@ -145,8 +147,6 @@ fun BlogNavGraph(
                 }
             )
         }
-
-        // Layar Utama Aplikasi
         composable(BlogDestinations.HOME_ROUTE) {
             HomeScreen(
                 onNavigateToProfile = {
@@ -170,7 +170,7 @@ fun BlogNavGraph(
                 onNavigateToCategories = {
                     navController.navigate(BlogDestinations.CATEGORIES_ROUTE)
                 },
-                onNavigateToSearch = { // *** ADDED NAVIGATION TO SEARCH ***
+                onNavigateToSearch = {
                     navController.navigate(BlogDestinations.SEARCH_ROUTE)
                 }
             )
@@ -200,6 +200,7 @@ fun BlogNavGraph(
                 }
             )
         }
+
 
         composable(BlogDestinations.CREATE_POST_ROUTE) {
             CreatePostScreen(
@@ -268,9 +269,8 @@ fun BlogNavGraph(
             CategoriesScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCategoryPosts = { categoryId, categoryName ->
-                    val encodedCategoryName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
                     navController.navigate(
-                        BlogDestinations.categoryPostsRoute(categoryId, encodedCategoryName)
+                        BlogDestinations.categoryPostsRoute(categoryId, categoryName)
                     )
                 }
             )
@@ -296,26 +296,52 @@ fun BlogNavGraph(
             )
         }
 
-        // *** NEW COMPOSABLE FOR SEARCH SCREEN ***
+
+        // Search Screen
         composable(BlogDestinations.SEARCH_ROUTE) {
             SearchScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToPostDetail = { postId ->
                     navController.navigate(BlogDestinations.postDetailRoute(postId))
                 },
-                onNavigateToUserProfile = { userId ->
-                    // Navigasi ke profil pengguna. Anda mungkin perlu membuat route khusus
-                    // jika ingin menampilkan profil pengguna lain, atau sesuaikan.
-                    // Untuk saat ini, navigasi ke profil pengguna saat ini jika userId cocok,
-                    // atau handle berbeda jika tidak.
-                    // Contoh sederhana:
-                    navController.navigate(BlogDestinations.PROFILE_ROUTE) // Sesuaikan jika perlu
+                // *** MODIFIED NAVIGATION FOR USER PROFILE CLICK FROM SEARCH ***
+                onNavigateToUserProfile = { authorId, authorName ->
+                    // URL encode the authorName to handle special characters in navigation routes
+                    navController.navigate(
+                        BlogDestinations.authorPostsRoute(authorId, authorName)
+                    )
                 },
                 onNavigateToCategoryPosts = { categoryId, categoryName ->
-                    val encodedCategoryName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
                     navController.navigate(
-                        BlogDestinations.categoryPostsRoute(categoryId, encodedCategoryName)
+                        BlogDestinations.categoryPostsRoute(categoryId, categoryName)
                     )
+                }
+            )
+        }
+
+        // *** NEW COMPOSABLE FOR AUTHOR POSTS SCREEN ***
+        composable(
+            route = BlogDestinations.AUTHOR_POSTS_WITH_ID_AND_NAME,
+            arguments = listOf(
+                navArgument(BlogDestinations.Args.AUTHOR_ID) { type = NavType.StringType },
+                navArgument(BlogDestinations.Args.AUTHOR_NAME) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val authorId = backStackEntry.arguments?.getString(BlogDestinations.Args.AUTHOR_ID) ?: ""
+            // Decode the authorName here as it was encoded before navigation
+            val encodedAuthorName = backStackEntry.arguments?.getString(BlogDestinations.Args.AUTHOR_NAME) ?: "Pengguna"
+            val authorName = try {
+                URLDecoder.decode(encodedAuthorName, StandardCharsets.UTF_8.toString())
+            } catch (e: Exception) {
+                "Pengguna" // Fallback if decoding fails
+            }
+
+
+            AuthorPostsScreen(
+                authorName = authorName,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPostDetail = { postId ->
+                    navController.navigate(BlogDestinations.postDetailRoute(postId))
                 }
             )
         }
