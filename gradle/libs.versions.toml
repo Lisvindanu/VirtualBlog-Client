@@ -4,6 +4,7 @@
 [versions]
 activityComposeVersion = "1.8.2"
 agp = "8.10.0" # Android Gradle Plugin version
+appcompat = "1.7.1"
 coreKtxVersion = "1.6.1"
 kotlin = "2.1.20" # Kotlin version
 ksp = "2.1.20-2.0.0" # KSP version
@@ -19,6 +20,9 @@ composeBom = "2025.05.01"
 composeCompiler = "1.5.3" # Example if you need to specify compiler separately, align with Kotlin version. Check compatibility.
 hilt = "2.56.1" # Hilt version
 hiltNavigationCompose = "1.2.0"
+mockk = "1.13.16"
+mockkAgent = "1.13.16"
+mockkAndroid = "1.13.8"
 retrofit = "2.11.0"
 okhttp = "4.12.0"
 room = "2.7.1"
@@ -39,6 +43,7 @@ uiTestJunit4Android = "1.8.2" # androidx.compose.ui:ui-test-junit4-android (Requ
 
 [libraries]
 androidx-activity-compose-v182 = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" } # No version needed if using BOM for Compose
 
@@ -80,6 +85,9 @@ hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-com
 hilt-android-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" } # For instrumented tests
 
 # Networking
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+mockk-agent = { module = "io.mockk:mockk-agent", version.ref = "mockkAgent" }
+mockk-android = { module = "io.mockk:mockk-android", version.ref = "mockkAndroid" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }

@@ -62,9 +62,19 @@ android {
         // kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
     }
     packaging {
-        // resources {
-        //    excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        // }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/NOTICE.md"
+            excludes += "/META-INF/NOTICE.txt"
+            excludes += "/META-INF/ASL2.0"
+            excludes += "/META-INF/LGPL2.1"
+            excludes += "**/META-INF/LICENSE.md"
+            excludes += "**/META-INF/LICENSE"
+            excludes += "**/META-INF/NOTICE"
+            excludes += "**/META-INF/DEPENDENCIES"
+        }
     }
     // Lint options from your original file
     lint {
@@ -84,10 +94,10 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended) 
+    implementation(libs.androidx.material.icons.extended)
 
     // Pull to refresh - Material 1 implementation (androidx.compose.material.pullrefresh.*)
-    implementation("androidx.compose.material:material") 
+    implementation("androidx.compose.material:material")
 
     // Hilt - Dependency Injection
     implementation(libs.hilt.android)
@@ -144,6 +154,14 @@ dependencies {
     androidTestImplementation(libs.core.ktx)
     // Hilt Testing (for instrumented tests)
     androidTestImplementation(libs.hilt.android.testing)
+
+//    androidTestImplementation(libs.androidx.appcompat)
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.mockk.agent)
+
+    // Jika perlu MockK untuk unit tests juga
+    testImplementation(libs.mockk)
+
     kspAndroidTest(libs.hilt.compiler) // Hilt KSP compiler for AndroidTest
 
     // Debugging - Only included in debug builds
