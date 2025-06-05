@@ -34,7 +34,7 @@ import javax.inject.Singleton
 class BlogRepositoryImpl @Inject constructor(
     private val blogApi: BlogApi,
     private val authRepository: AuthRepository,
-    private val gson: Gson // Added Gson for consistent error parsing
+    private val gson: Gson
 ) : BlogRepository {
 
     override suspend fun getAllPosts(): Flow<Resource<List<Post>>> = flow {
@@ -495,34 +495,25 @@ class BlogRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success) {
-                    // IMPROVED: Better message parsing for like status
+                    // FIXED: Analyze response to determine like status
                     val message = body.message.lowercase()
                     val isLiked = when {
-                        // Check for like keywords first
-                        message.contains("berhasil dikirim") ||
-                                message.contains("ditambahkan") ||
-                                message.contains("like berhasil") ||
-                                message.contains("disuka") -> true
-
-                        // Check for unlike keywords
+                        // API mengembalikan "Like berhasil ditambahkan" untuk like
+                        message.contains("ditambahkan") ||
+                                message.contains("berhasil") && !message.contains("dihapus") -> true
+                        // API mengembalikan "Like berhasil dihapus" untuk unlike
                         message.contains("dihapus") ||
                                 message.contains("dibatalkan") ||
-                                message.contains("unlike") ||
-                                message.contains("batal") ||
                                 message.contains("removed") -> false
-
-                        // Fallback: check HTTP status code
-                        body.status == 201 -> true  // Created = liked
-                        body.status == 200 -> false // OK = unliked
-
-                        // Default assume liked if API returns success but unclear message
-                        else -> true
+                        else -> {
+                            // Fallback: check if data exists (like created) or not (like deleted)
+                            body.data != null
+                        }
                     }
 
-                    // DEBUG: Log the response for debugging
-                    println("Like API Response - Status: ${body.status}, Message: '${body.message}', Parsed as liked: $isLiked")
-
-                    emit(Resource.Success(Pair(isLiked, 0))) // 0 indicates count handled by UI
+                    // FIXED: Return actual like status, let UI handle count
+                    // UI akan handle increment/decrement berdasarkan isLiked
+                    emit(Resource.Success(Pair(isLiked, -1))) // -1 indicates UI should handle count
                 } else {
                     emit(Resource.Error(body?.message ?: "Gagal toggle like"))
                 }

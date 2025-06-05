@@ -93,13 +93,19 @@ class PostDetailViewModel @Inject constructor(
     fun toggleLike() {
         val currentPost = _uiState.value.post ?: return
         val wasLiked = currentPost.isLiked
-        val originalLikes = currentPost.likes // Simpan original count
+        val currentLikes = currentPost.likes
 
         viewModelScope.launch {
-            // Optimistic update - update UI immediately
+            // FIXED: Optimistic update dengan logic yang benar
             val optimisticPost = currentPost.copy(
                 isLiked = !wasLiked,
-                likes = if (wasLiked) maxOf(0, originalLikes - 1) else originalLikes + 1
+                likes = if (wasLiked) {
+                    // Jika sebelumnya liked, sekarang unlike -> kurangi count
+                    maxOf(0, currentLikes - 1)
+                } else {
+                    // Jika sebelumnya tidak liked, sekarang like -> tambah count
+                    currentLikes + 1
+                }
             )
             _uiState.value = _uiState.value.copy(
                 post = optimisticPost,
@@ -109,17 +115,17 @@ class PostDetailViewModel @Inject constructor(
             toggleLikeUseCase(currentPost.id).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        val (isLiked, _) = resource.data!!
+                        val (actualIsLiked, _) = resource.data!!
 
-                        // FIXED: Calculate final count based on original state and API response
+                        // FIXED: Update berdasarkan response actual dari server
                         val finalPost = currentPost.copy(
-                            isLiked = isLiked,
-                            likes = if (isLiked) {
-                                // User liked: if was already liked, keep original, otherwise +1
-                                if (wasLiked) originalLikes else originalLikes + 1
+                            isLiked = actualIsLiked,
+                            likes = if (actualIsLiked) {
+                                // Server confirm like -> ensure count is incremented from original
+                                if (wasLiked) currentLikes else currentLikes + 1
                             } else {
-                                // User unliked: if was liked before, -1, otherwise keep original
-                                if (wasLiked) maxOf(0, originalLikes - 1) else originalLikes
+                                // Server confirm unlike -> ensure count is decremented from original
+                                if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes
                             }
                         )
 
@@ -129,9 +135,9 @@ class PostDetailViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        // FIXED: Rollback to original state
+                        // FIXED: Rollback optimistic update dengan data original
                         _uiState.value = _uiState.value.copy(
-                            post = currentPost, // Use original currentPost
+                            post = currentPost, // Kembali ke state asli
                             isLikeLoading = false,
                             error = resource.message
                         )
