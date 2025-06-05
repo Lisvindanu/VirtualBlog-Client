@@ -18,6 +18,7 @@ import com.virtualsblog.project.presentation.ui.component.PostCard
 import com.virtualsblog.project.presentation.ui.component.LoadingIndicator
 import com.virtualsblog.project.presentation.ui.component.ErrorMessage
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -71,7 +72,7 @@ fun CategoryPostsScreen(
                 title = { Text(uiState.categoryName.ifEmpty { "Post Kategori" }, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
