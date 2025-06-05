@@ -37,7 +37,7 @@ import com.virtualsblog.project.util.Constants
 fun SearchScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPostDetail: (String) -> Unit,
-    onNavigateToUserProfile: (String) -> Unit, // Assuming user ID for navigation
+    onNavigateToUserProfile: (authorId: String, authorName: String) -> Unit, // *** MODIFIED SIGNATURE ***
     onNavigateToCategoryPosts: (categoryId: String, categoryName: String) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -59,7 +59,7 @@ fun SearchScreen(
                         placeholder = { Text(Constants.SEARCH_HINT) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(end = 16.dp) // Give space for clear button if any
+                            .padding(end = 16.dp)
                             .focusRequester(focusRequester),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
@@ -104,7 +104,7 @@ fun SearchScreen(
                 ErrorMessage(
                     message = uiState.error!!,
                     onRetry = { viewModel.performSearch() },
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally)
                 )
             } else if (uiState.isInitialState) {
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
@@ -143,7 +143,8 @@ fun SearchScreen(
                         if (results.users.isNotEmpty()) {
                             item { SearchSectionHeader("Pengguna") }
                             items(results.users, key = { it.id }) { user ->
-                                UserResultItem(user = user, onClick = { onNavigateToUserProfile(user.id) })
+                                // *** MODIFIED onClick TO PASS BOTH ID AND NAME ***
+                                UserResultItem(user = user, onClick = { onNavigateToUserProfile(user.id, user.fullname.ifEmpty { user.username }) })
                             }
                         }
                         if (results.categories.isNotEmpty()) {
@@ -156,7 +157,6 @@ fun SearchScreen(
                             item { SearchSectionHeader("Postingan") }
                             items(results.posts, key = { it.id }) { post ->
                                 PostCard(post = post, onClick = { onNavigateToPostDetail(post.id) })
-                                // Like functionality can be added here if needed, similar to HomeScreen
                             }
                         }
                     }
@@ -189,10 +189,10 @@ private fun UserResultItem(user: User, onClick: () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserAvatar(userName = user.fullname, imageUrl = user.image, size = 48.dp)
+            UserAvatar(userName = user.fullname.ifEmpty { user.username }, imageUrl = user.image, size = 48.dp)
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(user.fullname, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(user.fullname.ifEmpty { user.username }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("@${user.username}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
