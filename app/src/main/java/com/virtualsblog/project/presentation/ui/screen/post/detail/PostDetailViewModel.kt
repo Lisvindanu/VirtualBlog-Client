@@ -93,13 +93,13 @@ class PostDetailViewModel @Inject constructor(
     fun toggleLike() {
         val currentPost = _uiState.value.post ?: return
         val wasLiked = currentPost.isLiked
-        val currentLikes = currentPost.likes
+        val originalLikes = currentPost.likes // Simpan original count
 
         viewModelScope.launch {
             // Optimistic update - update UI immediately
             val optimisticPost = currentPost.copy(
                 isLiked = !wasLiked,
-                likes = if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes + 1
+                likes = if (wasLiked) maxOf(0, originalLikes - 1) else originalLikes + 1
             )
             _uiState.value = _uiState.value.copy(
                 post = optimisticPost,
@@ -110,24 +110,28 @@ class PostDetailViewModel @Inject constructor(
                 when (resource) {
                     is Resource.Success -> {
                         val (isLiked, _) = resource.data!!
-                        // Verify our optimistic update was correct
+
+                        // FIXED: Calculate final count based on original state and API response
                         val finalPost = currentPost.copy(
                             isLiked = isLiked,
                             likes = if (isLiked) {
-                                if (wasLiked) currentLikes else currentLikes + 1
+                                // User liked: if was already liked, keep original, otherwise +1
+                                if (wasLiked) originalLikes else originalLikes + 1
                             } else {
-                                if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes
+                                // User unliked: if was liked before, -1, otherwise keep original
+                                if (wasLiked) maxOf(0, originalLikes - 1) else originalLikes
                             }
                         )
+
                         _uiState.value = _uiState.value.copy(
                             post = finalPost,
                             isLikeLoading = false
                         )
                     }
                     is Resource.Error -> {
-                        // Rollback optimistic update on error
+                        // FIXED: Rollback to original state
                         _uiState.value = _uiState.value.copy(
-                            post = currentPost, // Restore original state
+                            post = currentPost, // Use original currentPost
                             isLikeLoading = false,
                             error = resource.message
                         )

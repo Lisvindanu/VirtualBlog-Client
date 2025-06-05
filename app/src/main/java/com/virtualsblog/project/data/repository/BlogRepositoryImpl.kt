@@ -495,18 +495,33 @@ class BlogRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.success) {
-                    // Determine if user liked or unliked based on response message
+                    // IMPROVED: Better message parsing for like status
                     val message = body.message.lowercase()
                     val isLiked = when {
+                        // Check for like keywords first
                         message.contains("berhasil dikirim") ||
                                 message.contains("ditambahkan") ||
-                                message.contains("berhasil") -> true
+                                message.contains("like berhasil") ||
+                                message.contains("disuka") -> true
+
+                        // Check for unlike keywords
                         message.contains("dihapus") ||
-                                message.contains("dibatalkan") -> false
-                        else -> true // Default assume liked if API returns success
+                                message.contains("dibatalkan") ||
+                                message.contains("unlike") ||
+                                message.contains("batal") ||
+                                message.contains("removed") -> false
+
+                        // Fallback: check HTTP status code
+                        body.status == 201 -> true  // Created = liked
+                        body.status == 200 -> false // OK = unliked
+
+                        // Default assume liked if API returns success but unclear message
+                        else -> true
                     }
 
-                    // Return status, let UI handle count increment/decrement
+                    // DEBUG: Log the response for debugging
+                    println("Like API Response - Status: ${body.status}, Message: '${body.message}', Parsed as liked: $isLiked")
+
                     emit(Resource.Success(Pair(isLiked, 0))) // 0 indicates count handled by UI
                 } else {
                     emit(Resource.Error(body?.message ?: "Gagal toggle like"))

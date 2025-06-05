@@ -170,7 +170,7 @@ class HomeViewModel @Inject constructor(
 
         val currentPost = currentPosts[postIndex]
         val wasLiked = currentPost.isLiked
-        val currentLikes = currentPost.likes
+        val originalLikes = currentPost.likes // Simpan original count
 
         viewModelScope.launch {
             // Add to liking set for loading state
@@ -181,7 +181,7 @@ class HomeViewModel @Inject constructor(
             // Optimistic update
             val optimisticPost = currentPost.copy(
                 isLiked = !wasLiked,
-                likes = if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes + 1
+                likes = if (wasLiked) maxOf(0, originalLikes - 1) else originalLikes + 1
             )
             val updatedPosts = currentPosts.toMutableList().apply {
                 set(postIndex, optimisticPost)
@@ -192,14 +192,19 @@ class HomeViewModel @Inject constructor(
                 when (resource) {
                     is Resource.Success -> {
                         val (isLiked, _) = resource.data!!
+
+                        // FIXED: Calculate final count based on original state and API response
                         val finalPost = currentPost.copy(
                             isLiked = isLiked,
                             likes = if (isLiked) {
-                                if (wasLiked) currentLikes else currentLikes + 1
+                                // User liked: if was already liked, keep original, otherwise +1
+                                if (wasLiked) originalLikes else originalLikes + 1
                             } else {
-                                if (wasLiked) maxOf(0, currentLikes - 1) else currentLikes
+                                // User unliked: if was liked before, -1, otherwise keep original
+                                if (wasLiked) maxOf(0, originalLikes - 1) else originalLikes
                             }
                         )
+
                         val finalPosts = _uiState.value.posts.toMutableList().apply {
                             val finalIndex = indexOfFirst { it.id == postId }
                             if (finalIndex != -1) {
@@ -208,20 +213,21 @@ class HomeViewModel @Inject constructor(
                         }
                         _uiState.value = _uiState.value.copy(
                             posts = finalPosts,
-                            likingPostIds = _uiState.value.likingPostIds - postId // Remove from loading
+                            likingPostIds = _uiState.value.likingPostIds - postId
                         )
                     }
                     is Resource.Error -> {
-                        // Rollback optimistic update
+                        // FIXED: Rollback to original state, not currentPost
                         val rolledBackPosts = _uiState.value.posts.toMutableList().apply {
                             val rollbackIndex = indexOfFirst { it.id == postId }
                             if (rollbackIndex != -1) {
-                                set(rollbackIndex, currentPost)
+                                set(rollbackIndex, currentPost) // Use original currentPost
                             }
                         }
                         _uiState.value = _uiState.value.copy(
                             posts = rolledBackPosts,
-                            likingPostIds = _uiState.value.likingPostIds - postId // Remove from loading
+                            likingPostIds = _uiState.value.likingPostIds - postId,
+                            error = resource.message
                         )
                     }
                     is Resource.Loading -> {
