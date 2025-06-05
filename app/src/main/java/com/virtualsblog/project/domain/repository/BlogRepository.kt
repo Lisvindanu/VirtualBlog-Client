@@ -15,9 +15,10 @@ interface BlogRepository {
     suspend fun getTotalPostsCount(): Flow<Resource<Int>>
     suspend fun getPostById(postId: String): Flow<Resource<Post>>
     suspend fun getCategories(): Flow<Resource<List<Category>>>
-
-
     suspend fun getPostsByCategoryId(categoryId: String): Flow<Resource<List<Post>>>
+
+    // *** NEW FUNCTION TO GET POSTS BY AUTHOR ID ***
+    suspend fun getPostsByAuthorId(authorId: String): Flow<Resource<List<Post>>>
 
     suspend fun search(keyword: String): Flow<Resource<SearchData>>
 

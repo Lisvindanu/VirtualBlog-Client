@@ -40,6 +40,44 @@ class BlogRepositoryImpl @Inject constructor(
     private val gson: Gson
 ) : BlogRepository {
 
+    override suspend fun getPostsByAuthorId(authorId: String): Flow<Resource<List<Post>>> = flow {
+        try {
+            emit(Resource.Loading())
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.getPostsByAuthorId(
+                authorId = authorId,
+                authorization = "${Constants.BEARER_PREFIX}$token"
+            )
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    val posts = PostMapper.mapResponseListToDomain(body.data)
+                    val sortedPosts = posts.sortedByDescending { post ->
+                        DateUtil.getTimestamp(post.createdAt)
+                    }
+                    emit(Resource.Success(sortedPosts))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Gagal memuat postingan dari author ini."))
+                }
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+        } catch (e: HttpException) {
+            emit(handleHttpError(e.code(), e.response()?.errorBody()?.string()))
+        } catch (e: IOException) {
+            emit(Resource.Error("${Constants.ERROR_NETWORK}: ${e.localizedMessage}"))
+        } catch (e: Exception) {
+            emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
+        }
+    }
+
+
     override suspend fun getAllPosts(): Flow<Resource<List<Post>>> = flow {
         try {
             emit(Resource.Loading())
@@ -78,6 +116,8 @@ class BlogRepositoryImpl @Inject constructor(
             emit(Resource.Error("${Constants.ERROR_UNKNOWN}: ${e.localizedMessage}"))
         }
     }
+
+
 
     override suspend fun search(keyword: String): Flow<Resource<SearchData>> = flow {
         emit(Resource.Loading())
@@ -572,7 +612,6 @@ class BlogRepositoryImpl @Inject constructor(
         }
     }
 
-    // Excerpt from BlogRepositoryImpl.kt - Updated toggleLike method
 
     override suspend fun toggleLike(
         postId: String

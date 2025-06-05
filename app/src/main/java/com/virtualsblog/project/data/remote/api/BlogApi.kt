@@ -33,12 +33,18 @@ interface BlogApi {
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
     ): Response<PostsApiResponse>
 
-    // *** NEW SEARCH FUNCTION ***
     @GET("search")
     suspend fun search(
         @Query("keyword") keyword: String,
         @Header(Constants.HEADER_AUTHORIZATION) authorization: String
-    ): Response<ApiResponse<SearchResponseData>> //
+    ): Response<ApiResponse<SearchResponseData>>
+
+    // *** Endpoint for getting posts by author ID (as per API documentation) ***
+    @GET("authors/{id}")
+    suspend fun getPostsByAuthorId(
+        @Path("id") authorId: String,
+        @Header(Constants.HEADER_AUTHORIZATION) authorization: String
+    ): Response<PostsApiResponse>
 
     @Multipart
     @POST("posts")
