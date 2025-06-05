@@ -1,4 +1,4 @@
-// PostDetailViewModel.kt - Permanent Like System
+// PostDetailViewModel.kt - Fixed Delete Navigation
 package com.virtualsblog.project.presentation.ui.screen.post.detail
 
 import androidx.lifecycle.ViewModel
@@ -241,6 +241,7 @@ class PostDetailViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null, deletePostError = null)
     }
 
+    // FIXED: Delete with immediate navigation
     fun deleteCurrentPost() {
         val postIdToDelete = _uiState.value.post?.id ?: return
         viewModelScope.launch {
@@ -255,11 +256,13 @@ class PostDetailViewModel @Inject constructor(
                 actualDeletePostUseCase(postIdToDelete).collect { resource ->
                     when (resource) {
                         is Resource.Success -> {
+                            // IMMEDIATE: Set success state tanpa delay
                             navigationState.postDeleted(postIdToDelete)
 
                             _uiState.value = _uiState.value.copy(
                                 isDeletingPost = false,
                                 deletePostSuccess = true,
+                                // CLEAR: Clear post immediately to prevent re-loading
                                 post = null,
                                 comments = emptyList(),
                                 error = null
