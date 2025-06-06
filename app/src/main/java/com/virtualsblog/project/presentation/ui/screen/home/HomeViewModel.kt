@@ -9,6 +9,7 @@ import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.usecase.blog.GetPostsForHomeUseCase
 import com.virtualsblog.project.domain.usecase.blog.GetTotalPostsCountUseCase
 import com.virtualsblog.project.domain.usecase.blog.ToggleLikeUseCase
+import com.virtualsblog.project.util.NavigationEvent
 import com.virtualsblog.project.util.NavigationState
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,27 +29,49 @@ class HomeViewModel @Inject constructor(
     private val getTotalPostsCountUseCase: GetTotalPostsCountUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
     private val navigationState: NavigationState,
-    private val cacheManager: CacheManager // Added cache manager
+    private val cacheManager: CacheManager
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
         checkAuthStatus()
+        loadData() // Panggil metode gabungan
+        observeNavigationEvents() // Ganti observeNavigationState dengan ini
+        clearExpiredCache()
+    }
+
+    private fun observeNavigationEvents() {
+        viewModelScope.launch {
+            navigationState.navigationEvents.collect { event ->
+                if (event is NavigationEvent.RefreshHome ||
+                    event is NavigationEvent.PostCreated ||
+                    event is NavigationEvent.PostDeleted ||
+                    event is NavigationEvent.PostUpdated
+                ) {
+                    forceRefreshPosts()
+                }
+            }
+        }
+    }
+
+    // Metode baru untuk memuat data awal
+    private fun loadData() {
         loadPosts()
         loadTotalPostsCount()
-        observeNavigationState()
+    }
 
-        // Clear expired cache on init
+
+    private fun clearExpiredCache() {
         viewModelScope.launch {
             try {
                 cacheManager.clearExpiredCache()
             } catch (e: Exception) {
-                // Ignore cache clear errors
+                // Abaikan kesalahan pembersihan cache
             }
         }
     }
+
 
     private fun observeNavigationState() {
         viewModelScope.launch {
@@ -99,7 +122,6 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        // Only show error if we don't have cached data
                         if (_uiState.value.posts.isEmpty()) {
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
@@ -107,7 +129,6 @@ class HomeViewModel @Inject constructor(
                                 error = resource.message ?: "Gagal memuat postingan"
                             )
                         } else {
-                            // We have cached data, just stop loading/refreshing
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
                                 isRefreshing = false
@@ -129,7 +150,7 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        // Handle error jika diperlukan - keep existing count
+                        // Handle error jika diperlukan
                     }
                     is Resource.Loading -> {
                         // Loading state tidak perlu ditampilkan

@@ -30,7 +30,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize background sync
         initializeBackgroundSync()
 
         setContent {
@@ -50,16 +49,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        mainViewModel.refreshHome()
-    }
 
     private fun initializeBackgroundSync() {
         try {
             syncWorkManager.scheduleSyncWork()
         } catch (e: Exception) {
-            // Log error but don't crash app
             e.printStackTrace()
         }
     }

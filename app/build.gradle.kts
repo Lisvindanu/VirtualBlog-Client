@@ -80,11 +80,15 @@ dependencies {
 
     // Hilt - Dependency Injection
     implementation(libs.hilt.android)
-    implementation(libs.androidx.hilt.common)
-    implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.androidx.hilt.work)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Hilt-WorkManager Integration
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler) // Use the correct reference
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
@@ -119,6 +123,7 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.arch.core.testing)
+    testImplementation(libs.mockk)
 
     // Android Instrumented Tests
     androidTestImplementation(libs.androidx.junit)
@@ -132,7 +137,6 @@ dependencies {
     androidTestImplementation(libs.hilt.android.testing)
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.mockk.agent)
-    testImplementation(libs.mockk)
     kspAndroidTest(libs.hilt.compiler)
 
     // Debugging

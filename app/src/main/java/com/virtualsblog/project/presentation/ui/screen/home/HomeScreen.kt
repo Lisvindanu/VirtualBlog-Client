@@ -55,14 +55,11 @@ fun HomeScreen(
     var showDislikeDialog by remember { mutableStateOf(false) }
     var postToDislike by remember { mutableStateOf<String?>(null) }
 
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> {
-                    viewModel.forceRefreshPosts()
-                }
-                else -> {}
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.forceRefreshPosts()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -70,6 +67,7 @@ fun HomeScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
+
 
     LaunchedEffect(uiState.isLoggedIn, uiState.isLoading) {
         if (!uiState.isLoading && !uiState.isLoggedIn) {

@@ -16,9 +16,4 @@ class BlogApplication : Application(), Configuration.Provider {
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
-
-    override fun onCreate() {
-        super.onCreate()
-        // WorkManager will be automatically initialized with the configuration
-    }
 }
