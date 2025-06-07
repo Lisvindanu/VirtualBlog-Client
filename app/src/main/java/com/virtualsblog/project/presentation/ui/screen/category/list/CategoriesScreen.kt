@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
@@ -22,7 +21,6 @@ import com.virtualsblog.project.domain.model.Category
 import com.virtualsblog.project.presentation.ui.component.LoadingIndicator
 import com.virtualsblog.project.presentation.ui.component.ErrorMessage
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(
     onNavigateBack: () -> Unit,
@@ -31,53 +29,55 @@ fun CategoriesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Semua Kategori", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        }
-    ) { paddingValues ->
+    // Clean layout without top bar
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+    ) {
+        // Simple header
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            when {
-                uiState.isLoading -> LoadingIndicator(message = "Memuat kategori...")
-                uiState.error != null -> ErrorMessage(
-                    message = uiState.error!!,
-                    onRetry = { viewModel.loadCategories() },
-                    modifier = Modifier.padding(16.dp)
-                )
-                uiState.categories.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                        Text("Belum ada kategori.", style = MaterialTheme.typography.bodyLarge)
-                    }
+            Text(
+                text = "Kategori",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        when {
+            uiState.isLoading -> LoadingIndicator(message = "Memuat kategori...")
+            uiState.error != null -> ErrorMessage(
+                message = uiState.error!!,
+                onRetry = { viewModel.loadCategories() },
+                modifier = Modifier.padding(16.dp)
+            )
+            uiState.categories.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("Belum ada kategori.", style = MaterialTheme.typography.bodyLarge)
                 }
-                else -> {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(uiState.categories, key = { it.id }) { category ->
-                            CategoryListItem(
-                                category = category,
-                                onClick = {
-                                    onNavigateToCategoryPosts(category.id, category.name)
-                                }
-                            )
-                        }
+            }
+            else -> {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(uiState.categories, key = { it.id }) { category ->
+                        CategoryListItem(
+                            category = category,
+                            onClick = {
+                                onNavigateToCategoryPosts(category.id, category.name)
+                            }
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp)) // Space for bottom nav
                     }
                 }
             }

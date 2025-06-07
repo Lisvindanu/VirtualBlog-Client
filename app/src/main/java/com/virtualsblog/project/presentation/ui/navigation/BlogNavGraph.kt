@@ -1,10 +1,23 @@
 package com.virtualsblog.project.presentation.ui.navigation
 
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.virtualsblog.project.presentation.MainViewModel
 import com.virtualsblog.project.presentation.ui.screen.auth.changepassword.ChangePasswordScreen
@@ -24,7 +37,6 @@ import com.virtualsblog.project.presentation.ui.screen.post.edit.EditPostScreen
 import com.virtualsblog.project.presentation.ui.screen.post.list.PostListScreen
 import com.virtualsblog.project.presentation.ui.screen.search.SearchScreen
 import com.virtualsblog.project.presentation.ui.screen.splash.SplashScreen
-// *** NEW IMPORT FOR AUTHOR POSTS SCREEN ***
 import com.virtualsblog.project.presentation.ui.screen.authorposts.AuthorPostsScreen
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -35,9 +47,165 @@ fun BlogNavGraph(
     navController: NavHostController,
     mainViewModel: MainViewModel? = null
 ) {
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+
+    // Check if current screen should show bottom navigation
+    val showBottomNav = when {
+        currentRoute == BlogDestinations.SPLASH_ROUTE -> false
+        currentRoute == BlogDestinations.LOGIN_ROUTE -> false
+        currentRoute == BlogDestinations.REGISTER_ROUTE -> false
+        currentRoute == BlogDestinations.FORGOT_PASSWORD_ROUTE -> false
+        currentRoute?.startsWith(BlogDestinations.VERIFY_OTP_ROUTE) == true -> false
+        currentRoute?.startsWith(BlogDestinations.RESET_PASSWORD_ROUTE) == true -> false
+        currentRoute == BlogDestinations.TERMS_AND_CONDITIONS_ROUTE -> false
+        currentRoute == BlogDestinations.CHANGE_PASSWORD_ROUTE -> false
+        else -> true
+    }
+
+    if (showBottomNav) {
+        Scaffold(
+            bottomBar = {
+                BottomNavigationBar(
+                    currentRoute = currentRoute,
+                    onHomeClick = {
+                        navController.navigate(BlogDestinations.HOME_ROUTE) {
+                            popUpTo(BlogDestinations.HOME_ROUTE) { inclusive = true }
+                        }
+                    },
+                    onSearchClick = {
+                        navController.navigate(BlogDestinations.SEARCH_ROUTE)
+                    },
+                    onCreateClick = {
+                        navController.navigate(BlogDestinations.CREATE_POST_ROUTE)
+                    },
+                    onCategoriesClick = {
+                        navController.navigate(BlogDestinations.CATEGORIES_ROUTE)
+                    },
+                    onProfileClick = {
+                        navController.navigate(BlogDestinations.PROFILE_ROUTE)
+                    }
+                )
+            }
+        ) { paddingValues ->
+            BlogNavHost(
+                navController = navController,
+                mainViewModel = mainViewModel,
+                contentPadding = paddingValues
+            )
+        }
+    } else {
+        BlogNavHost(
+            navController = navController,
+            mainViewModel = mainViewModel,
+            contentPadding = PaddingValues(0.dp)
+        )
+    }
+}
+
+@Composable
+private fun BottomNavigationBar(
+    currentRoute: String?,
+    onHomeClick: () -> Unit,
+    onSearchClick: () -> Unit,
+    onCreateClick: () -> Unit,
+    onCategoriesClick: () -> Unit,
+    onProfileClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .navigationBarsPadding(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Home
+            BottomNavItem(
+                icon = if (currentRoute == BlogDestinations.HOME_ROUTE) Icons.Filled.Home else Icons.Outlined.Home,
+                isSelected = currentRoute == BlogDestinations.HOME_ROUTE,
+                onClick = onHomeClick
+            )
+
+            // Search
+            BottomNavItem(
+                icon = if (currentRoute == BlogDestinations.SEARCH_ROUTE) Icons.Filled.Search else Icons.Outlined.Search,
+                isSelected = currentRoute == BlogDestinations.SEARCH_ROUTE,
+                onClick = onSearchClick
+            )
+
+            // Create Post (Center button like IG)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.outline),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(
+                    onClick = onCreateClick,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Create",
+                        tint = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            // Categories (using grid icon like IG activity)
+            BottomNavItem(
+                icon = if (currentRoute == BlogDestinations.CATEGORIES_ROUTE) Icons.Filled.GridView else Icons.Outlined.GridView,
+                isSelected = currentRoute == BlogDestinations.CATEGORIES_ROUTE,
+                onClick = onCategoriesClick
+            )
+
+            // Profile
+            BottomNavItem(
+                icon = if (currentRoute == BlogDestinations.PROFILE_ROUTE) Icons.Filled.Person else Icons.Outlined.Person,
+                isSelected = currentRoute == BlogDestinations.PROFILE_ROUTE,
+                onClick = onProfileClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomNavItem(
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(42.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(26.dp)
+        )
+    }
+}
+
+@Composable
+private fun BlogNavHost(
+    navController: NavHostController,
+    mainViewModel: MainViewModel? = null,
+    contentPadding: PaddingValues
+) {
     NavHost(
         navController = navController,
-        startDestination = BlogDestinations.SPLASH_ROUTE
+        startDestination = BlogDestinations.SPLASH_ROUTE,
+        modifier = Modifier.padding(contentPadding)
     ) {
 
         composable(BlogDestinations.SPLASH_ROUTE) {
@@ -86,7 +254,6 @@ fun BlogNavGraph(
                 }
             )
         }
-
 
         composable(BlogDestinations.TERMS_AND_CONDITIONS_ROUTE) {
             TermsAndConditionsScreen(
@@ -147,6 +314,7 @@ fun BlogNavGraph(
                 }
             )
         }
+
         composable(BlogDestinations.HOME_ROUTE) {
             HomeScreen(
                 onNavigateToProfile = {
@@ -200,7 +368,6 @@ fun BlogNavGraph(
                 }
             )
         }
-
 
         composable(BlogDestinations.CREATE_POST_ROUTE) {
             CreatePostScreen(
@@ -296,17 +463,13 @@ fun BlogNavGraph(
             )
         }
 
-
-        // Search Screen
         composable(BlogDestinations.SEARCH_ROUTE) {
             SearchScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToPostDetail = { postId ->
                     navController.navigate(BlogDestinations.postDetailRoute(postId))
                 },
-                // *** MODIFIED NAVIGATION FOR USER PROFILE CLICK FROM SEARCH ***
                 onNavigateToUserProfile = { authorId, authorName ->
-                    // URL encode the authorName to handle special characters in navigation routes
                     navController.navigate(
                         BlogDestinations.authorPostsRoute(authorId, authorName)
                     )
@@ -319,7 +482,6 @@ fun BlogNavGraph(
             )
         }
 
-        // *** NEW COMPOSABLE FOR AUTHOR POSTS SCREEN ***
         composable(
             route = BlogDestinations.AUTHOR_POSTS_WITH_ID_AND_NAME,
             arguments = listOf(
@@ -328,14 +490,12 @@ fun BlogNavGraph(
             )
         ) { backStackEntry ->
             val authorId = backStackEntry.arguments?.getString(BlogDestinations.Args.AUTHOR_ID) ?: ""
-            // Decode the authorName here as it was encoded before navigation
             val encodedAuthorName = backStackEntry.arguments?.getString(BlogDestinations.Args.AUTHOR_NAME) ?: "Pengguna"
             val authorName = try {
                 URLDecoder.decode(encodedAuthorName, StandardCharsets.UTF_8.toString())
             } catch (e: Exception) {
-                "Pengguna" // Fallback if decoding fails
+                "Pengguna"
             }
-
 
             AuthorPostsScreen(
                 authorName = authorName,
