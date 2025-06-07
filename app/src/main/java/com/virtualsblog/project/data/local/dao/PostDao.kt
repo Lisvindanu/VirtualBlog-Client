@@ -40,8 +40,6 @@ interface PostDao {
     @Update
     suspend fun updatePost(post: PostEntity)
 
-    @Query("UPDATE posts SET likes = :likes, isLiked = :isLiked WHERE id = :postId")
-    suspend fun updatePostLikes(postId: String, likes: Int, isLiked: Boolean)
 
     @Query("UPDATE posts SET comments = :comments WHERE id = :postId")
     suspend fun updatePostComments(postId: String, comments: Int)

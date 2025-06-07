@@ -752,12 +752,8 @@ class BlogRepositoryImpl @Inject constructor(
                         else -> body.data != null
                     }
 
-                    // Update cached post
-                    val cachedPost = postDao.getPostById(postId)
-                    if (cachedPost != null) {
-                        val newLikeCount = if (isLiked) cachedPost.likes + 1 else maxOf(0, cachedPost.likes - 1)
-                        postDao.updatePostLikes(postId, newLikeCount, isLiked)
-                    }
+                    // Pembaruan data di Room (postDao) sudah dihapus dari sini.
+                    // ViewModel akan menangani pembaruan UI dengan memuat ulang data.
 
                     emit(Resource.Success(Pair(isLiked, -1)))
                 } else {

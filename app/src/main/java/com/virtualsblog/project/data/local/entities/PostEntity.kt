@@ -1,9 +1,17 @@
 package com.virtualsblog.project.data.local.entities
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "posts")
+@Entity(
+    tableName = "posts",
+    indices = [
+        Index(value = ["categoryId"]),
+        Index(value = ["authorId"]),
+        Index(value = ["createdAt"])
+    ]
+)
 data class PostEntity(
     @PrimaryKey
     val id: String,
@@ -22,6 +30,6 @@ data class PostEntity(
     val isLiked: Boolean = false,
     val image: String?,
     val slug: String,
-    val isCached: Boolean = false, // Flag for cache management
+    val isCached: Boolean = false,
     val lastSyncTime: Long = System.currentTimeMillis()
 )
