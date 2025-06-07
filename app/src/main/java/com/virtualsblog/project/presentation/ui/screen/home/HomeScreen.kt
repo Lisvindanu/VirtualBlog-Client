@@ -1,4 +1,4 @@
-// HomeScreen.kt - Updated with Dislike Confirmation & Categories Navigation
+// HomeScreen.kt - Updated tanpa Quick Actions dan jarak navigasi diperbaiki
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.compose.animation.*
@@ -7,11 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Category // *** NEW IMPORT FOR CATEGORY ICON ***
+import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +24,6 @@ import com.virtualsblog.project.presentation.ui.component.PostCard
 import com.virtualsblog.project.presentation.ui.component.UserAvatar
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -41,7 +39,7 @@ fun HomeScreen(
     onNavigateToPostDetail: (String) -> Unit,
     onNavigateToLogin: () -> Unit,
     onNavigateToAllPosts: () -> Unit,
-    onNavigateToCategories: () -> Unit, // *** NEW PARAMETER ***
+    onNavigateToCategories: () -> Unit,
     onNavigateToSearch: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -139,7 +137,7 @@ fun HomeScreen(
                 userImageUrl = uiState.userImageUrl,
                 onProfileClick = onNavigateToProfile,
                 onSearchClick = onNavigateToSearch,
-                onCategoriesClick = onNavigateToCategories // *** PASS NAVIGATION HERE ***
+                onCategoriesClick = onNavigateToCategories
             )
         },
         floatingActionButton = {
@@ -177,16 +175,6 @@ fun HomeScreen(
                             item {
                                 EnhancedWelcomeHeader(username = uiState.username)
                             }
-                        }
-
-                        // Enhanced Statistics Card
-                        item {
-                            EnhancedStatisticsCard(
-                                totalPosts = uiState.totalPostsCount,
-                                totalUsers = 42, // Placeholder
-                                onViewAllPosts = onNavigateToAllPosts,
-                                onViewCategories = onNavigateToCategories // *** ADDED CATEGORIES NAVIGATION ***
-                            )
                         }
 
                         // Enhanced Section Header
@@ -247,7 +235,7 @@ private fun EnhancedTopAppBar(
     userImageUrl: String?,
     onProfileClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onCategoriesClick: () -> Unit // *** NEW PARAMETER ***
+    onCategoriesClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -278,15 +266,14 @@ private fun EnhancedTopAppBar(
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp), // Ubah dari 8.dp ke 4.dp
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // *** ADDED CATEGORIES BUTTON ***
                 IconButton(
                     onClick = onCategoriesClick,
                     colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = Color.Transparent, // Or primary if preferred
-                        contentColor = MaterialTheme.colorScheme.primary // Or onPrimary
+                        containerColor = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Icon(
@@ -295,15 +282,15 @@ private fun EnhancedTopAppBar(
                     )
                 }
 
-                IconButton( // Changed from FilledIconButton to IconButton for consistency
-                    onClick = onSearchClick, // Uses the passed lambda
+                IconButton(
+                    onClick = onSearchClick,
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = Color.Transparent,
                         contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Search, // Using Filled.Search icon
+                        imageVector = Icons.Filled.Search,
                         contentDescription = "Cari"
                     )
                 }
@@ -343,7 +330,6 @@ private fun EnhancedFloatingActionButton(
     }
 }
 
-// Tambahan component lainnya tetap sama seperti sebelumnya...
 @Composable
 private fun EnhancedWelcomeHeader(username: String) {
     Card(
@@ -384,123 +370,6 @@ private fun EnhancedWelcomeHeader(username: String) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun EnhancedStatisticsCard(
-    totalPosts: Int,
-    totalUsers: Int,
-    onViewAllPosts: () -> Unit,
-    onViewCategories: () -> Unit // *** NEW PARAMETER ***
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "📊 Statistik Platform",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                // *** UPDATED TO INCLUDE CATEGORIES BUTTON ***
-                Row {
-                    TextButton(onClick = onViewCategories) {
-                        Text("Kategori")
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = onViewAllPosts) {
-                        Text("Semua Post")
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                EnhancedStatItem(
-                    icon = Icons.AutoMirrored.Filled.Article,
-                    title = "Total Post",
-                    value = formatCount(totalPosts),
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f)
-                )
-
-                VerticalDivider(
-                    modifier = Modifier.height(60.dp),
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                )
-
-                EnhancedStatItem(
-                    icon = Icons.Default.People,
-                    title = "Pengguna Aktif",
-                    value = formatCount(totalUsers), // Placeholder, replace with actual data if available
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EnhancedStatItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Surface(
-            color = color.copy(alpha = 0.1f),
-            shape = CircleShape,
-            modifier = Modifier.size(48.dp)
-        ) {
-            Box(
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -643,13 +512,5 @@ private fun EnhancedErrorState(
                 }
             }
         }
-    }
-}
-
-fun formatCount(count: Int): String {
-    return when {
-        count < 1000 -> count.toString()
-        count < 1000000 -> "${count / 1000}K"
-        else -> "${count / 1000000}M"
     }
 }
