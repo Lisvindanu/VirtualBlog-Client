@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.HeartBroken
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,13 +18,12 @@ import com.virtualsblog.project.presentation.ui.component.PostCard
 import com.virtualsblog.project.presentation.ui.component.LoadingIndicator
 import com.virtualsblog.project.presentation.ui.component.ErrorMessage
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import com.virtualsblog.project.util.Constants
+import androidx.compose.ui.graphics.Color
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun CategoryPostsScreen(
     categoryName: String,
@@ -34,12 +33,11 @@ fun CategoryPostsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pullRefreshState = rememberPullRefreshState(
-        refreshing = uiState.isLoading && uiState.posts.isNotEmpty(), // Show pull refresh only if already has data
+        refreshing = uiState.isLoading && uiState.posts.isNotEmpty(),
         onRefresh = { viewModel.loadPostsForCategory() }
     )
     var showDislikeDialog by remember { mutableStateOf(false) }
     var postToDislike by remember { mutableStateOf<String?>(null) }
-
 
     if (showDislikeDialog && postToDislike != null) {
         AlertDialog(
@@ -66,27 +64,47 @@ fun CategoryPostsScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(uiState.categoryName.ifEmpty { "Post Kategori" }, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+    // Clean layout without top bar - Instagram style
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+    ) {
+        // Simple header with back button and category name
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onNavigateBack,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 )
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Kembali",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = uiState.categoryName.ifEmpty { "Post Kategori" },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
-    ) { paddingValues ->
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
                 .pullRefresh(pullRefreshState)
         ) {
             when {
@@ -99,6 +117,11 @@ fun CategoryPostsScreen(
                 uiState.posts.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "📝",
+                                style = MaterialTheme.typography.displayMedium
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
                             Text("Belum ada postingan di kategori ini.", style = MaterialTheme.typography.bodyLarge)
                             Spacer(Modifier.height(8.dp))
                             Text("Jadilah yang pertama mengisi kategori ini dengan tulisanmu!", style = MaterialTheme.typography.bodySmall)
@@ -107,8 +130,8 @@ fun CategoryPostsScreen(
                 }
                 else -> {
                     LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(0.dp), // No horizontal padding like IG
+                        verticalArrangement = Arrangement.spacedBy(0.dp), // No spacing like IG
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(uiState.posts, key = { it.id }) { post ->
@@ -123,6 +146,10 @@ fun CategoryPostsScreen(
                                 },
                                 isLikeLoading = uiState.likingPostIds.contains(post.id)
                             )
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(80.dp)) // Space for bottom nav
                         }
                     }
                 }

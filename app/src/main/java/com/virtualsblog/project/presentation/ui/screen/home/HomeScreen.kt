@@ -30,7 +30,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToProfile: () -> Unit,
@@ -136,338 +136,101 @@ fun HomeScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            CleanTopAppBar(
-                username = uiState.username,
-                userImageUrl = uiState.userImageUrl,
-                onProfileClick = onNavigateToProfile,
-                onSearchClick = onNavigateToSearch,
-                onCategoriesClick = onNavigateToCategories
+    // Simple clean layout without top bar
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        if (uiState.isLoading && !uiState.isRefreshing) {
+            CleanLoadingState()
+        } else if (uiState.error != null && !uiState.isRefreshing) {
+            CleanErrorState(
+                error = uiState.error!!,
+                onRetry = { viewModel.refreshPosts() }
             )
-        },
-        floatingActionButton = {
-            CleanFloatingActionButton(
-                onClick = onNavigateToCreatePost
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            if (uiState.isLoading && !uiState.isRefreshing) {
-                CleanLoadingState()
-            } else if (uiState.error != null && !uiState.isRefreshing) {
-                CleanErrorState(
-                    error = uiState.error!!,
-                    onRetry = { viewModel.refreshPosts() }
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pullRefresh(pullRefreshState)
-                ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        if (uiState.isLoggedIn && uiState.username.isNotEmpty()) {
-                            item {
-                                CleanWelcomeHeader(username = uiState.username)
-                            }
-                        }
-
-                        item {
-                            CleanSectionHeader(
-                                title = "Postingan Terbaru",
-                                subtitle = "Temukan konten menarik dari komunitas",
-                                onViewAll = onNavigateToAllPosts
-                            )
-                        }
-
-                        if (uiState.posts.isEmpty() && !uiState.isLoading) {
-                            item {
-                                CleanEmptyState(onCreatePost = onNavigateToCreatePost)
-                            }
-                        } else {
-                            items(
-                                items = uiState.posts,
-                                key = { post -> post.id }
-                            ) { post ->
-                                PostCard(
-                                    post = post,
-                                    onClick = { onNavigateToPostDetail(post.id) },
-                                    onLikeClick = { postId ->
-                                        viewModel.togglePostLike(postId) {
-                                            postToDislike = postId
-                                            showDislikeDialog = true
-                                        }
-                                    },
-                                    isLikeLoading = uiState.likingPostIds.contains(post.id),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(60.dp))
-                        }
-                    }
-
-                    PullRefreshIndicator(
-                        refreshing = uiState.isRefreshing,
-                        state = pullRefreshState,
-                        modifier = Modifier.align(Alignment.TopCenter),
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        scale = true
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CleanTopAppBar(
-    username: String,
-    userImageUrl: String?,
-    onProfileClick: () -> Unit,
-    onSearchClick: () -> Unit,
-    onCategoriesClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-                .statusBarsPadding(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Simple Brand Title
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "VirtualsBlog",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Berbagi cerita, berbagi inspirasi",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Clean Action Buttons
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Categories Button
-                IconButton(
-                    onClick = onCategoriesClick,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Category,
-                        contentDescription = "Kategori",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                // Search Button
-                IconButton(
-                    onClick = onSearchClick,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Cari",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Clean User Avatar
-                UserAvatar(
-                    userName = username.ifEmpty { "User" },
-                    imageUrl = userImageUrl,
-                    size = 40.dp,
-                    onClick = onProfileClick,
-                    showBorder = true,
-                    borderColor = MaterialTheme.colorScheme.outline,
-                    borderWidth = 1.dp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CleanFloatingActionButton(
-    onClick: () -> Unit
-) {
-    ExtendedFloatingActionButton(
-        onClick = onClick,
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Edit,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "Tulis Post",
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun CleanWelcomeHeader(username: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box {
-            // Subtle gradient background
+        } else {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
-                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.05f)
-                            )
-                        )
-                    )
-            )
-            
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
+                    .pullRefresh(pullRefreshState)
             ) {
-                // Simple welcome message
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding(), // Add status bar padding
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp), // Removed horizontal padding for full width
+                    verticalArrangement = Arrangement.spacedBy(0.dp) // Minimal spacing like IG
                 ) {
-                    Text(
-                        text = "Halo, ",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = username,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "! 👋",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // Simple header with app name only
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = "VirtualsBlog",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    if (uiState.posts.isEmpty() && !uiState.isLoading) {
+                        item {
+                            CleanEmptyState(onCreatePost = onNavigateToCreatePost)
+                        }
+                    } else {
+                        items(
+                            items = uiState.posts,
+                            key = { post -> post.id }
+                        ) { post ->
+                            PostCard(
+                                post = post,
+                                onClick = { onNavigateToPostDetail(post.id) },
+                                onLikeClick = { postId ->
+                                    viewModel.togglePostLike(postId) {
+                                        postToDislike = postId
+                                        showDislikeDialog = true
+                                    }
+                                },
+                                isLikeLoading = uiState.likingPostIds.contains(post.id),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp)) // Space for bottom nav
+                    }
                 }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "Mari berbagi inspirasi dan pengalaman menarik hari ini",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.2
+
+                PullRefreshIndicator(
+                    refreshing = uiState.isRefreshing,
+                    state = pullRefreshState,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding(), // Adjust for status bar
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    scale = true
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun CleanSectionHeader(
-    title: String,
-    subtitle: String,
-    onViewAll: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        TextButton(
-            onClick = onViewAll,
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text(
-                "Lihat Semua",
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
         }
     }
 }
 
 @Composable
 private fun CleanEmptyState(onCreatePost: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(

@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,12 +31,11 @@ import com.virtualsblog.project.presentation.ui.component.PostCard
 import com.virtualsblog.project.presentation.ui.component.UserAvatar
 import com.virtualsblog.project.util.Constants
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPostDetail: (String) -> Unit,
-    onNavigateToUserProfile: (authorId: String, authorName: String) -> Unit, // *** MODIFIED SIGNATURE ***
+    onNavigateToUserProfile: (authorId: String, authorName: String) -> Unit,
     onNavigateToCategoryPosts: (categoryId: String, categoryName: String) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -49,117 +47,118 @@ fun SearchScreen(
         focusRequester.requestFocus()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    OutlinedTextField(
-                        value = uiState.searchQuery,
-                        onValueChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = { Text(Constants.SEARCH_HINT) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(end = 16.dp)
-                            .focusRequester(focusRequester),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = {
-                            focusManager.clearFocus()
-                            viewModel.performSearch()
-                        }),
-                        trailingIcon = {
-                            if (uiState.searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear search")
-                                }
-                            }
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            cursorColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
+    // Clean layout without top bar
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+    ) {
+        // Search bar at top
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 1.dp
         ) {
-            if (uiState.isLoading) {
-                LoadingIndicator(message = "Mencari...")
-            } else if (uiState.error != null) {
-                ErrorMessage(
-                    message = uiState.error!!,
-                    onRetry = { viewModel.performSearch() },
-                    modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally)
-                )
-            } else if (uiState.isInitialState) {
-                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "Cari Postingan, Pengguna, atau Kategori",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            } else if (uiState.searchResults == null ||
-                (uiState.searchResults!!.users.isEmpty() && uiState.searchResults!!.categories.isEmpty() && uiState.searchResults!!.posts.isEmpty())
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.SentimentDissatisfied, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "Tidak ada hasil untuk \"${uiState.searchQuery}\"",
-                            style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                    placeholder = { Text(Constants.SEARCH_HINT) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        focusManager.clearFocus()
+                        viewModel.performSearch()
+                    }),
+                    trailingIcon = {
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                            }
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
+                )
+            }
+        }
+
+        // Content
+        if (uiState.isLoading) {
+            LoadingIndicator(message = "Mencari...")
+        } else if (uiState.error != null) {
+            ErrorMessage(
+                message = uiState.error!!,
+                onRetry = { viewModel.performSearch() },
+                modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally)
+            )
+        } else if (uiState.isInitialState) {
+            Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Cari Postingan, Pengguna, atau Kategori",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else if (uiState.searchResults == null ||
+            (uiState.searchResults!!.users.isEmpty() && uiState.searchResults!!.categories.isEmpty() && uiState.searchResults!!.posts.isEmpty())
+        ) {
+            Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.SentimentDissatisfied, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Tidak ada hasil untuk \"${uiState.searchQuery}\"",
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                uiState.searchResults?.let { results ->
+                    if (results.users.isNotEmpty()) {
+                        item { SearchSectionHeader("Pengguna") }
+                        items(results.users, key = { it.id }) { user ->
+                            UserResultItem(user = user, onClick = { onNavigateToUserProfile(user.id, user.fullname.ifEmpty { user.username }) })
+                        }
+                    }
+                    if (results.categories.isNotEmpty()) {
+                        item { SearchSectionHeader("Kategori") }
+                        items(results.categories, key = { it.id }) { category ->
+                            CategoryResultItem(category = category, onClick = { onNavigateToCategoryPosts(category.id, category.name) })
+                        }
+                    }
+                    if (results.posts.isNotEmpty()) {
+                        item { SearchSectionHeader("Postingan") }
+                        items(results.posts, key = { it.id }) { post ->
+                            PostCard(post = post, onClick = { onNavigateToPostDetail(post.id) })
+                        }
                     }
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    uiState.searchResults?.let { results ->
-                        if (results.users.isNotEmpty()) {
-                            item { SearchSectionHeader("Pengguna") }
-                            items(results.users, key = { it.id }) { user ->
-                                // *** MODIFIED onClick TO PASS BOTH ID AND NAME ***
-                                UserResultItem(user = user, onClick = { onNavigateToUserProfile(user.id, user.fullname.ifEmpty { user.username }) })
-                            }
-                        }
-                        if (results.categories.isNotEmpty()) {
-                            item { SearchSectionHeader("Kategori") }
-                            items(results.categories, key = { it.id }) { category ->
-                                CategoryResultItem(category = category, onClick = { onNavigateToCategoryPosts(category.id, category.name) })
-                            }
-                        }
-                        if (results.posts.isNotEmpty()) {
-                            item { SearchSectionHeader("Postingan") }
-                            items(results.posts, key = { it.id }) { post ->
-                                PostCard(post = post, onClick = { onNavigateToPostDetail(post.id) })
-                            }
-                        }
-                    }
+
+                item {
+                    Spacer(modifier = Modifier.height(80.dp)) // Space for bottom nav
                 }
             }
         }
