@@ -2,7 +2,6 @@ package com.virtualsblog.project.data.remote.api
 
 import com.virtualsblog.project.data.remote.dto.request.*
 import com.virtualsblog.project.data.remote.dto.response.*
-// import com.virtualsblog.project.util.Constants // No longer needed directly for API_KEY here
 import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
@@ -17,6 +16,12 @@ interface AuthApi {
     @POST("register")
     suspend fun register(
         @Body request: RegisterRequest
+    ): Response<ApiResponse<UserResponse>>
+
+    // NEW: Check login status endpoint
+    @GET("check-login")
+    suspend fun checkLogin(
+        @Header("Authorization") token: String
     ): Response<ApiResponse<UserResponse>>
 
     @GET("profile")
@@ -39,7 +44,7 @@ interface AuthApi {
     @POST("forget-password")
     suspend fun forgetPassword(
         @Body request: ForgetPasswordRequest
-    ): Response<ApiResponse<Any>> // Or specific data type if any
+    ): Response<ApiResponse<Any>>
 
     @POST("verify-otp")
     suspend fun verifyOtp(

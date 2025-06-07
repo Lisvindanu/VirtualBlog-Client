@@ -43,7 +43,7 @@ fun ForgotPasswordScreen(
     // Navigasi ke layar verifikasi OTP setelah berhasil
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
-            onNavigateToVerifyOtp(email)
+            onNavigateToVerifyOtp(uiState.email)
         }
     }
 
