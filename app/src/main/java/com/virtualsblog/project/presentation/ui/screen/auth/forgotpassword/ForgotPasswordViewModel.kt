@@ -30,7 +30,7 @@ class ForgotPasswordViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, email = email) // Store the email
 
             when (val result = forgotPasswordUseCase(email)) {
                 is Resource.Success -> {
