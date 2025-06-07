@@ -2,20 +2,20 @@ package com.virtualsblog.project.presentation.ui.screen.splash
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.virtualsblog.project.data.local.dao.UserDao
-import com.virtualsblog.project.domain.usecase.auth.GetCurrentUserUseCase
+import com.virtualsblog.project.data.remote.api.AuthApi
+import com.virtualsblog.project.preferences.UserPreferences
+import com.virtualsblog.project.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
-    private val getCurrentUserUseCase: GetCurrentUserUseCase,
-    private val userDao: UserDao // Inject UserDao untuk cek status login dari Room
+    private val authApi: AuthApi,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SplashUiState())
@@ -24,40 +24,60 @@ class SplashViewModel @Inject constructor(
     fun checkAuthenticationStatus() {
         viewModelScope.launch {
             try {
-                // Check user dari UseCase (DataStore)
-                val currentUserFromUseCase = getCurrentUserUseCase().first()
+                _uiState.value = _uiState.value.copy(isLoading = true)
 
-                // Check user dari Room database
-                val currentUserFromRoom = userDao.getCurrentUserSync()
+                // Ambil token dari preferences
+                val token = userPreferences.getAccessToken()
 
-                // User dianggap login jika ada di salah satu tempat
-                val isLoggedIn = currentUserFromUseCase != null || currentUserFromRoom != null
+                if (token.isNullOrEmpty()) {
+                    // Tidak ada token, langsung ke login
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isLoggedIn = false,
+                        shouldNavigate = true
+                    )
+                    return@launch
+                }
 
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    isLoggedIn = isLoggedIn,
-                    shouldNavigate = true
-                )
+                // Check login status dengan API
+                val response = authApi.checkLogin("${Constants.BEARER_PREFIX}$token")
 
-            } catch (e: Exception) {
-                // Jika ada error, coba check hanya dari Room database
-                try {
-                    val currentUserFromRoom = userDao.getCurrentUserSync()
-                    val isLoggedIn = currentUserFromRoom != null
+                if (response.isSuccessful && response.body()?.success == true) {
+                    // Token valid, user masih login
+                    val userData = response.body()!!.data
+
+                    // Update user preferences dengan data terbaru
+                    userPreferences.saveUserSession(
+                        accessToken = token,
+                        userId = userData.id,
+                        username = userData.username,
+                        fullname = userData.fullname,
+                        email = userData.email,
+                        image = userData.image.ifEmpty { null }
+                    )
 
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        isLoggedIn = isLoggedIn,
+                        isLoggedIn = true,
                         shouldNavigate = true
                     )
-                } catch (roomError: Exception) {
-                    // Jika semua gagal, assume user tidak login
+                } else {
+                    // Token tidak valid, clear session dan redirect ke login
+                    userPreferences.clearUserSession()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isLoggedIn = false,
                         shouldNavigate = true
                     )
                 }
+            } catch (e: Exception) {
+                // Error terjadi, clear session dan redirect ke login
+                userPreferences.clearUserSession()
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    isLoggedIn = false,
+                    shouldNavigate = true
+                )
             }
         }
     }
