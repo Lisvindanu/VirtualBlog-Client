@@ -25,7 +25,7 @@
             android:name=".presentation.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.VirtualsBlog"
-            android:screenOrientation="fullSensor"
+            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize"
             tools:ignore="DiscouragedApi">
             <intent-filter>
