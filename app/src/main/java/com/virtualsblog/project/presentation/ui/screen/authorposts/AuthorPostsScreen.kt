@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -19,10 +20,9 @@ import com.virtualsblog.project.presentation.ui.component.PostCard
 import com.virtualsblog.project.presentation.ui.component.LoadingIndicator
 import com.virtualsblog.project.presentation.ui.component.ErrorMessage
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthorPostsScreen(
-    authorName: String, // Received from NavGraph (already decoded)
+    authorName: String,
     onNavigateBack: () -> Unit,
     onNavigateToPostDetail: (String) -> Unit,
     viewModel: AuthorPostsViewModel = hiltViewModel()
@@ -56,63 +56,93 @@ fun AuthorPostsScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Postingan oleh ${uiState.authorName.ifEmpty { authorName }}", fontWeight = FontWeight.Bold, maxLines = 1) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+    // Clean layout without top bar - Instagram style
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+    ) {
+        // Simple header with back button and author name
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onNavigateBack,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 )
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Kembali",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = uiState.authorName.ifEmpty { authorName },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
             )
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            when {
-                uiState.isLoading && uiState.posts.isEmpty() -> LoadingIndicator(message = "Memuat postingan ${uiState.authorName.ifEmpty{authorName}}...")
-                uiState.error != null -> ErrorMessage(
-                    message = uiState.error!!,
-                    onRetry = { viewModel.loadPostsForAuthor() },
-                    modifier = Modifier.padding(16.dp).align(Alignment.Center)
-                )
-                uiState.posts.isEmpty() && !uiState.isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+
+        when {
+            uiState.isLoading && uiState.posts.isEmpty() -> LoadingIndicator(message = "Memuat postingan ${uiState.authorName.ifEmpty{authorName}}...")
+            uiState.error != null -> ErrorMessage(
+                message = uiState.error!!,
+                onRetry = { viewModel.loadPostsForAuthor() },
+                modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally)
+            )
+            uiState.posts.isEmpty() && !uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "📝",
+                            style = MaterialTheme.typography.displayMedium
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "${uiState.authorName.ifEmpty { authorName }} belum memiliki postingan.",
                             style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                else -> {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(uiState.posts, key = { it.id }) { post ->
-                            PostCard(
-                                post = post,
-                                onClick = { onNavigateToPostDetail(post.id) },
-                                onLikeClick = { postId ->
-                                    viewModel.togglePostLike(postId) {
-                                        postToDislike = postId
-                                        showDislikeDialog = true
-                                    }
-                                },
-                                isLikeLoading = uiState.likingPostIds.contains(post.id)
-                            )
-                        }
+            }
+            else -> {
+                LazyColumn(
+                    contentPadding = PaddingValues(0.dp), // No horizontal padding like IG
+                    verticalArrangement = Arrangement.spacedBy(0.dp), // No spacing like IG
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(uiState.posts, key = { it.id }) { post ->
+                        PostCard(
+                            post = post,
+                            onClick = { onNavigateToPostDetail(post.id) },
+                            onLikeClick = { postId ->
+                                viewModel.togglePostLike(postId) {
+                                    postToDislike = postId
+                                    showDislikeDialog = true
+                                }
+                            },
+                            isLikeLoading = uiState.likingPostIds.contains(post.id)
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp)) // Space for bottom nav
                     }
                 }
             }

@@ -13,8 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,14 +45,6 @@ import com.virtualsblog.project.util.showToast
 import kotlin.math.ceil
 import kotlinx.coroutines.delay
 
-@Composable
-fun rememberCurrentUserId(): String? {
-    val viewModel: PostDetailViewModel = androidx.hilt.navigation.compose.hiltViewModel()
-    val currentUserId by viewModel.getCurrentUserId().collectAsStateWithLifecycle(initialValue = null)
-    return currentUserId
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostDetailScreen(
     postId: String,
@@ -168,18 +158,125 @@ fun PostDetailScreen(
         )
     }
 
+    // Clean layout without top bar - Instagram style
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .statusBarsPadding()
     ) {
-        ModernTopAppBar(
-            onNavigateBack = onNavigateBack,
-            post = uiState.post,
-            currentUserId = currentUserId,
-            onEdit = { onNavigateToEdit(postId) },
-            onDelete = { showDeleteDialog = true }
-        )
+        // Simple top section with back button and options (only if owner)
+        if (uiState.post != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onNavigateBack,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = Color(0xFF424242)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Kembali",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                if (uiState.post!!.authorId == currentUserId) {
+                    var menuExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(
+                            onClick = { menuExpanded = true },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = Color(0xFF424242)
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Menu Lainnya",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
+                            modifier = Modifier.background(
+                                color = Color.White,
+                                shape = RoundedCornerShape(12.dp)
+                            ),
+                            shadowElevation = 8.dp
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = null,
+                                            tint = Color(0xFF1976D2),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            "Ubah Postingan",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF212121)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    onNavigateToEdit(postId)
+                                }
+                            )
+
+                            HorizontalDivider(
+                                color = Color(0xFFE0E0E0),
+                                thickness = 0.5.dp
+                            )
+
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = null,
+                                            tint = Color(0xFFD32F2F),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            "Hapus Postingan",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFFD32F2F)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    showDeleteDialog = true
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.size(48.dp)) // Placeholder space
+                }
+            }
+        }
 
         when {
             uiState.isLoading || uiState.isDeletingPost -> {
@@ -250,7 +347,7 @@ fun PostDetailScreen(
                         isCommentLoading = uiState.isCommentLoading
                     )
 
-                    Spacer(modifier = Modifier.height(60.dp))
+                    Spacer(modifier = Modifier.height(80.dp)) // Space for bottom nav
                 }
             }
             else -> {
@@ -264,140 +361,7 @@ fun PostDetailScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ModernTopAppBar(
-    onNavigateBack: () -> Unit,
-    post: Post?,
-    currentUserId: String?,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shadowElevation = 0.5.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .statusBarsPadding(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onNavigateBack,
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = Color(0xFFF5F5F5),
-                    contentColor = Color(0xFF424242)
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Kembali",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Text(
-                text = "Detail Post",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF212121)
-            )
-
-            if (post != null && post.authorId == currentUserId) {
-                var menuExpanded by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(
-                        onClick = { menuExpanded = true },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = Color(0xFFF5F5F5),
-                            contentColor = Color(0xFF424242)
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu Lainnya",
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    
-                    DropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false },
-                        modifier = Modifier.background(
-                            color = Color.White,
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                        shadowElevation = 8.dp
-                    ) {
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = null,
-                                        tint = Color(0xFF1976D2),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        "Ubah Postingan",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF212121)
-                                    )
-                                }
-                            },
-                            onClick = {
-                                menuExpanded = false
-                                onEdit()
-                            }
-                        )
-                        
-                        HorizontalDivider(
-                            color = Color(0xFFE0E0E0),
-                            thickness = 0.5.dp
-                        )
-                        
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = Color(0xFFD32F2F),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        "Hapus Postingan",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFFD32F2F)
-                                    )
-                                }
-                            },
-                            onClick = {
-                                menuExpanded = false
-                                onDelete()
-                            }
-                        )
-                    }
-                }
-            } else {
-                Spacer(modifier = Modifier.size(40.dp))
-            }
-        }
-    }
-}
-
+// Keep the same components as before but remove top bar references
 @Composable
 private fun ModernPostDetailLayout(
     post: Post,
@@ -497,7 +461,7 @@ private fun ModernPostDetailLayout(
                     contentScale = ContentScale.Crop
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -613,7 +577,7 @@ private fun ModernPostDetailLayout(
                     verticalArrangement = Arrangement.spacedBy(12.dp) // Reduced spacing for compact look
                 ) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     CommentInput(
                         value = commentText,
                         onValueChange = onCommentTextChange,
@@ -627,8 +591,8 @@ private fun ModernPostDetailLayout(
                             CommentItem(
                                 comment = comment,
                                 currentUserId = currentUserId,
-                                onDeleteClick = if (currentUserId == comment.authorId) { 
-                                    { onDeleteComment(comment.id) } 
+                                onDeleteClick = if (currentUserId == comment.authorId) {
+                                    { onDeleteComment(comment.id) }
                                 } else null,
                                 onAvatarClick = { onCommentAvatarClick(comment.authorImage) }
                             )

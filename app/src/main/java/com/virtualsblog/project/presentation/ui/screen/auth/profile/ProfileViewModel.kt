@@ -1,7 +1,7 @@
 package com.virtualsblog.project.presentation.ui.screen.auth.profile
 
-import android.content.Context // <-- Tambahkan import ini
-import android.net.Uri // <-- Tambahkan import ini
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.virtualsblog.project.domain.model.User
@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-// import okhttp3.MultipartBody // Tidak lagi dibutuhkan di ViewModel untuk fungsi ini
 import javax.inject.Inject
 
 @HiltViewModel
@@ -50,7 +49,7 @@ class ProfileViewModel @Inject constructor(
                         _uiState.value = _uiState.value.copy(
                             user = localUser,
                             isLoading = false,
-                            error = result.message ?: Constants.ERROR_FAILED_LOAD_PROFILE // Menggunakan konstanta baru
+                            error = result.message ?: Constants.ERROR_FAILED_LOAD_PROFILE
                         )
                     }
                 }
@@ -63,40 +62,42 @@ class ProfileViewModel @Inject constructor(
 
     fun updateProfile(fullname: String, email: String, username: String) {
         if (fullname.isBlank() || email.isBlank() || username.isBlank()) {
-            _uiState.value = _uiState.value.copy(error = Constants.ERROR_REQUIRED_FIELDS, updateSuccess = false)
+            _uiState.value = _uiState.value.copy(error = Constants.ERROR_REQUIRED_FIELDS, isSuccess = false)
             return
         }
         if (fullname.length < Constants.MIN_FULLNAME_LENGTH) {
             _uiState.value = _uiState.value.copy(
-                error = Constants.VALIDATION_FULLNAME_MIN_LENGTH, updateSuccess = false
+                error = Constants.VALIDATION_FULLNAME_MIN_LENGTH,
+                isSuccess = false
             )
             return
         }
         if (username.length < Constants.MIN_USERNAME_LENGTH) {
             _uiState.value = _uiState.value.copy(
-                error = Constants.VALIDATION_USERNAME_MIN_LENGTH, updateSuccess = false
+                error = Constants.VALIDATION_USERNAME_MIN_LENGTH,
+                isSuccess = false
             )
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, updateSuccess = false)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, isSuccess = false)
             when (val result = updateProfileUseCase(fullname, email, username)) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(
                         user = result.data,
                         isLoading = false,
                         error = null,
-                        updateSuccess = true
+                        isSuccess = true
                     )
                     kotlinx.coroutines.delay(3000)
-                    _uiState.value = _uiState.value.copy(updateSuccess = false)
+                    _uiState.value = _uiState.value.copy(isSuccess = false)
                 }
                 is Resource.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = result.message ?: Constants.ERROR_PROFILE_UPDATE_FAILED,
-                        updateSuccess = false
+                        isSuccess = false
                     )
                 }
                 is Resource.Loading -> {
@@ -106,31 +107,34 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    // Mengubah parameter fungsi ini
     fun uploadProfilePicture(context: Context, imageUri: Uri) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, updateSuccess = false)
-            // Memanggil UseCase dengan parameter yang benar
+            _uiState.value = _uiState.value.copy(
+                isUploadingImage = true,
+                error = null,
+                isSuccess = false
+            )
+
             when (val result = uploadProfilePictureUseCase(context, imageUri)) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(
                         user = result.data,
-                        isLoading = false,
+                        isUploadingImage = false,
                         error = null,
-                        updateSuccess = true
+                        isSuccess = true
                     )
                     kotlinx.coroutines.delay(3000)
-                    _uiState.value = _uiState.value.copy(updateSuccess = false)
+                    _uiState.value = _uiState.value.copy(isSuccess = false)
                 }
                 is Resource.Error -> {
                     _uiState.value = _uiState.value.copy(
-                        isLoading = false,
+                        isUploadingImage = false,
                         error = result.message ?: "Gagal mengunggah foto profil",
-                        updateSuccess = false
+                        isSuccess = false
                     )
                 }
                 is Resource.Loading -> {
-                    _uiState.value = _uiState.value.copy(isLoading = true)
+                    _uiState.value = _uiState.value.copy(isUploadingImage = true)
                 }
             }
         }
@@ -151,7 +155,11 @@ class ProfileViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
+    fun clearMessages() {
+        _uiState.value = _uiState.value.copy(error = null, isSuccess = false)
+    }
+
     fun clearUpdateSuccess() {
-        _uiState.value = _uiState.value.copy(updateSuccess = false)
+        _uiState.value = _uiState.value.copy(isSuccess = false)
     }
 }
