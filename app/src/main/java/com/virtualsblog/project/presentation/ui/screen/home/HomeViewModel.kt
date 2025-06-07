@@ -1,4 +1,3 @@
-// HomeViewModel.kt - Permanent Like System
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.lifecycle.ViewModel
@@ -65,7 +64,7 @@ class HomeViewModel @Inject constructor(
                     username = currentUser?.username ?: "",
                     userImageUrl = currentUser?.image
                 )
-            }.collect { /* Data sudah diproses di atas */ }
+            }.collect { }
         }
     }
 
@@ -108,10 +107,8 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        // Handle error jika diperlukan
                     }
                     is Resource.Loading -> {
-                        // Loading state tidak perlu ditampilkan
                     }
                 }
             }
@@ -155,7 +152,6 @@ class HomeViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
-    // NEW: Permanent Like System with Confirmation
     fun togglePostLike(postId: String, onConfirmDislike: () -> Unit) {
         val currentPosts = _uiState.value.posts
         val postIndex = currentPosts.indexOfFirst { it.id == postId }
@@ -164,18 +160,16 @@ class HomeViewModel @Inject constructor(
         val currentPost = currentPosts[postIndex]
         val wasLiked = currentPost.isLiked
 
-        // PERMANENT LIKE SYSTEM: Jika sudah liked, minta konfirmasi untuk dislike
         if (wasLiked) {
             onConfirmDislike()
             return
         }
 
-        // Jika belum liked, langsung like
         performLike(postId)
     }
 
     fun performDislike(postId: String) {
-        performLike(postId) // Same API call, server handles toggle
+        performLike(postId)
     }
 
     private fun performLike(postId: String) {
@@ -186,7 +180,6 @@ class HomeViewModel @Inject constructor(
         val currentPost = currentPosts[postIndex]
 
         viewModelScope.launch {
-            // Show loading state
             _uiState.value = _uiState.value.copy(
                 likingPostIds = _uiState.value.likingPostIds + postId
             )
@@ -194,12 +187,10 @@ class HomeViewModel @Inject constructor(
             toggleLikeUseCase(postId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        // SUCCESS: Auto refresh untuk avoid bugs
                         _uiState.value = _uiState.value.copy(
                             likingPostIds = _uiState.value.likingPostIds - postId
                         )
 
-                        // SILENT REFRESH: Reload data dari server
                         silentRefreshAfterLike()
                     }
                     is Resource.Error -> {
@@ -209,39 +200,32 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                     is Resource.Loading -> {
-                        // Already handled by adding to likingPostIds
                     }
                 }
             }
         }
     }
 
-    // SILENT REFRESH: Refresh tanpa loading indicator yang mengganggu
     private fun silentRefreshAfterLike() {
         viewModelScope.launch {
-            // Small delay untuk user experience
             delay(300)
 
             try {
                 getPostsForHomeUseCase().collect { resource ->
                     when (resource) {
                         is Resource.Success -> {
-                            // Update posts tanpa loading indicator
                             _uiState.value = _uiState.value.copy(
                                 posts = resource.data ?: emptyList(),
                                 error = null
                             )
                         }
                         is Resource.Error -> {
-                            // Ignore error untuk silent refresh
                         }
                         is Resource.Loading -> {
-                            // No loading indicator untuk silent refresh
                         }
                     }
                 }
             } catch (e: Exception) {
-                // Ignore errors for silent refresh
             }
         }
     }

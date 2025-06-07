@@ -1,4 +1,3 @@
-// PostCard.kt - Updated untuk Permanent Like System
 package com.virtualsblog.project.presentation.ui.component
 
 import androidx.compose.animation.animateColorAsState
@@ -8,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Favorite
@@ -40,24 +40,17 @@ import com.virtualsblog.project.util.DateUtil
 fun PostCard(
     post: Post,
     onClick: () -> Unit,
-    onLikeClick: ((String) -> Unit)? = null, // Updated callback signature
+    onLikeClick: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
     isLikeLoading: Boolean = false
 ) {
     val context = LocalContext.current
     var isPressed by remember { mutableStateOf(false) }
 
-    // Animation states
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = spring(dampingRatio = 0.4f),
+        animationSpec = spring(dampingRatio = 0.5f),
         label = "card_scale"
-    )
-
-    val elevation by animateFloatAsState(
-        targetValue = if (isPressed) 1f else 4f,
-        animationSpec = spring(dampingRatio = 0.4f),
-        label = "card_elevation"
     )
 
     Card(
@@ -79,24 +72,22 @@ fun PostCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation.dp),
-        shape = MaterialTheme.shapes.large
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            // Author and Date Row with enhanced design
+        Column {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Enhanced Author Avatar
                 UserAvatar(
                     userName = post.author,
                     imageUrl = post.authorImage,
-                    size = 44.dp,
+                    size = 40.dp,
                     showBorder = true,
-                    borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                     borderWidth = 1.dp
                 )
 
@@ -105,207 +96,190 @@ fun PostCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = post.author,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    if (post.authorUsername.isNotEmpty()) {
-                        Text(
-                            text = "@${post.authorUsername}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                        )
-                    }
-
-                    // Enhanced time display
+                    
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.AccessTime,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        if (post.authorUsername.isNotEmpty()) {
+                            Text(
+                                text = "@${post.authorUsername}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = " • ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
                         Text(
                             text = DateUtil.getRelativeTime(post.createdAt),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-
-                // Enhanced Category Badge
-                if (post.category.isNotEmpty()) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
-                        shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.padding(4.dp)
-                    ) {
-                        Text(
-                            text = getCategoryDisplayName(post.category),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            fontWeight = FontWeight.Medium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Enhanced Post Title
-            Text(
-                text = post.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = MaterialTheme.typography.titleLarge.lineHeight * 1.1
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Enhanced Post Image with gradient overlay
+            
             if (!post.image.isNullOrEmpty()) {
-                Card(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 220.dp),
-                    shape = MaterialTheme.shapes.medium
+                        .height(240.dp)
+                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(12.dp))
                 ) {
-                    Box {
-                        val fullImageUrl = if (post.image.startsWith("http")) {
-                            post.image
-                        } else {
-                            "https://be-prakmob.kodingin.id${post.image}"
-                        }
+                    val fullImageUrl = if (post.image.startsWith("http")) {
+                        post.image
+                    } else {
+                        "https://be-prakmob.kodingin.id${post.image}"
+                    }
 
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(fullImageUrl)
-                                .crossfade(true)
-                                .placeholder(android.R.drawable.ic_menu_gallery)
-                                .error(android.R.drawable.ic_menu_gallery)
-                                .build(),
-                            contentDescription = "Post Image",
-                            modifier = Modifier.fillMaxWidth(),
-                            contentScale = ContentScale.Crop
-                        )
-
-                        // Gradient overlay for better text readability
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(fullImageUrl)
+                            .crossfade(true)
+                            .placeholder(android.R.drawable.ic_menu_gallery)
+                            .error(android.R.drawable.ic_menu_gallery)
+                            .build(),
+                        contentDescription = "Post Image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Black.copy(alpha = 0.1f),
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.2f)
+                                    ),
+                                    startY = 0f,
+                                    endY = Float.POSITIVE_INFINITY
+                                )
+                            )
+                    )
+                    
+                    if (post.category.isNotEmpty()) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(60.dp)
-                                .align(Alignment.BottomCenter)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color.Transparent,
-                                            Color.Black.copy(alpha = 0.3f)
-                                        )
-                                    )
+                                .align(Alignment.TopEnd)
+                                .padding(12.dp)
+                        ) {
+                            Surface(
+                                color = Color(0xFF4CAF50),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Text(
+                                    text = post.category,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    fontWeight = FontWeight.Bold
                                 )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
+            ) {
+                Text(
+                    text = post.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = MaterialTheme.typography.headlineSmall.lineHeight * 1.0
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = post.content,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.2
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CompactLikeButton(
+                            post = post,
+                            isLoading = isLikeLoading,
+                            onClick = { onLikeClick?.invoke(post.id) }
+                        )
+
+                        CompactActionButton(
+                            icon = Icons.Default.ModeComment,
+                            text = formatCount(post.comments),
+                            onClick = { onClick() }
+                        )
+                    }
+                    
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.clickable { onClick() }
+                    ) {
+                        Text(
+                            text = "Baca Selengkapnya",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Enhanced Post Content Preview
-            Text(
-                text = post.content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.3
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // UPDATED Enhanced Action Row with Permanent Like System
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Like and Comment Actions with enhanced design
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    // UPDATED Enhanced Like Button dengan Permanent Like System
-                    PermanentLikeButton(
-                        post = post,
-                        isLoading = isLikeLoading,
-                        onClick = {
-                            onLikeClick?.invoke(post.id)
-                        }
-                    )
-
-                    // Enhanced Comment Button (unchanged)
-                    ActionButton(
-                        icon = Icons.Default.ModeComment,
-                        text = formatCount(post.comments),
-                        isActive = false,
-                        activeColor = MaterialTheme.colorScheme.primary,
-                        onClick = { onClick() }
-                    )
-                }
-
-                // Enhanced Read More Button
-                FilledTonalButton(
-                    onClick = onClick,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Text(
-                        text = "Baca Lengkap",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                
+                Spacer(modifier = Modifier.height(14.dp))
             }
         }
     }
 }
 
-// NEW: Permanent Like Button Component
 @Composable
-private fun PermanentLikeButton(
+private fun CompactLikeButton(
     post: Post,
     isLoading: Boolean,
     onClick: () -> Unit
 ) {
-    val color by animateColorAsState(
-        targetValue = if (post.isLiked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "like_color"
-    )
-
-    // VISUAL FEEDBACK: Jika sudah liked, tampilkan differently
-    val backgroundColor by animateColorAsState(
-        targetValue = if (post.isLiked)
-            MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
-        else
-            Color.Transparent,
-        label = "like_bg_color"
-    )
+    val color = if (post.isLiked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clip(MaterialTheme.shapes.small)
-            .background(backgroundColor)
             .clickable(enabled = !isLoading) { onClick() }
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(2.dp)
     ) {
         if (isLoading) {
             CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(22.dp),
                 strokeWidth = 2.dp,
                 color = color
             )
@@ -313,62 +287,44 @@ private fun PermanentLikeButton(
             Icon(
                 imageVector = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(22.dp),
                 tint = color
             )
         }
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = formatCount(post.likes),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.titleSmall,
             color = color,
-            fontWeight = if (post.isLiked) FontWeight.Bold else FontWeight.Medium
+            fontWeight = FontWeight.Bold
         )
-
-        // PERMANENT INDICATOR: Tanda bahwa like ini permanen
-        if (post.isLiked) {
-            Spacer(modifier = Modifier.width(4.dp))
-            Surface(
-                color = MaterialTheme.colorScheme.error,
-                shape = CircleShape,
-                modifier = Modifier.size(6.dp)
-            ) {}
-        }
     }
 }
 
-// Original ActionButton (for comment button)
 @Composable
-private fun ActionButton(
+private fun CompactActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     text: String,
-    isActive: Boolean,
-    activeColor: Color,
     onClick: () -> Unit
 ) {
-    val color by animateColorAsState(
-        targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "action_color"
-    )
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clickable { onClick() }
-            .padding(4.dp)
+            .padding(2.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = color
+            modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = color,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -377,20 +333,4 @@ private fun formatCount(count: Int): String = when {
     count >= 1000000 -> "${count / 1000000}M"
     count >= 1000 -> "${count / 1000}K"
     else -> count.toString()
-}
-
-@Composable
-private fun getCategoryDisplayName(category: String): String {
-    return when (category) {
-        "Technology" -> stringResource(R.string.category_technology)
-        "Lifestyle" -> stringResource(R.string.category_lifestyle)
-        "Food & Drink" -> stringResource(R.string.category_food_drink)
-        "Travel" -> stringResource(R.string.category_travel)
-        "Finance" -> stringResource(R.string.category_finance)
-        "Health" -> stringResource(R.string.category_health)
-        "Education" -> stringResource(R.string.category_education)
-        "Entertainment" -> stringResource(R.string.category_entertainment)
-        "Sports" -> stringResource(R.string.category_sports)
-        else -> stringResource(R.string.category_other)
-    }
 }
