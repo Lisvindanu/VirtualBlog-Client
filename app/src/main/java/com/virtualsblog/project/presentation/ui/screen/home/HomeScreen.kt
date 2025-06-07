@@ -1,4 +1,4 @@
-// HomeScreen.kt - Updated tanpa Statistik Performa
+// HomeScreen.kt - Updated tanpa Quick Actions dan jarak navigasi diperbaiki
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.compose.animation.*
@@ -179,15 +179,6 @@ fun HomeScreen(
                             }
                         }
 
-                        // Quick Actions Card (replaced statistics)
-                        item {
-                            QuickActionsCard(
-                                onViewAllPosts = onNavigateToAllPosts,
-                                onViewCategories = onNavigateToCategories,
-                                onCreatePost = onNavigateToCreatePost
-                            )
-                        }
-
                         // Enhanced Section Header
                         item {
                             EnhancedSectionHeader(
@@ -277,7 +268,7 @@ private fun EnhancedTopAppBar(
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp), // Ubah dari 8.dp ke 4.dp
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
@@ -380,106 +371,6 @@ private fun EnhancedWelcomeHeader(username: String) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-    }
-}
-
-// NEW: Quick Actions Card menggantikan statistik
-@Composable
-private fun QuickActionsCard(
-    onViewAllPosts: () -> Unit,
-    onViewCategories: () -> Unit,
-    onCreatePost: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Text(
-                text = "🚀 Aksi Cepat",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                QuickActionButton(
-                    icon = Icons.Default.Article,
-                    title = "Semua Post",
-                    color = MaterialTheme.colorScheme.primary,
-                    onClick = onViewAllPosts,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                QuickActionButton(
-                    icon = Icons.Outlined.Category,
-                    title = "Kategori",
-                    color = MaterialTheme.colorScheme.secondary,
-                    onClick = onViewCategories,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                QuickActionButton(
-                    icon = Icons.Default.Add,
-                    title = "Tulis Post",
-                    color = MaterialTheme.colorScheme.tertiary,
-                    onClick = onCreatePost,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    color: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.1f)
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = color,
-                fontWeight = FontWeight.Medium
-            )
         }
     }
 }

@@ -101,7 +101,7 @@ fun CategoryPostsScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Belum ada postingan di kategori ini.", style = MaterialTheme.typography.bodyLarge)
                             Spacer(Modifier.height(8.dp))
-                            Text("Tarik ke bawah untuk refresh.", style = MaterialTheme.typography.bodySmall)
+                            Text("Jadilah yang pertama mengisi kategori ini dengan tulisanmu!", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
