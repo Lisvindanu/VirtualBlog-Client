@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,7 +24,12 @@ class CategoryPostsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val categoryId: String = savedStateHandle.get<String>(BlogDestinations.Args.CATEGORY_ID) ?: ""
-    private val categoryNameArg: String = savedStateHandle.get<String>(BlogDestinations.Args.CATEGORY_NAME) ?: "Kategori"
+    private val encodedCategoryName: String = savedStateHandle.get<String>(BlogDestinations.Args.CATEGORY_NAME) ?: "Kategori"
+    private val categoryNameArg: String = try {
+        URLDecoder.decode(encodedCategoryName, StandardCharsets.UTF_8.toString())
+    } catch (e: Exception) {
+        "Kategori" // Fallback jika decoding gagal
+    }
 
     private val _uiState = MutableStateFlow(CategoryPostsUiState(categoryName = categoryNameArg))
     val uiState: StateFlow<CategoryPostsUiState> = _uiState.asStateFlow()
