@@ -22,7 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.virtualsblog.project.presentation.ui.component.FullScreenImageViewer
 import com.virtualsblog.project.presentation.ui.component.UserAvatar
+import com.virtualsblog.project.util.ImageUtil
 import com.virtualsblog.project.util.showToast
 
 @Composable
@@ -42,6 +44,15 @@ fun ProfileScreen(
     }
 
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
+
+    if (fullScreenImageUrl != null) {
+        FullScreenImageViewer(
+            imageUrl = fullScreenImageUrl,
+            onDismiss = { fullScreenImageUrl = null }
+        )
+    }
+
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
@@ -159,7 +170,11 @@ fun ProfileScreen(
                                 showBorder = true,
                                 borderColor = MaterialTheme.colorScheme.primary,
                                 borderWidth = 2.dp,
-                                onClick = { imagePickerLauncher.launch("image/*") }
+                                onClick = {
+                                    uiState.imageUrl?.let { imageName ->
+                                        fullScreenImageUrl = ImageUtil.getProfileImageUrl(imageName)
+                                    }
+                                }
                             )
 
                             if (uiState.isUploadingImage) {
