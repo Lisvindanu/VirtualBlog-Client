@@ -3,7 +3,6 @@ package com.virtualsblog.project.presentation.ui.screen.auth.profile
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,7 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.virtualsblog.project.presentation.ui.component.FullScreenImageViewer
 import com.virtualsblog.project.presentation.ui.component.UserAvatar
+import com.virtualsblog.project.util.ImageUtil
 import com.virtualsblog.project.util.showToast
 
 @Composable
@@ -42,6 +44,15 @@ fun ProfileScreen(
     }
 
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
+
+    if (fullScreenImageUrl != null) {
+        FullScreenImageViewer(
+            imageUrl = fullScreenImageUrl,
+            onDismiss = { fullScreenImageUrl = null }
+        )
+    }
+
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
@@ -115,7 +126,7 @@ fun ProfileScreen(
                 onClick = { showLogoutDialog = true }
             ) {
                 Icon(
-                    imageVector = Icons.Default.Logout,
+                    imageVector = Icons.AutoMirrored.Filled.Logout,
                     contentDescription = "Logout",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -159,7 +170,11 @@ fun ProfileScreen(
                                 showBorder = true,
                                 borderColor = MaterialTheme.colorScheme.primary,
                                 borderWidth = 2.dp,
-                                onClick = { imagePickerLauncher.launch("image/*") }
+                                onClick = {
+                                    uiState.imageUrl?.let { imageName ->
+                                        fullScreenImageUrl = ImageUtil.getProfileImageUrl(imageName)
+                                    }
+                                }
                             )
 
                             if (uiState.isUploadingImage) {
@@ -284,7 +299,7 @@ fun ProfileScreen(
                         )
 
                         SettingsItem(
-                            icon = Icons.Default.Logout,
+                            icon = Icons.AutoMirrored.Filled.Logout,
                             title = "Logout",
                             subtitle = "Keluar dari akun",
                             onClick = { showLogoutDialog = true },
