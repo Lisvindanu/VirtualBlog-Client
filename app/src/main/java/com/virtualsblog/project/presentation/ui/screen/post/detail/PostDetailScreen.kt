@@ -44,6 +44,9 @@ import com.virtualsblog.project.util.ImageUtil
 import com.virtualsblog.project.util.showToast
 import kotlin.math.ceil
 import kotlinx.coroutines.delay
+import com.virtualsblog.project.presentation.ui.theme.*
+import androidx.compose.ui.unit.sp
+
 
 @Composable
 fun PostDetailScreen(
@@ -158,123 +161,143 @@ fun PostDetailScreen(
         )
     }
 
-    // Clean layout without top bar - Instagram style
+    // Clean layout with consistent theming
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(BlogTheme.Colors.background)
             .statusBarsPadding()
     ) {
-        // Simple top section with back button and options (only if owner)
-        if (uiState.post != null) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onNavigateBack,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = Color(0xFF424242)
-                    )
+        // Header with title and back button
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = BlogTheme.Colors.surface,
+            shadowElevation = 2.dp
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Kembali",
-                        modifier = Modifier.size(24.dp)
+                    IconButton(
+                        onClick = onNavigateBack,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = BlogTheme.Colors.textPrimary
+                        ),
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Kembali",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "Detail Postingan",
+                        style = BlogTheme.Text.headlineMedium.copy(
+                            fontSize = 20.sp
+                        ),
+                        fontWeight = FontWeight.Bold,
+                        color = BlogTheme.Colors.textPrimary,
+                        modifier = Modifier.weight(1f)
                     )
-                }
 
-                if (uiState.post!!.authorId == currentUserId) {
-                    var menuExpanded by remember { mutableStateOf(false) }
-                    Box {
-                        IconButton(
-                            onClick = { menuExpanded = true },
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = Color.Transparent,
-                                contentColor = Color(0xFF424242)
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Menu Lainnya",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                    if (uiState.post != null && uiState.post!!.authorId == currentUserId) {
+                        var menuExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(
+                                onClick = { menuExpanded = true },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = BlogTheme.Colors.textPrimary
+                                ),
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "Menu Lainnya",
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
 
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false },
-                            modifier = Modifier.background(
-                                color = Color.White,
-                                shape = RoundedCornerShape(12.dp)
-                            ),
-                            shadowElevation = 8.dp
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = null,
-                                            tint = Color(0xFF1976D2),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            "Ubah Postingan",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color(0xFF212121)
-                                        )
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false },
+                                modifier = Modifier.background(
+                                    color = BlogTheme.Colors.surface,
+                                    shape = BlogTheme.Shapes.card
+                                ),
+                                shadowElevation = 8.dp
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = null,
+                                                tint = BlogTheme.Colors.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                "Ubah Postingan",
+                                                style = BlogTheme.Text.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                color = BlogTheme.Colors.textPrimary
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onNavigateToEdit(postId)
                                     }
-                                },
-                                onClick = {
-                                    menuExpanded = false
-                                    onNavigateToEdit(postId)
-                                }
-                            )
+                                )
 
-                            HorizontalDivider(
-                                color = Color(0xFFE0E0E0),
-                                thickness = 0.5.dp
-                            )
+                                HorizontalDivider(
+                                    color = BlogTheme.Colors.border,
+                                    thickness = 0.5.dp
+                                )
 
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = null,
-                                            tint = Color(0xFFD32F2F),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            "Hapus Postingan",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color(0xFFD32F2F)
-                                        )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = null,
+                                                tint = BlogTheme.Colors.error,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                "Hapus Postingan",
+                                                style = BlogTheme.Text.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                color = BlogTheme.Colors.error
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        showDeleteDialog = true
                                     }
-                                },
-                                onClick = {
-                                    menuExpanded = false
-                                    showDeleteDialog = true
-                                }
-                            )
+                                )
+                            }
                         }
                     }
-                } else {
-                    Spacer(modifier = Modifier.size(48.dp)) // Placeholder space
                 }
+                
+                // Bottom margin for navbar
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
 
@@ -307,7 +330,7 @@ fun PostDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .background(Color.White)
+                        .background(BlogTheme.Colors.background)
                 ) {
                     ModernPostDetailLayout(
                         post = postDetail,
@@ -347,7 +370,7 @@ fun PostDetailScreen(
                         isCommentLoading = uiState.isCommentLoading
                     )
 
-                    Spacer(modifier = Modifier.height(80.dp)) // Space for bottom nav
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
             }
             else -> {
@@ -383,65 +406,67 @@ private fun ModernPostDetailLayout(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(BlogTheme.Colors.background)
     ) {
-        // Modern Author Header with vertical layout
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Modern Author Header with theme colors
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = BlogTheme.Colors.surface
         ) {
-            UserAvatar(
-                userName = post.author,
-                imageUrl = post.authorImage,
-                size = 48.dp,
-                showBorder = true,
-                borderColor = Color(0xFFE0E0E0),
-                borderWidth = 1.dp,
-                onClick = onAvatarClick
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Author info in vertical layout
-            Column(modifier = Modifier.weight(1f)) {
-                // Fullname (top)
-                Text(
-                    text = post.author,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF212121)
-                )
-                // Username (bottom)
-                Text(
-                    text = "@${post.authorUsername}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF757575),
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Surface(
-                color = Color(0xFFF5F5F5),
-                shape = RoundedCornerShape(8.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = DateUtil.getRelativeTime(post.createdAt),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF616161),
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                UserAvatar(
+                    userName = post.author,
+                    imageUrl = post.authorImage,
+                    size = 48.dp,
+                    showBorder = true,
+                    borderColor = BlogTheme.Colors.border,
+                    borderWidth = 1.dp,
+                    onClick = onAvatarClick
                 )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = post.author,
+                        style = BlogTheme.Text.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = BlogTheme.Colors.textPrimary
+                    )
+                    Text(
+                        text = "@${post.authorUsername}",
+                        style = BlogTheme.Text.bodyMedium,
+                        color = BlogTheme.Colors.textSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Surface(
+                    color = BlogTheme.Colors.cardBackground,
+                    shape = BlogTheme.Shapes.small
+                ) {
+                    Text(
+                        text = DateUtil.getRelativeTime(post.createdAt),
+                        style = BlogTheme.Text.caption,
+                        color = BlogTheme.Colors.textSecondary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
 
-        // Image Section (Moved to top, before category)
+        // Image Section with theme-aware background
         if (!post.image.isNullOrEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .clip(BlogTheme.Shapes.postCard)
                     .clickable(onClick = onImageClick)
             ) {
                 val context = LocalContext.current
@@ -461,170 +486,182 @@ private fun ModernPostDetailLayout(
                     contentScale = ContentScale.Crop
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Compact Content Section
-        Column(
-            modifier = Modifier.padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced spacing for compact look
+        // Content Section with theme colors
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = BlogTheme.Colors.surface
         ) {
-            // Category Badge (Now after image)
-            if (post.category.isNotEmpty()) {
-                Surface(
-                    color = Color(0xFF1976D2),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Text(
-                        text = post.category,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        fontWeight = FontWeight.Medium
-                    )
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Category Badge
+                if (post.category.isNotEmpty()) {
+                    Surface(
+                        color = BlogTheme.Colors.primary,
+                        shape = BlogTheme.Shapes.fullRounded
+                    ) {
+                        Text(
+                            text = post.category,
+                            style = BlogTheme.Text.caption,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
+
+                // Title
+                Text(
+                    text = post.title,
+                    style = BlogTheme.Text.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = BlogTheme.Colors.textPrimary,
+                    lineHeight = BlogTheme.Text.headlineMedium.lineHeight * 1.1
+                )
+
+                // Content
+                Text(
+                    text = post.content,
+                    style = BlogTheme.Text.bodyLarge,
+                    color = BlogTheme.Colors.textPrimary,
+                    lineHeight = BlogTheme.Text.bodyLarge.lineHeight * 1.4
+                )
             }
-
-            // Compact Title
-            Text(
-                text = post.title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF212121),
-                lineHeight = MaterialTheme.typography.headlineMedium.lineHeight * 1.1
-            )
-
-            // Compact Content
-            Text(
-                text = post.content,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xFF424242),
-                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.4
-            )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Modern Actions Section
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            SimpleActionButton(
-                icon = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                text = formatCount(post.likes),
-                isActive = post.isLiked,
-                onClick = onLikeClick,
-                isLoading = isLikeLoading
-            )
-
-            SimpleActionButton(
-                icon = Icons.Default.ModeComment,
-                text = formatCount(post.comments),
-                isActive = false,
-                onClick = { }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Modern Divider
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .background(Color(0xFFFAFAFA))
-        )
-
-        // Modern Comments Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(20.dp)
+        // Actions Section with theme colors
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = BlogTheme.Colors.surface
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { isCommentsExpanded = !isCommentsExpanded }
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Text(
-                    text = "Komentar (${comments.size})",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF212121)
+                SimpleActionButton(
+                    icon = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    text = formatCount(post.likes),
+                    isActive = post.isLiked,
+                    onClick = onLikeClick,
+                    isLoading = isLikeLoading
                 )
-                Icon(
-                    imageVector = if (isCommentsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isCommentsExpanded) "Sembunyikan" else "Tampilkan",
-                    tint = Color(0xFF757575),
-                    modifier = Modifier.size(24.dp)
+
+                SimpleActionButton(
+                    icon = Icons.Default.ModeComment,
+                    text = formatCount(post.comments),
+                    isActive = false,
+                    onClick = { }
                 )
             }
+        }
 
-            AnimatedVisibility(
-                visible = isCommentsExpanded,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+        // Divider
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .background(BlogTheme.Colors.cardBackground)
+        )
+
+        // Comments Section with theme colors
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = BlogTheme.Colors.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp) // Reduced spacing for compact look
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isCommentsExpanded = !isCommentsExpanded }
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    CommentInput(
-                        value = commentText,
-                        onValueChange = onCommentTextChange,
-                        onSendClick = onSendComment,
-                        isLoading = isCommentLoading,
-                        placeholder = "Tulis komentar Anda..."
+                    Text(
+                        text = "Komentar (${comments.size})",
+                        style = BlogTheme.Text.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = BlogTheme.Colors.textPrimary
                     )
+                    Icon(
+                        imageVector = if (isCommentsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (isCommentsExpanded) "Sembunyikan" else "Tampilkan",
+                        tint = BlogTheme.Colors.textSecondary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
-                    if (comments.isNotEmpty()) {
-                        comments.forEach { comment ->
-                            CommentItem(
-                                comment = comment,
-                                currentUserId = currentUserId,
-                                onDeleteClick = if (currentUserId == comment.authorId) {
-                                    { onDeleteComment(comment.id) }
-                                } else null,
-                                onAvatarClick = { onCommentAvatarClick(comment.authorImage) }
-                            )
-                        }
-                    } else {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = Color(0xFFFAFAFA),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(32.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                AnimatedVisibility(
+                    visible = isCommentsExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        CommentInput(
+                            value = commentText,
+                            onValueChange = onCommentTextChange,
+                            onSendClick = onSendComment,
+                            isLoading = isCommentLoading,
+                            placeholder = "Tulis komentar Anda..."
+                        )
+
+                        if (comments.isNotEmpty()) {
+                            comments.forEach { comment ->
+                                CommentItem(
+                                    comment = comment,
+                                    currentUserId = currentUserId,
+                                    onDeleteClick = if (currentUserId == comment.authorId) {
+                                        { onDeleteComment(comment.id) }
+                                    } else null,
+                                    onAvatarClick = { onCommentAvatarClick(comment.authorImage) }
+                                )
+                            }
+                        } else {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = BlogTheme.Colors.cardBackground
+                                ),
+                                shape = BlogTheme.Shapes.card
                             ) {
-                                Text(
-                                    text = "💬",
-                                    style = MaterialTheme.typography.displaySmall
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "Belum ada komentar",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF212121)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Jadilah yang pertama berkomentar!",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFF757575),
-                                    textAlign = TextAlign.Center
-                                )
+                                Column(
+                                    modifier = Modifier.padding(32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "💬",
+                                        style = BlogTheme.Text.displayLarge.copy(fontSize = 32.sp)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = "Belum ada komentar",
+                                        style = BlogTheme.Text.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = BlogTheme.Colors.textPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Jadilah yang pertama berkomentar!",
+                                        style = BlogTheme.Text.bodyMedium,
+                                        color = BlogTheme.Colors.textSecondary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }
@@ -642,7 +679,7 @@ private fun SimpleActionButton(
     onClick: () -> Unit,
     isLoading: Boolean = false
 ) {
-    val contentColor = if (isActive) Color(0xFFE91E63) else Color(0xFF757575)
+    val contentColor = if (isActive) BlogTheme.Colors.error else BlogTheme.Colors.textSecondary
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -667,7 +704,7 @@ private fun SimpleActionButton(
         Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge,
+            style = BlogTheme.Text.labelLarge,
             color = contentColor,
             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
         )
@@ -679,7 +716,7 @@ private fun ModernLoadingState(message: String = "Memuat...") {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(BlogTheme.Colors.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -688,13 +725,13 @@ private fun ModernLoadingState(message: String = "Memuat...") {
             CircularProgressIndicator(
                 modifier = Modifier.size(32.dp),
                 strokeWidth = 3.dp,
-                color = Color(0xFF1976D2)
+                color = BlogTheme.Colors.primary
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF757575)
+                style = BlogTheme.Text.bodyMedium,
+                color = BlogTheme.Colors.textSecondary
             )
         }
     }
@@ -709,54 +746,62 @@ private fun ModernErrorState(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(BlogTheme.Colors.background)
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = BlogTheme.Colors.error.copy(alpha = 0.1f)
+            ),
+            shape = BlogTheme.Shapes.card
         ) {
-            Icon(
-                imageVector = Icons.Default.ErrorOutline,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = Color(0xFFD32F2F)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Terjadi Kesalahan",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF212121)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = error,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF757575),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                OutlinedButton(
-                    onClick = onNavigateBack,
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF757575)
-                    )
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = BlogTheme.Colors.error
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Terjadi Kesalahan",
+                    style = BlogTheme.Text.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = BlogTheme.Colors.textPrimary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = error,
+                    style = BlogTheme.Text.bodyMedium,
+                    color = BlogTheme.Colors.textSecondary,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Kembali")
-                }
-                Button(
-                    onClick = onRetry,
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1976D2)
-                    )
-                ) {
-                    Text("Coba Lagi")
+                    OutlinedButton(
+                        onClick = onNavigateBack,
+                        shape = BlogTheme.Shapes.button,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = BlogTheme.Colors.textSecondary
+                        )
+                    ) {
+                        Text("Kembali")
+                    }
+                    Button(
+                        onClick = onRetry,
+                        shape = BlogTheme.Shapes.button,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BlogTheme.Colors.primary
+                        )
+                    ) {
+                        Text("Coba Lagi")
+                    }
                 }
             }
         }

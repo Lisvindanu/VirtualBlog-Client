@@ -11,10 +11,9 @@ data class PostDetailUiState(
     val isCommentLoading: Boolean = false,
     val isLikeLoading: Boolean = false,
     val error: String? = null,
-    // Delete states
     val isDeletingPost: Boolean = false,
     val deletePostError: String? = null,
     val deletePostSuccess: Boolean = false,
     val postJustDeleted: Boolean = false,
-    val currentUserId: String? = null // To check authorship
+    val currentUserId: String? = null 
 )
