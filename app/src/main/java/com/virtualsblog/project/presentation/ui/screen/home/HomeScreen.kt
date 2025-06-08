@@ -29,8 +29,10 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.virtualsblog.project.presentation.ui.theme.*
+import androidx.compose.ui.unit.sp
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToProfile: () -> Unit,
@@ -136,86 +138,192 @@ fun HomeScreen(
         )
     }
 
-    // Simple clean layout without top bar
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        if (uiState.isLoading && !uiState.isRefreshing) {
-            CleanLoadingState()
-        } else if (uiState.error != null && !uiState.isRefreshing) {
-            CleanErrorState(
-                error = uiState.error!!,
-                onRetry = { viewModel.refreshPosts() }
+    Scaffold(
+        topBar = {
+            CleanTopAppBar(
+                username = uiState.username,
+                userImageUrl = uiState.userImageUrl,
+                onProfileClick = onNavigateToProfile,
+                onSearchClick = onNavigateToSearch,
+                onCategoriesClick = onNavigateToCategories
             )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pullRefresh(pullRefreshState)
-            ) {
-                LazyColumn(
+        },
+        containerColor = BlogTheme.Colors.background
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (uiState.isLoading && !uiState.isRefreshing) {
+                CleanLoadingState()
+            } else if (uiState.error != null && !uiState.isRefreshing) {
+                CleanErrorState(
+                    error = uiState.error!!,
+                    onRetry = { viewModel.refreshPosts() }
+                )
+            } else {
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .statusBarsPadding(), // Add status bar padding
-                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp), // Removed horizontal padding for full width
-                    verticalArrangement = Arrangement.spacedBy(0.dp) // Minimal spacing like IG
+                        .pullRefresh(pullRefreshState)
                 ) {
-                    // Simple header with app name only
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Text(
-                                text = "VirtualsBlog",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
-                    if (uiState.posts.isEmpty() && !uiState.isLoading) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         item {
-                            CleanEmptyState(onCreatePost = onNavigateToCreatePost)
-                        }
-                    } else {
-                        items(
-                            items = uiState.posts,
-                            key = { post -> post.id }
-                        ) { post ->
-                            PostCard(
-                                post = post,
-                                onClick = { onNavigateToPostDetail(post.id) },
-                                onLikeClick = { postId ->
-                                    viewModel.togglePostLike(postId) {
-                                        postToDislike = postId
-                                        showDislikeDialog = true
-                                    }
-                                },
-                                isLikeLoading = uiState.likingPostIds.contains(post.id),
-                                modifier = Modifier.fillMaxWidth()
+                            CleanSectionHeader(
+                                title = "Postingan Terbaru",
+                                subtitle = "Temukan konten menarik dari komunitas",
+                                onViewAll = onNavigateToAllPosts
                             )
                         }
+
+                        if (uiState.posts.isEmpty() && !uiState.isLoading) {
+                            item {
+                                CleanEmptyState(onCreatePost = onNavigateToCreatePost)
+                            }
+                        } else {
+                            items(
+                                items = uiState.posts,
+                                key = { post -> post.id }
+                            ) { post ->
+                                PostCard(
+                                    post = post,
+                                    onClick = { onNavigateToPostDetail(post.id) },
+                                    onLikeClick = { postId ->
+                                        viewModel.togglePostLike(postId) {
+                                            postToDislike = postId
+                                            showDislikeDialog = true
+                                        }
+                                    },
+                                    isLikeLoading = uiState.likingPostIds.contains(post.id),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(80.dp))
+                        }
                     }
 
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp)) // Space for bottom nav
-                    }
+                    PullRefreshIndicator(
+                        refreshing = uiState.isRefreshing,
+                        state = pullRefreshState,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        backgroundColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        scale = true
+                    )
                 }
+            }
+        }
+    }
+}
 
-                PullRefreshIndicator(
-                    refreshing = uiState.isRefreshing,
-                    state = pullRefreshState,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .statusBarsPadding(), // Adjust for status bar
-                    backgroundColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    scale = true
+@Composable
+private fun CleanTopAppBar(
+    username: String,
+    userImageUrl: String?,
+    onProfileClick: () -> Unit,
+    onSearchClick: () -> Unit,
+    onCategoriesClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = BlogTheme.Colors.surface,
+        shadowElevation = 2.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 1.dp)
+                .padding(bottom = 20.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = "VirtualsBlog",
+                style = BlogTheme.Text.headlineMedium.copy(
+                    fontSize = 24.sp,
+                    letterSpacing = 0.sp
+                ),
+                fontWeight = FontWeight.Bold,
+                color = BlogTheme.Colors.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun CleanSectionHeader(
+    title: String,
+    subtitle: String,
+    onViewAll: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = BlogTheme.Colors.surface
+        ),
+        shape = BlogTheme.Shapes.card,
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = BlogTheme.Text.titleLarge.copy(
+                        fontSize = 18.sp,
+                        letterSpacing = 0.sp
+                    ),
+                    fontWeight = FontWeight.Bold,
+                    color = BlogTheme.Colors.textPrimary
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = BlogTheme.Text.bodyMedium.copy(
+                        fontSize = 12.sp
+                    ),
+                    color = BlogTheme.Colors.textSecondary
+                )
+            }
+
+            TextButton(
+                onClick = onViewAll,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = BlogTheme.Colors.primary
+                ),
+                shape = BlogTheme.Shapes.button,
+                modifier = Modifier.padding(start = 8.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    "Lihat Semua",
+                    style = BlogTheme.Text.labelLarge.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp
+                    )
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp)
                 )
             }
         }
@@ -224,40 +332,58 @@ fun HomeScreen(
 
 @Composable
 private fun CleanEmptyState(onCreatePost: () -> Unit) {
-    Box(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = BlogTheme.Colors.cardBackground
+        ),
+        shape = BlogTheme.Shapes.card,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "📝",
-                style = MaterialTheme.typography.displayMedium
+                style = BlogTheme.Text.displayLarge.copy(
+                    fontSize = 40.sp
+                )
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Belum Ada Postingan",
-                style = MaterialTheme.typography.titleLarge,
+                style = BlogTheme.Text.titleLarge.copy(
+                    fontSize = 20.sp
+                ),
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = BlogTheme.Colors.textPrimary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Jadilah yang pertama membuat postingan dan bagikan cerita inspiratif Anda!",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = BlogTheme.Text.bodyMedium.copy(
+                    lineHeight = 20.sp
+                ),
+                color = BlogTheme.Colors.textSecondary,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
             Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = onCreatePost,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = BlogTheme.Colors.primary
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = BlogTheme.Shapes.button,
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 2.dp,
+                    pressedElevation = 4.dp
+                ),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
@@ -267,6 +393,9 @@ private fun CleanEmptyState(onCreatePost: () -> Unit) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "Tulis Postingan Pertama",
+                    style = BlogTheme.Text.buttonText.copy(
+                        fontSize = 14.sp
+                    ),
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -286,14 +415,14 @@ private fun CleanLoadingState() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                color = MaterialTheme.colorScheme.primary,
+                color = BlogTheme.Colors.primary,
                 modifier = Modifier.size(40.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Memuat postingan...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = BlogTheme.Text.bodyMedium,
+                color = BlogTheme.Colors.textSecondary
             )
         }
     }
@@ -313,9 +442,9 @@ private fun CleanErrorState(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
+                containerColor = BlogTheme.Colors.error.copy(alpha = 0.1f)
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = BlogTheme.Shapes.card
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -325,29 +454,29 @@ private fun CleanErrorState(
                     imageVector = Icons.Default.ErrorOutline,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.error
+                    tint = BlogTheme.Colors.error
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Terjadi Kesalahan",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = BlogTheme.Text.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = BlogTheme.Colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = BlogTheme.Text.bodyMedium,
+                    color = BlogTheme.Colors.textSecondary,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = onRetry,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
+                        containerColor = BlogTheme.Colors.primary
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = BlogTheme.Shapes.button
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
@@ -357,6 +486,7 @@ private fun CleanErrorState(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Coba Lagi",
+                        style = BlogTheme.Text.buttonText,
                         fontWeight = FontWeight.Medium
                     )
                 }

@@ -72,10 +72,15 @@ fun PostCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 3.dp,
+            pressedElevation = 6.dp
+        ),
+        shape = RoundedCornerShape(20.dp) // More rounded for modern look
     ) {
-        Column {
+        Column(
+            modifier = Modifier.padding(vertical = 4.dp) // Subtle vertical padding
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -85,10 +90,10 @@ fun PostCard(
                 UserAvatar(
                     userName = post.author,
                     imageUrl = post.authorImage,
-                    size = 40.dp,
+                    size = 42.dp, // Slightly larger
                     showBorder = true,
-                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                    borderWidth = 1.dp
+                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                    borderWidth = 1.5.dp
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -207,7 +212,7 @@ fun PostCard(
                     lineHeight = MaterialTheme.typography.headlineSmall.lineHeight * 1.0
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp)) // Slightly more space
 
                 Text(
                     text = post.content,
@@ -215,10 +220,10 @@ fun PostCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.2
+                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.3
                 )
                 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -226,7 +231,7 @@ fun PostCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp), // More spacing
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         CompactLikeButton(
@@ -244,7 +249,7 @@ fun PostCard(
                     
                     Surface(
                         color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(24.dp), // More rounded button
                         modifier = Modifier.clickable { onClick() }
                     ) {
                         Text(
@@ -252,12 +257,12 @@ fun PostCard(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)
                         )
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp)) // More bottom padding
             }
         }
     }
