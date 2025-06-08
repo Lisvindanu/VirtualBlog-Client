@@ -248,12 +248,6 @@ fun ProfileScreen(
                             label = "Email",
                             value = uiState.email.ifEmpty { "Tidak tersedia" }
                         )
-
-                        ProfileInfoItem(
-                            icon = Icons.Default.Badge,
-                            label = "User ID",
-                            value = uiState.userId.ifEmpty { "Tidak tersedia" }
-                        )
                     }
                 }
 
