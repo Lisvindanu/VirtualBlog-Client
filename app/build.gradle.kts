@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,10 +26,20 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-
         testInstrumentationRunner = "com.virtualsblog.project.CustomTestRunner"
-        buildConfigField("String", "API_KEY", "\"${System.getenv("API_KEY") ?: project.findProperty("API_KEY")}\"")
 
+        // FIXED: Cara yang benar untuk membaca dari local.properties
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localProperties.load(FileInputStream(localPropertiesFile))
+        }
+
+        val apiKey = localProperties.getProperty("API_KEY") ?:
+        System.getenv("API_KEY") ?:
+        "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW" // fallback value
+
+        buildConfigField("String", "API_KEY", "\"$apiKey\"")
     }
 
     buildTypes {
@@ -36,9 +49,22 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-        }
 
+            // Untuk release, bisa menggunakan environment variable
+            val localProperties = Properties()
+            val localPropertiesFile = rootProject.file("local.properties")
+            if (localPropertiesFile.exists()) {
+                localProperties.load(FileInputStream(localPropertiesFile))
+            }
+
+            val apiKey = System.getenv("API_KEY") ?:
+            localProperties.getProperty("API_KEY") ?:
+            "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW"
+
+            buildConfigField("String", "API_KEY", "\"$apiKey\"")
+        }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -48,8 +74,6 @@ android {
     }
     buildFeatures {
         compose = true
-        // viewBinding = true // If you were using ViewBinding
-        // dataBinding = true // If you were using DataBinding
     }
     composeOptions {
         // This line is usually not needed when the Kotlin Compose plugin version is aligned with your Kotlin version.
@@ -96,7 +120,6 @@ dependencies {
 
     // Hilt - Dependency Injection
     implementation(libs.hilt.android)
-//    implementation(libs.androidx.runner)
     ksp(libs.hilt.compiler) // Hilt's KSP compiler
     implementation(libs.hilt.navigation.compose) // Hilt integration with Jetpack Navigation Compose
 
@@ -133,11 +156,9 @@ dependencies {
     testImplementation(libs.mockito.core) // Mockito for mocking
     testImplementation(libs.mockito.kotlin) // Mockito-Kotlin integration
     testImplementation(libs.arch.core.testing) // For testing Architecture Components (LiveData, etc.)
-    // testImplementation(libs.robolectric) // If using Robolectric
 
     // Android Instrumented Tests (run on an Android device or emulator)
     androidTestImplementation(libs.androidx.junit) // androidx.test.ext:junit (uses junitVersion from libs.versions.toml)
-    // androidTestImplementation(libs.androidx.junit.ktx) // If you have androidx-junit-ktx alias
     androidTestImplementation(libs.androidx.espresso.core) // Espresso for UI testing (uses espressoCore from libs.versions.toml)
     androidTestImplementation(platform(libs.androidx.compose.bom)) // Align Compose test versions with BOM
     androidTestImplementation(libs.androidx.ui.test.junit4) // Base Compose UI testing
@@ -145,12 +166,10 @@ dependencies {
     androidTestImplementation(libs.kotlinx.coroutines.test) // For testing coroutines in instrumented tests
     androidTestImplementation(libs.androidx.runner) // AndroidX Test Runner
 
-
     androidTestImplementation(libs.core.ktx)
     // Hilt Testing (for instrumented tests)
     androidTestImplementation(libs.hilt.android.testing)
 
-//    androidTestImplementation(libs.androidx.appcompat)
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.mockk.agent)
 
@@ -163,5 +182,4 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling) // Compose UI tooling for Layout Inspector, etc.
     debugImplementation(libs.androidx.ui.test.manifest) // Compose test manifest
     debugImplementation(libs.chucker) // Chucker for HTTP inspection
-    // releaseImplementation(libs.chucker.no.op) // No-op version of Chucker for release builds
 }
