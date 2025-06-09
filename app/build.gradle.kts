@@ -12,23 +12,33 @@ plugins {
 
 android {
     namespace = "com.virtualsblog.project"
-    compileSdk = 35 // Required by androidx.compose.ui:ui-test-junit4-android:1.8.2
+    compileSdk = 35
 
     buildFeatures {
         compose = true
-        buildConfig = true // Aktifkan BuildConfig
+        buildConfig = true
+    }
+
+    // SIGNING CONFIG untuk Release
+    signingConfigs {
+        create("release") {
+            storeFile = file("../my-release-key.keystore") // Path ke keystore
+            storePassword = "DevGuerilla"
+            keyAlias = "my-key-alias"
+            keyPassword = "DevGuerilla"
+        }
     }
 
     defaultConfig {
         applicationId = "com.virtualsblog.project"
         minSdk = 24
-        targetSdk = 35 // Should match compileSdk
+        targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "com.virtualsblog.project.CustomTestRunner"
 
-        // FIXED: Cara yang benar untuk membaca dari local.properties
+        // API Key configuration
         val localProperties = Properties()
         val localPropertiesFile = rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
@@ -37,28 +47,46 @@ android {
 
         val apiKey = localProperties.getProperty("API_KEY") ?:
         System.getenv("API_KEY") ?:
-        "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW" // fallback value
+        "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW"
 
         buildConfigField("String", "API_KEY", "\"$apiKey\"")
     }
 
     buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+        debug {
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
 
-            // Untuk release, bisa menggunakan environment variable
             val localProperties = Properties()
             val localPropertiesFile = rootProject.file("local.properties")
             if (localPropertiesFile.exists()) {
                 localProperties.load(FileInputStream(localPropertiesFile))
             }
 
-            val apiKey = System.getenv("API_KEY") ?:
-            localProperties.getProperty("API_KEY") ?:
+            val apiKey = localProperties.getProperty("API_KEY") ?:
+            System.getenv("API_KEY") ?:
+            "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW"
+
+            buildConfigField("String", "API_KEY", "\"$apiKey\"")
+        }
+
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = false
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+
+            // GUNAKAN SIGNING CONFIG
+            signingConfig = signingConfigs.getByName("release")
+
+            // API Key untuk production
+            val apiKey = System.getenv("PROD_API_KEY") ?:
+            System.getenv("API_KEY") ?:
             "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW"
 
             buildConfigField("String", "API_KEY", "\"$apiKey\"")
@@ -76,9 +104,7 @@ android {
         compose = true
     }
     composeOptions {
-        // This line is usually not needed when the Kotlin Compose plugin version is aligned with your Kotlin version.
-        // The plugin (version 2.1.20 here) will use a compatible compiler by default.
-        // kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
     packaging {
         resources {
@@ -93,9 +119,25 @@ android {
             excludes += "**/META-INF/LICENSE"
             excludes += "**/META-INF/NOTICE"
             excludes += "**/META-INF/DEPENDENCIES"
+
+            // JUnit conflict fixes
+            excludes += "**/META-INF/LICENSE-notice.md"
+            excludes += "/META-INF/LICENSE-notice.md"
+            excludes += "**/META-INF/LICENSE-notice.txt"
+            excludes += "/META-INF/LICENSE-notice.txt"
+            excludes += "**/META-INF/junit-platform.properties"
+            excludes += "**/META-INF/io.netty.versions.properties"
+            excludes += "**/META-INF/gradle-plugins/**"
+            excludes += "**/META-INF/native-image/**"
+            excludes += "**/META-INF/*.kotlin_module"
+            excludes += "**/META-INF/versions/**"
+            excludes += "**/META-INF/maven/**"
+            excludes += "**/META-INF/services/**"
+            excludes += "**/META-INF/extensions.idx"
+            excludes += "**/META-INF/INDEX.LIST"
+            excludes += "**/OSGI-INF/**"
         }
     }
-    // Lint options from your original file
     lint {
         disable.add("NullSafeMutableLiveData")
     }
@@ -115,21 +157,21 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
 
-    // Pull to refresh - Material 1 implementation (androidx.compose.material.pullrefresh.*)
+    // Pull to refresh
     implementation("androidx.compose.material:material")
 
     // Hilt - Dependency Injection
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler) // Hilt's KSP compiler
-    implementation(libs.hilt.navigation.compose) // Hilt integration with Jetpack Navigation Compose
+    ksp(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
     // Room - Local Database
     implementation(libs.room.runtime)
-    implementation(libs.room.ktx) // Kotlin Extensions for Room
-    ksp(libs.room.compiler) // Room's KSP compiler
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // Kotlinx Serialization
     implementation(libs.kotlinx.serialization.json)
@@ -142,44 +184,38 @@ dependencies {
 
     // Networking - Retrofit & OkHttp
     implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.gson) // Gson converter for Retrofit
-    implementation(libs.okhttp) // OkHttp client
-    implementation(libs.okhttp.logging.interceptor) // OkHttp logging interceptor
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
 
-    // Add image picker and upload functionality
+    // Image picker
     implementation(libs.androidx.activity.compose.v182)
 
-    // Unit Tests (run on local JVM)
-    testImplementation(libs.junit) // Standard JUnit4
-    testImplementation(libs.kotlinx.coroutines.test) // For testing coroutines
-    testImplementation(libs.truth) // Google's Truth assertion library
-    testImplementation(libs.mockito.core) // Mockito for mocking
-    testImplementation(libs.mockito.kotlin) // Mockito-Kotlin integration
-    testImplementation(libs.arch.core.testing) // For testing Architecture Components (LiveData, etc.)
+    // Unit Tests
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.truth)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.arch.core.testing)
 
-    // Android Instrumented Tests (run on an Android device or emulator)
-    androidTestImplementation(libs.androidx.junit) // androidx.test.ext:junit (uses junitVersion from libs.versions.toml)
-    androidTestImplementation(libs.androidx.espresso.core) // Espresso for UI testing (uses espressoCore from libs.versions.toml)
-    androidTestImplementation(platform(libs.androidx.compose.bom)) // Align Compose test versions with BOM
-    androidTestImplementation(libs.androidx.ui.test.junit4) // Base Compose UI testing
-    androidTestImplementation(libs.androidx.ui.test.junit4.android) // Android specific Compose UI testing (uses uiTestJunit4Android)
-    androidTestImplementation(libs.kotlinx.coroutines.test) // For testing coroutines in instrumented tests
-    androidTestImplementation(libs.androidx.runner) // AndroidX Test Runner
-
+    // Android Instrumented Tests
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.ui.test.junit4.android)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.core.ktx)
-    // Hilt Testing (for instrumented tests)
     androidTestImplementation(libs.hilt.android.testing)
-
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.mockk.agent)
-
-    // Jika perlu MockK untuk unit tests juga
     testImplementation(libs.mockk)
+    kspAndroidTest(libs.hilt.compiler)
 
-    kspAndroidTest(libs.hilt.compiler) // Hilt KSP compiler for AndroidTest
-
-    // Debugging - Only included in debug builds
-    debugImplementation(libs.androidx.ui.tooling) // Compose UI tooling for Layout Inspector, etc.
-    debugImplementation(libs.androidx.ui.test.manifest) // Compose test manifest
-    debugImplementation(libs.chucker) // Chucker for HTTP inspection
+    // Debugging
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
+    debugImplementation(libs.chucker)
 }
