@@ -1,3 +1,4 @@
+// PostMapper.kt - FIXED: Always get dynamic data from API
 package com.virtualsblog.project.data.mapper
 
 import com.virtualsblog.project.data.local.entities.PostEntity
@@ -7,7 +8,8 @@ import com.virtualsblog.project.domain.model.Post
 
 object PostMapper {
 
-    // From API Response to Domain
+    // ===== API TO DOMAIN (ALWAYS COMPLETE DATA) =====
+
     fun mapResponseToDomain(response: PostResponse): Post {
         return Post(
             id = response.id,
@@ -21,6 +23,7 @@ object PostMapper {
             updatedAt = response.updatedAt,
             category = response.category.name,
             categoryId = response.categoryId,
+            // 🔥 ALWAYS FROM API - Real-time data
             likes = response.count?.Like ?: 0,
             comments = response.count?.Comment ?: 0,
             isLiked = response.liked,
@@ -43,6 +46,7 @@ object PostMapper {
             categoryId = response.categoryId,
             createdAt = response.createdAt,
             updatedAt = response.updatedAt,
+            // 🔥 ALWAYS FROM API - Real-time data
             likes = response.count?.Like ?: 0,
             comments = response.count?.Comment ?: 0,
             isLiked = response.liked,
@@ -52,9 +56,9 @@ object PostMapper {
         )
     }
 
-    // ===== CACHE MAPPING =====
+    // ===== CACHE MAPPING (STATIC DATA ONLY) =====
 
-    // From API Response to Cache Entity
+    // From API Response to Cache Entity (NO dynamic data)
     fun mapResponseToEntity(response: PostResponse, lastUpdated: Long = System.currentTimeMillis()): PostEntity {
         return PostEntity(
             id = response.id,
@@ -72,6 +76,7 @@ object PostMapper {
             slug = response.slug,
             lastUpdated = lastUpdated,
             isStale = false
+            // 🚫 NO likes, comments, isLiked - these come from API only!
         )
     }
 
@@ -92,10 +97,13 @@ object PostMapper {
             slug = response.slug,
             lastUpdated = lastUpdated,
             isStale = false
+            // 🚫 NO likes, comments, isLiked - these come from API only!
         )
     }
 
-    // From Cache Entity to Domain
+    // ===== CACHE TO DOMAIN (PLACEHOLDER FOR DYNAMIC DATA) =====
+
+    // From Cache Entity to Domain - with PLACEHOLDER dynamic data
     fun mapEntityToDomain(entity: PostEntity): Post {
         return Post(
             id = entity.id,
@@ -109,17 +117,18 @@ object PostMapper {
             categoryId = entity.categoryId,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
-            // Beri nilai default, karena data ini akan diisi dari network
-            likes = 0,
-            comments = 0,
-            isLiked = false,
             image = entity.image,
             slug = entity.slug,
-            actualComments = emptyList()
+            // 🎯 PLACEHOLDER VALUES - Real data comes from API refresh
+            likes = 0, // Will be updated from API
+            comments = 0, // Will be updated from API
+            isLiked = false, // Will be updated from API
+            actualComments = emptyList() // Will be updated from API
         )
     }
 
-    // Batch operations
+    // ===== BATCH OPERATIONS =====
+
     fun mapResponseListToEntities(responses: List<PostResponse>, lastUpdated: Long = System.currentTimeMillis()): List<PostEntity> {
         return responses.map { mapResponseToEntity(it, lastUpdated) }
     }
@@ -132,18 +141,58 @@ object PostMapper {
         return responseList.map { mapResponseToDomain(it) }
     }
 
-    // ===== QUICK UPDATES (for real-time actions) =====
+    // ===== HYBRID STRATEGIES FOR COMBINING CACHE + API =====
 
-    // Update like status in domain model
-    fun updateLikeStatus(post: Post, isLiked: Boolean, newLikeCount: Int): Post {
-        return post.copy(
-            isLiked = isLiked,
-            likes = newLikeCount
+    /**
+     * Combine cached static data with fresh API dynamic data
+     * Use this when you have cached post but want fresh like/comment data
+     */
+    fun combineEntityWithApiResponse(entity: PostEntity, apiResponse: PostResponse): Post {
+        return Post(
+            // Static data from cache (faster)
+            id = entity.id,
+            title = entity.title,
+            content = entity.content,
+            author = entity.author,
+            authorId = entity.authorId,
+            authorUsername = entity.authorUsername,
+            authorImage = entity.authorImage,
+            category = entity.category,
+            categoryId = entity.categoryId,
+            createdAt = entity.createdAt,
+            updatedAt = entity.updatedAt,
+            image = entity.image,
+            slug = entity.slug,
+            // Dynamic data from API (always fresh)
+            likes = apiResponse.count?.Like ?: 0,
+            comments = apiResponse.count?.Comment ?: 0,
+            isLiked = apiResponse.liked,
+            actualComments = CommentMapper.mapEmbeddedCommentResponseListToDomain(apiResponse.comments ?: emptyList())
         )
     }
 
-    // Update comment count in domain model
-    fun updateCommentCount(post: Post, newCommentCount: Int): Post {
-        return post.copy(comments = newCommentCount)
+    /**
+     * Update only dynamic data in existing Post
+     * Use this for optimistic updates or real-time refreshes
+     */
+    fun updateDynamicData(post: Post, likes: Int, comments: Int, isLiked: Boolean): Post {
+        return post.copy(
+            likes = likes,
+            comments = comments,
+            isLiked = isLiked
+        )
+    }
+
+    /**
+     * Check if two posts are the same (ignoring dynamic data)
+     * Use this to determine if cache needs updating
+     */
+    fun areStaticDataEqual(post1: Post, post2: Post): Boolean {
+        return post1.id == post2.id &&
+                post1.title == post2.title &&
+                post1.content == post2.content &&
+                post1.authorId == post2.authorId &&
+                post1.categoryId == post2.categoryId &&
+                post1.updatedAt == post2.updatedAt
     }
 }

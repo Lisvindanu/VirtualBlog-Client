@@ -1,4 +1,4 @@
-// BlogRepositoryImpl.kt - Cache-First Implementation (Fixed)
+// BlogRepositoryImpl.kt - Complete Implementation with Hybrid Cache + API Strategy
 package com.virtualsblog.project.data.repository
 
 import com.google.gson.Gson
@@ -6,7 +6,6 @@ import com.google.gson.reflect.TypeToken
 import com.virtualsblog.project.data.local.CacheConstants
 import com.virtualsblog.project.data.local.dao.*
 import com.virtualsblog.project.data.local.entities.CacheMetadataEntity
-import com.virtualsblog.project.data.local.entities.PostEntity
 import com.virtualsblog.project.data.mapper.*
 import com.virtualsblog.project.data.remote.api.BlogApi
 import com.virtualsblog.project.data.remote.dto.request.CreateCommentRequest
@@ -18,9 +17,7 @@ import com.virtualsblog.project.util.Constants
 import com.virtualsblog.project.util.DateUtil
 import com.virtualsblog.project.util.Resource
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -42,42 +39,34 @@ class BlogRepositoryImpl @Inject constructor(
     private val gson: Gson
 ) : BlogRepository {
 
-    // ===== CACHE-FIRST: ALL POSTS =====
+    // ===== 🚀 HYBRID STRATEGY: CACHE STATIC + API DYNAMIC =====
+
     override suspend fun getAllPosts(): Flow<Resource<List<Post>>> = flow {
         emit(Resource.Loading())
 
         try {
-            // 1. Always emit cached data first (if available)
-            val hasCachedPosts = postDao.hasAnyCachedPosts()
-            if (hasCachedPosts) {
-                val cachedPosts = postDao.getAllPostsSync()
-                val domainPosts = PostMapper.mapEntitiesToDomainList(cachedPosts)
-                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
-                emit(Resource.Success(domainPosts))
-            }
-
-            // 2. Check if we should refresh
-            val shouldRefresh = shouldRefreshCache(CacheConstants.CACHE_KEY_ALL_POSTS)
-            if (!shouldRefresh && hasCachedPosts) {
-                return@flow // Cache is fresh, no need to fetch
-            }
-
-            // 3. Fetch from network and update cache
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
                 emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
-            setRefreshingStatus(CacheConstants.CACHE_KEY_ALL_POSTS, true)
+            // 1️⃣ FAST: Show cached posts immediately (if available)
+            val cachedEntities = postDao.getAllPostsSync()
+            if (cachedEntities.isNotEmpty()) {
+                val cachedPosts = PostMapper.mapEntitiesToDomainList(cachedEntities)
+                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                emit(Resource.Success(cachedPosts))
+            }
 
+            // 2️⃣ FRESH: Always fetch latest from API for dynamic data
             val response = blogApi.getAllPosts("${Constants.BEARER_PREFIX}$token")
 
             if (response.isSuccessful && response.body()?.success == true) {
                 val apiPosts = response.body()!!.data
                 val currentTime = System.currentTimeMillis()
 
-                // Update cache
+                // 3️⃣ UPDATE CACHE: Save static data only
                 val postEntities = PostMapper.mapResponseListToEntities(apiPosts, currentTime)
                 postDao.insertPosts(postEntities)
 
@@ -94,104 +83,208 @@ class BlogRepositoryImpl @Inject constructor(
                     }
                 }
 
-                // Update cache metadata
+                // 4️⃣ EMIT FRESH: Complete data with dynamic values
+                val freshPosts = PostMapper.mapResponseListToDomain(apiPosts)
+                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                emit(Resource.Success(freshPosts))
+
+                // 5️⃣ UPDATE METADATA
                 setCacheMetadata(
                     CacheConstants.CACHE_KEY_ALL_POSTS,
                     currentTime + CacheConstants.CACHE_DURATION_POSTS
                 )
 
-                // Emit fresh data
-                val freshPosts = PostMapper.mapResponseListToDomain(apiPosts)
-                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
-                emit(Resource.Success(freshPosts))
+            } else if (cachedEntities.isEmpty()) {
+                // Only show error if no cache available
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
 
-            } else {
-                // Network failed, but we might have cache
-                if (hasCachedPosts) {
-                    // Keep showing cached data, don't emit error
-                    return@flow
-                } else {
-                    emit(handleHttpError(response.code(), response.errorBody()?.string()))
+        } catch (e: Exception) {
+            // Network error - only emit error if no cached data
+            val hasCached = postDao.hasAnyCachedPosts()
+            if (!hasCached) {
+                emit(handleNetworkError(e))
+            }
+        }
+    }
+
+    override suspend fun getPostsForHome(): Flow<Resource<List<Post>>> = flow {
+        emit(Resource.Loading())
+
+        try {
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            // 1️⃣ FAST: Show cached posts immediately
+            val cachedEntities = postDao.getAllPostsSync()
+                .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                .take(Constants.HOME_POSTS_LIMIT)
+
+            if (cachedEntities.isNotEmpty()) {
+                val cachedPosts = PostMapper.mapEntitiesToDomainList(cachedEntities)
+                emit(Resource.Success(cachedPosts))
+            }
+
+            // 2️⃣ FRESH: Get latest dynamic data
+            val response = blogApi.getAllPosts("${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful && response.body()?.success == true) {
+                val apiPosts = response.body()!!.data
+                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                    .take(Constants.HOME_POSTS_LIMIT)
+
+                // Update cache with static data
+                val postEntities = PostMapper.mapResponseListToEntities(response.body()!!.data)
+                postDao.insertPosts(postEntities)
+
+                // Cache comments
+                response.body()!!.data.forEach { postResponse ->
+                    postResponse.comments?.let { comments ->
+                        val commentEntities = comments.map { commentResponse ->
+                            CommentMapper.mapResponseToEntity(
+                                convertEmbeddedToDetail(commentResponse),
+                                System.currentTimeMillis()
+                            )
+                        }
+                        commentDao.insertComments(commentEntities)
+                    }
+                }
+
+                // Emit fresh complete data
+                val freshHomePosts = PostMapper.mapResponseListToDomain(apiPosts)
+                emit(Resource.Success(freshHomePosts))
+
+                // Update metadata
+                setCacheMetadata(
+                    CacheConstants.CACHE_KEY_HOME_POSTS,
+                    System.currentTimeMillis() + CacheConstants.CACHE_DURATION_POSTS
+                )
+
+            } else if (cachedEntities.isEmpty()) {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+
+        } catch (e: Exception) {
+            val hasCached = postDao.hasAnyCachedPosts()
+            if (!hasCached) {
+                emit(handleNetworkError(e))
+            }
+        }
+    }
+
+    override suspend fun getTotalPostsCount(): Flow<Resource<Int>> = flow {
+        emit(Resource.Loading())
+
+        try {
+            // Quick cache count
+            val cachedCount = postDao.getTotalCount()
+            emit(Resource.Success(cachedCount))
+
+            // Background refresh for accurate count
+            val token = authRepository.getAuthToken()
+            if (token != null) {
+                try {
+                    val response = blogApi.getAllPosts("${Constants.BEARER_PREFIX}$token")
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        val actualCount = response.body()!!.data.size
+                        emit(Resource.Success(actualCount))
+                    }
+                } catch (e: Exception) {
+                    // Ignore background refresh errors
                 }
             }
 
         } catch (e: Exception) {
-            // Network error, emit cached data if available
-            val hasCachedPosts = postDao.hasAnyCachedPosts()
-            if (!hasCachedPosts) {
-                emit(handleNetworkError(e))
-            }
-            // If we have cache, just keep showing it
-        } finally {
-            setRefreshingStatus(CacheConstants.CACHE_KEY_ALL_POSTS, false)
+            emit(Resource.Error(e.message ?: Constants.ERROR_UNKNOWN))
         }
     }
 
-    // ===== CACHE-FIRST: HOME POSTS =====
-    override suspend fun getPostsForHome(): Flow<Resource<List<Post>>> = flow {
+    // ===== 🎯 ALWAYS FRESH: POST DETAIL (Comments change frequently) =====
+
+    override suspend fun getPostById(postId: String): Flow<Resource<Post>> = flow {
         emit(Resource.Loading())
 
-        var cachedPosts = emptyList<PostEntity>()
-
         try {
-            // 1. Emit cached data first
-            cachedPosts = postDao.getAllPostsSync() // Get all, then limit
-            if (cachedPosts.isNotEmpty()) {
-                val homePosts = cachedPosts
-                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
-                    .take(Constants.HOME_POSTS_LIMIT)
-                val domainPosts = PostMapper.mapEntitiesToDomainList(homePosts)
-                emit(Resource.Success(domainPosts))
-            }
-
-            // 2. Background refresh if needed
-            val shouldRefresh = shouldRefreshCache(CacheConstants.CACHE_KEY_HOME_POSTS)
-            if (!shouldRefresh && cachedPosts.isNotEmpty()) {
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
-            // 3. Fetch fresh data
-            refreshAllPostsCache() // Refresh entire cache for consistency
+            // 1️⃣ QUICK CACHE: Show if available (for instant loading)
+            val cachedEntity = postDao.getPostById(postId)
+            if (cachedEntity != null) {
+                val cachedPost = PostMapper.mapEntityToDomain(cachedEntity)
+                emit(Resource.Success(cachedPost))
+            }
 
-            // 4. Emit updated home posts
-            val updatedPosts = postDao.getAllPostsSync()
-                .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
-                .take(Constants.HOME_POSTS_LIMIT)
-            val updatedDomainPosts = PostMapper.mapEntitiesToDomainList(updatedPosts)
-            emit(Resource.Success(updatedDomainPosts))
+            // 2️⃣ ALWAYS FRESH: Post detail needs latest comments & likes
+            val response = blogApi.getPostById(postId, "${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful && response.body()?.success == true) {
+                val postDetailResponse = response.body()!!.data
+                val currentTime = System.currentTimeMillis()
+
+                // Update cache (static data only)
+                val postEntity = PostMapper.mapDetailResponseToEntity(postDetailResponse, currentTime)
+                postDao.insertPost(postEntity)
+
+                // Update comments cache
+                commentDao.deleteCommentsForPost(postId)
+                val comments = postDetailResponse.comments ?: emptyList()
+                val commentEntities = comments.map { commentResponse ->
+                    CommentMapper.mapResponseToEntity(
+                        convertEmbeddedToDetail(commentResponse),
+                        currentTime
+                    )
+                }
+                commentDao.insertComments(commentEntities)
+
+                // Emit complete fresh data
+                val freshPost = PostMapper.mapDetailResponseToDomain(postDetailResponse)
+                emit(Resource.Success(freshPost))
+
+            } else if (cachedEntity == null) {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
 
         } catch (e: Exception) {
-            if (cachedPosts.isEmpty()) {
+            val cachedEntity = postDao.getPostById(postId)
+            if (cachedEntity == null) {
                 emit(handleNetworkError(e))
             }
         }
     }
 
-    // ===== CACHE-FIRST: CATEGORIES =====
+    // ===== 📱 AGGRESSIVE CACHE: CATEGORIES (Rarely change) =====
+
     override suspend fun getCategories(): Flow<Resource<List<Category>>> = flow {
         emit(Resource.Loading())
 
-        var hasCachedCategories = false
-
         try {
-            // 1. Emit cached categories first
-            hasCachedCategories = categoryDao.hasAnyCachedCategories()
+            // 1️⃣ CACHE FIRST: Categories rarely change
+            val hasCachedCategories = categoryDao.hasAnyCachedCategories()
             if (hasCachedCategories) {
                 val cachedCategories = categoryDao.getAllCategoriesSync()
                 val domainCategories = CategoryMapper.mapEntitiesToDomainList(cachedCategories)
                 emit(Resource.Success(domainCategories))
             }
 
-            // 2. Check if refresh needed (categories change rarely)
+            // 2️⃣ SMART REFRESH: Only if cache is old
             val shouldRefresh = shouldRefreshCache(CacheConstants.CACHE_KEY_CATEGORIES)
             if (!shouldRefresh && hasCachedCategories) {
-                return@flow
+                return@flow // Cache is fresh enough
             }
 
-            // 3. Fetch from network
+            // 3️⃣ BACKGROUND REFRESH
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                if (!hasCachedCategories) {
+                    emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                }
                 return@flow
             }
 
@@ -219,122 +312,161 @@ class BlogRepositoryImpl @Inject constructor(
             }
 
         } catch (e: Exception) {
-            if (!hasCachedCategories) {
+            val hasCached = categoryDao.hasAnyCachedCategories()
+            if (!hasCached) {
                 emit(handleNetworkError(e))
             }
         }
     }
 
-    // ===== HYBRID: POST DETAIL =====
-    override suspend fun getPostById(postId: String): Flow<Resource<Post>> = flow {
+    // ===== 🔄 SMART REFRESH: POSTS BY CATEGORY =====
+
+    override suspend fun getPostsByCategoryId(categoryId: String): Flow<Resource<List<Post>>> = flow {
         emit(Resource.Loading())
 
-        var cachedPost: PostEntity? = null
-
         try {
-            // 1. Quick cache check
-            cachedPost = postDao.getPostById(postId)
-            val cachedComments = commentDao.getCommentsForPostSync(postId)
-
-            if (cachedPost != null) {
-                val domainPost = PostMapper.mapEntityToDomain(cachedPost)
-                val domainComments = CommentMapper.mapEntitiesToDomainList(cachedComments)
-                val postWithComments = domainPost.copy(actualComments = domainComments)
-                emit(Resource.Success(postWithComments))
-            }
-
-            // 2. Always fetch fresh for post detail (comments update frequently)
             val token = authRepository.getAuthToken()
             if (token.isNullOrEmpty()) {
                 emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
                 return@flow
             }
 
-            val response = blogApi.getPostById(postId, "${Constants.BEARER_PREFIX}$token")
+            // 1️⃣ CACHE FIRST: Show cached posts
+            val cachedEntities = postDao.getAllPostsSync().filter { it.categoryId == categoryId }
+            if (cachedEntities.isNotEmpty()) {
+                val cachedPosts = PostMapper.mapEntitiesToDomainList(cachedEntities)
+                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                emit(Resource.Success(cachedPosts))
+            }
+
+            // 2️⃣ FRESH API: Always get latest for dynamic data
+            val response = blogApi.getPostsByCategoryId(categoryId, "${Constants.BEARER_PREFIX}$token")
 
             if (response.isSuccessful && response.body()?.success == true) {
-                val postDetailResponse = response.body()!!.data
-                val currentTime = System.currentTimeMillis()
+                val apiPosts = response.body()!!.data
 
-                // Update post cache
-                val postEntity = PostMapper.mapDetailResponseToEntity(postDetailResponse, currentTime)
-                postDao.insertPost(postEntity)
+                // Update cache
+                val postEntities = PostMapper.mapResponseListToEntities(apiPosts)
+                postDao.insertPosts(postEntities)
 
-                // Update comments cache
-                commentDao.deleteCommentsForPost(postId)
-                val comments = postDetailResponse.comments ?: emptyList()
-                val commentEntities = comments.map { commentResponse ->
-                    CommentMapper.mapResponseToEntity(
-                        convertEmbeddedToDetail(commentResponse),
-                        currentTime
-                    )
+                // Cache comments
+                apiPosts.forEach { postResponse ->
+                    postResponse.comments?.let { comments ->
+                        val commentEntities = comments.map { commentResponse ->
+                            CommentMapper.mapResponseToEntity(
+                                convertEmbeddedToDetail(commentResponse),
+                                System.currentTimeMillis()
+                            )
+                        }
+                        commentDao.insertComments(commentEntities)
+                    }
                 }
-                commentDao.insertComments(commentEntities)
 
-                // Emit fresh data
-                val freshPost = PostMapper.mapDetailResponseToDomain(postDetailResponse)
-                emit(Resource.Success(freshPost))
+                // Emit fresh data with dynamic values
+                val freshPosts = PostMapper.mapResponseListToDomain(apiPosts)
+                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                emit(Resource.Success(freshPosts))
 
-            } else if (cachedPost == null) {
+            } else if (cachedEntities.isEmpty()) {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
 
         } catch (e: Exception) {
-            if (cachedPost == null) {
+            val hasCached = postDao.getAllPostsSync().any { it.categoryId == categoryId }
+            if (!hasCached) {
                 emit(handleNetworkError(e))
             }
         }
     }
 
-    // ===== CACHE-FIRST: POSTS BY CATEGORY =====
-    override suspend fun getPostsByCategoryId(categoryId: String): Flow<Resource<List<Post>>> = flow {
-        emit(Resource.Loading())
-
-        try {
-            // 1. Emit cached posts first
-            val cachedEntities = postDao.getPostsByCategoryFlow(categoryId)
-            cachedEntities.collect { entities ->
-                if (entities.isNotEmpty()) {
-                    val domainPosts = PostMapper.mapEntitiesToDomainList(entities)
-                        .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
-                    emit(Resource.Success(domainPosts))
-                }
-            }
-
-            // 2. Background refresh
-            val cacheKey = "${CacheConstants.CACHE_KEY_CATEGORY_POSTS}$categoryId"
-            val shouldRefresh = shouldRefreshCache(cacheKey)
-
-            if (shouldRefresh) {
-                refreshCategoryPosts(categoryId, cacheKey)
-            }
-
-        } catch (e: Exception) {
-            emit(handleNetworkError(e))
-        }
-    }
-
-    // ===== CACHE-FIRST: POSTS BY AUTHOR =====
     override suspend fun getPostsByAuthorId(authorId: String): Flow<Resource<List<Post>>> = flow {
         emit(Resource.Loading())
 
         try {
-            // 1. Emit cached posts first
-            val cachedEntities = postDao.getPostsByAuthorFlow(authorId)
-            cachedEntities.collect { entities ->
-                if (entities.isNotEmpty()) {
-                    val domainPosts = PostMapper.mapEntitiesToDomainList(entities)
-                        .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
-                    emit(Resource.Success(domainPosts))
-                }
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
             }
 
-            // 2. Background refresh
-            val cacheKey = "${CacheConstants.CACHE_KEY_AUTHOR_POSTS}$authorId"
-            val shouldRefresh = shouldRefreshCache(cacheKey)
+            // 1️⃣ CACHE FIRST
+            val cachedEntities = postDao.getAllPostsSync().filter { it.authorId == authorId }
+            if (cachedEntities.isNotEmpty()) {
+                val cachedPosts = PostMapper.mapEntitiesToDomainList(cachedEntities)
+                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                emit(Resource.Success(cachedPosts))
+            }
 
-            if (shouldRefresh) {
-                refreshAuthorPosts(authorId, cacheKey)
+            // 2️⃣ FRESH API
+            val response = blogApi.getPostsByAuthorId(authorId, "${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful && response.body()?.success == true) {
+                val apiPosts = response.body()!!.data
+
+                // Update cache
+                val postEntities = PostMapper.mapResponseListToEntities(apiPosts)
+                postDao.insertPosts(postEntities)
+
+                // Cache comments
+                apiPosts.forEach { postResponse ->
+                    postResponse.comments?.let { comments ->
+                        val commentEntities = comments.map { commentResponse ->
+                            CommentMapper.mapResponseToEntity(
+                                convertEmbeddedToDetail(commentResponse),
+                                System.currentTimeMillis()
+                            )
+                        }
+                        commentDao.insertComments(commentEntities)
+                    }
+                }
+
+                // Emit fresh data
+                val freshPosts = PostMapper.mapResponseListToDomain(apiPosts)
+                    .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
+                emit(Resource.Success(freshPosts))
+
+            } else if (cachedEntities.isEmpty()) {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+
+        } catch (e: Exception) {
+            val hasCached = postDao.getAllPostsSync().any { it.authorId == authorId }
+            if (!hasCached) {
+                emit(handleNetworkError(e))
+            }
+        }
+    }
+
+    // ===== 🌐 ALWAYS ONLINE: REAL-TIME OPERATIONS =====
+
+    override suspend fun toggleLike(postId: String): Flow<Resource<Pair<Boolean, Int>>> = flow {
+        emit(Resource.Loading())
+
+        try {
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.toggleLike(postId, "${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful && response.body()?.success == true) {
+                val message = response.body()!!.message.lowercase()
+                val isLiked = when {
+                    message.contains("ditambahkan") ||
+                            message.contains("berhasil") && !message.contains("dihapus") -> true
+                    message.contains("dihapus") ||
+                            message.contains("dibatalkan") ||
+                            message.contains("removed") -> false
+                    else -> response.body()!!.data != null
+                }
+
+                // ✅ NO CACHE UPDATE - UI will refresh from API
+                emit(Resource.Success(Pair(isLiked, -1))) // -1 means count from API
+
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
             }
 
         } catch (e: Exception) {
@@ -342,7 +474,73 @@ class BlogRepositoryImpl @Inject constructor(
         }
     }
 
-    // ===== ALWAYS ONLINE: SEARCH =====
+    override suspend fun createComment(postId: String, content: String): Flow<Resource<Comment>> = flow {
+        emit(Resource.Loading())
+
+        try {
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.createComment(
+                postId = postId,
+                authorization = "${Constants.BEARER_PREFIX}$token",
+                request = CreateCommentRequest(content.trim())
+            )
+
+            if (response.isSuccessful && response.body()?.success == true) {
+                val newComment = CommentMapper.mapResponseToDomain(response.body()!!.data)
+
+                // Update comments cache
+                val commentEntity = CommentMapper.mapResponseToEntity(response.body()!!.data)
+                commentDao.insertComment(commentEntity)
+
+                // ✅ NO COUNT UPDATE - UI will refresh from API
+                emit(Resource.Success(newComment))
+
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+
+        } catch (e: Exception) {
+            emit(handleNetworkError(e))
+        }
+    }
+
+    override suspend fun deleteComment(commentId: String): Flow<Resource<Comment>> = flow {
+        emit(Resource.Loading())
+
+        try {
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) {
+                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
+                return@flow
+            }
+
+            val response = blogApi.deleteComment(commentId, "${Constants.BEARER_PREFIX}$token")
+
+            if (response.isSuccessful && response.body()?.success == true) {
+                val deletedComment = CommentMapper.mapResponseToDomain(response.body()!!.data)
+
+                // Remove from cache
+                commentDao.deleteCommentById(commentId)
+
+                // ✅ NO COUNT UPDATE - UI will refresh from API
+                emit(Resource.Success(deletedComment))
+
+            } else {
+                emit(handleHttpError(response.code(), response.errorBody()?.string()))
+            }
+
+        } catch (e: Exception) {
+            emit(handleNetworkError(e))
+        }
+    }
+
+    // ===== SEARCH: ALWAYS ONLINE =====
+
     override suspend fun search(keyword: String): Flow<Resource<SearchData>> = flow {
         emit(Resource.Loading())
 
@@ -385,7 +583,8 @@ class BlogRepositoryImpl @Inject constructor(
         }
     }
 
-    // ===== ALWAYS ONLINE: CREATE POST =====
+    // ===== POST CRUD: ALWAYS ONLINE =====
+
     override suspend fun createPost(title: String, content: String, categoryId: String, photo: File): Flow<Resource<Post>> = flow {
         emit(Resource.Loading())
 
@@ -396,7 +595,6 @@ class BlogRepositoryImpl @Inject constructor(
                 return@flow
             }
 
-            // Validate file
             if (!photo.exists() || photo.length() == 0L) {
                 emit(Resource.Error("File gambar tidak valid"))
                 return@flow
@@ -426,11 +624,11 @@ class BlogRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body()?.success == true) {
                 val newPost = PostMapper.mapResponseToDomain(response.body()!!.data)
 
-                // Add to cache
+                // Add to cache (static data only)
                 val postEntity = PostMapper.mapResponseToEntity(response.body()!!.data)
                 postDao.insertPost(postEntity)
 
-                // Invalidate related caches
+                // Invalidate caches to force refresh
                 invalidatePostCaches()
 
                 emit(Resource.Success(newPost))
@@ -444,117 +642,6 @@ class BlogRepositoryImpl @Inject constructor(
         }
     }
 
-    // ===== ALWAYS ONLINE: TOGGLE LIKE =====
-    override suspend fun toggleLike(postId: String): Flow<Resource<Pair<Boolean, Int>>> = flow {
-        emit(Resource.Loading())
-
-        try {
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
-                return@flow
-            }
-
-            val response = blogApi.toggleLike(postId, "${Constants.BEARER_PREFIX}$token")
-
-            if (response.isSuccessful && response.body()?.success == true) {
-                val message = response.body()!!.message.lowercase()
-                val isLiked = when {
-                    message.contains("ditambahkan") ||
-                            message.contains("berhasil") && !message.contains("dihapus") -> true
-                    message.contains("dihapus") ||
-                            message.contains("dibatalkan") ||
-                            message.contains("removed") -> false
-                    else -> response.body()!!.data != null
-                }
-
-                // Note: The PostDao no longer has methods to update like status directly.
-                // This logic is removed because the local entity doesn't store this information.
-                // The UI will rely on a fresh fetch or optimistic updates in the ViewModel.
-
-                emit(Resource.Success(Pair(isLiked, -1))) // -1 indicates the count should be fetched or is unknown
-
-            } else {
-                emit(handleHttpError(response.code(), response.errorBody()?.string()))
-            }
-
-        } catch (e: Exception) {
-            emit(handleNetworkError(e))
-        }
-    }
-
-    // ===== ALWAYS ONLINE: CREATE COMMENT =====
-    override suspend fun createComment(postId: String, content: String): Flow<Resource<Comment>> = flow {
-        emit(Resource.Loading())
-
-        try {
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
-                return@flow
-            }
-
-            val response = blogApi.createComment(
-                postId = postId,
-                authorization = "${Constants.BEARER_PREFIX}$token",
-                request = CreateCommentRequest(content.trim())
-            )
-
-            if (response.isSuccessful && response.body()?.success == true) {
-                val newComment = CommentMapper.mapResponseToDomain(response.body()!!.data)
-
-                // Add to cache
-                val commentEntity = CommentMapper.mapResponseToEntity(response.body()!!.data)
-                commentDao.insertComment(commentEntity)
-
-                // Note: The PostDao no longer has a method to update comment count.
-                // This logic is removed. The UI will get the count from the network.
-
-                emit(Resource.Success(newComment))
-
-            } else {
-                emit(handleHttpError(response.code(), response.errorBody()?.string()))
-            }
-
-        } catch (e: Exception) {
-            emit(handleNetworkError(e))
-        }
-    }
-
-    // ===== ALWAYS ONLINE: DELETE COMMENT =====
-    override suspend fun deleteComment(commentId: String): Flow<Resource<Comment>> = flow {
-        emit(Resource.Loading())
-
-        try {
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) {
-                emit(Resource.Error(Constants.ERROR_UNAUTHORIZED))
-                return@flow
-            }
-
-            val response = blogApi.deleteComment(commentId, "${Constants.BEARER_PREFIX}$token")
-
-            if (response.isSuccessful && response.body()?.success == true) {
-                val deletedComment = CommentMapper.mapResponseToDomain(response.body()!!.data)
-
-                // Remove from cache
-                commentDao.deleteCommentById(commentId)
-
-                // Note: The PostDao no longer has a method to update comment count.
-                // This logic is removed.
-
-                emit(Resource.Success(deletedComment))
-
-            } else {
-                emit(handleHttpError(response.code(), response.errorBody()?.string()))
-            }
-
-        } catch (e: Exception) {
-            emit(handleNetworkError(e))
-        }
-    }
-
-    // ===== ALWAYS ONLINE: UPDATE POST =====
     override suspend fun updatePost(postId: String, title: String, content: String, categoryId: String, photo: File?): Flow<Resource<Post>> = flow {
         emit(Resource.Loading())
 
@@ -592,7 +679,7 @@ class BlogRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body()?.success == true) {
                 val updatedPost = PostMapper.mapResponseToDomain(response.body()!!.data)
 
-                // Update cache
+                // Update cache (static data only)
                 val postEntity = PostMapper.mapResponseToEntity(response.body()!!.data)
                 postDao.insertPost(postEntity)
 
@@ -607,7 +694,6 @@ class BlogRepositoryImpl @Inject constructor(
         }
     }
 
-    // ===== ALWAYS ONLINE: DELETE POST =====
     override suspend fun deletePost(postId: String): Flow<Resource<Post>> = flow {
         emit(Resource.Loading())
 
@@ -627,7 +713,7 @@ class BlogRepositoryImpl @Inject constructor(
                 postDao.deletePostById(postId)
                 commentDao.deleteCommentsForPost(postId)
 
-                // Invalidate related caches
+                // Invalidate caches
                 invalidatePostCaches()
 
                 emit(Resource.Success(deletedPost))
@@ -641,28 +727,7 @@ class BlogRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getTotalPostsCount(): Flow<Resource<Int>> = flow {
-        emit(Resource.Loading())
-
-        try {
-            // Use cache first
-            val cachedCount = postDao.getTotalCount()
-            emit(Resource.Success(cachedCount))
-
-            // Background refresh if needed
-            val shouldRefresh = shouldRefreshCache(CacheConstants.CACHE_KEY_ALL_POSTS)
-            if (shouldRefresh) {
-                refreshAllPostsCache()
-                val updatedCount = postDao.getTotalCount()
-                emit(Resource.Success(updatedCount))
-            }
-
-        } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: Constants.ERROR_UNKNOWN))
-        }
-    }
-
-    // ===== HELPER METHODS =====
+    // ===== 🛠️ HELPER METHODS =====
 
     private suspend fun shouldRefreshCache(cacheKey: String): Boolean {
         val metadata = cacheMetadataDao.getCacheMetadata(cacheKey)
@@ -679,75 +744,8 @@ class BlogRepositoryImpl @Inject constructor(
         cacheMetadataDao.setCacheMetadata(metadata)
     }
 
-    private suspend fun setRefreshingStatus(cacheKey: String, isRefreshing: Boolean) {
-        cacheMetadataDao.setRefreshingStatus(cacheKey, isRefreshing)
-    }
-
-    private suspend fun refreshAllPostsCache() {
-        try {
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) return
-
-            val response = blogApi.getAllPosts("${Constants.BEARER_PREFIX}$token")
-            if (response.isSuccessful && response.body()?.success == true) {
-                val apiPosts = response.body()!!.data
-                val currentTime = System.currentTimeMillis()
-
-                val postEntities = PostMapper.mapResponseListToEntities(apiPosts, currentTime)
-                postDao.insertPosts(postEntities)
-
-                setCacheMetadata(
-                    CacheConstants.CACHE_KEY_ALL_POSTS,
-                    currentTime + CacheConstants.CACHE_DURATION_POSTS
-                )
-            }
-        } catch (e: Exception) {
-            // Ignore refresh errors
-        }
-    }
-
-    private suspend fun refreshCategoryPosts(categoryId: String, cacheKey: String) {
-        try {
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) return
-
-            val response = blogApi.getPostsByCategoryId(categoryId, "${Constants.BEARER_PREFIX}$token")
-            if (response.isSuccessful && response.body()?.success == true) {
-                val apiPosts = response.body()!!.data
-                val currentTime = System.currentTimeMillis()
-
-                val postEntities = PostMapper.mapResponseListToEntities(apiPosts, currentTime)
-                postDao.insertPosts(postEntities)
-
-                setCacheMetadata(cacheKey, currentTime + CacheConstants.CACHE_DURATION_POSTS)
-            }
-        } catch (e: Exception) {
-            // Ignore refresh errors
-        }
-    }
-
-    private suspend fun refreshAuthorPosts(authorId: String, cacheKey: String) {
-        try {
-            val token = authRepository.getAuthToken()
-            if (token.isNullOrEmpty()) return
-
-            val response = blogApi.getPostsByAuthorId(authorId, "${Constants.BEARER_PREFIX}$token")
-            if (response.isSuccessful && response.body()?.success == true) {
-                val apiPosts = response.body()!!.data
-                val currentTime = System.currentTimeMillis()
-
-                val postEntities = PostMapper.mapResponseListToEntities(apiPosts, currentTime)
-                postDao.insertPosts(postEntities)
-
-                setCacheMetadata(cacheKey, currentTime + CacheConstants.CACHE_DURATION_POSTS)
-            }
-        } catch (e: Exception) {
-            // Ignore refresh errors
-        }
-    }
-
     private suspend fun invalidatePostCaches() {
-        // Mark all post-related caches as stale
+        // Mark all post-related caches as expired
         cacheMetadataDao.deleteCacheMetadata(CacheConstants.CACHE_KEY_ALL_POSTS)
         cacheMetadataDao.deleteCacheMetadata(CacheConstants.CACHE_KEY_HOME_POSTS)
     }
@@ -782,7 +780,7 @@ class BlogRepositoryImpl @Inject constructor(
     }
 }
 
-// ===== HELPER FUNCTION: Convert Embedded Comment to Detail =====
+// ===== 🔧 HELPER FUNCTION =====
 private fun convertEmbeddedToDetail(embedded: CommentResponse): CommentDetailResponse {
     return CommentDetailResponse(
         id = embedded.id,

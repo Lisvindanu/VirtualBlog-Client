@@ -1,4 +1,4 @@
-// HomeViewModel.kt - Complete Cache-First Implementation
+// HomeViewModel.kt - FIXED: Simplified for API-First Dynamic Data
 package com.virtualsblog.project.presentation.ui.screen.home
 
 import androidx.lifecycle.ViewModel
@@ -76,24 +76,23 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // ===== CACHE-FIRST: POSTS FOR HOME =====
+    // ===== 🚀 SIMPLIFIED: POSTS LOADING =====
     private fun loadPosts() {
         viewModelScope.launch {
             getPostsForHomeUseCase().collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {
-                        // 🚀 SMART LOADING: Only show spinner if no cached data
+                        // Only show loading if no posts yet
                         if (_uiState.value.posts.isEmpty()) {
                             _uiState.value = _uiState.value.copy(
                                 isLoading = true,
                                 error = null
                             )
                         }
-                        // If we have cached data, keep showing it while loading fresh data
                     }
 
                     is Resource.Success -> {
-                        // ✅ SUCCESS: Update UI with fresh data (from cache or network)
+                        // ✅ SUCCESS: Repository gives us complete data (cache + fresh API)
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             isRefreshing = false,
@@ -103,7 +102,7 @@ class HomeViewModel @Inject constructor(
                     }
 
                     is Resource.Error -> {
-                        // 🛡️ GRACEFUL ERROR: Only show error if no cached data
+                        // Only show error if no cached data
                         if (_uiState.value.posts.isEmpty()) {
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
@@ -122,7 +121,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // ===== CACHE-FIRST: TOTAL POSTS COUNT =====
+    // ===== TOTAL POSTS COUNT =====
     private fun loadTotalPostsCount() {
         viewModelScope.launch {
             getTotalPostsCountUseCase().collect { resource ->
@@ -133,17 +132,17 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        // Ignore count errors - not critical for user experience
+                        // Ignore count errors - not critical
                     }
                     is Resource.Loading -> {
-                        // Ignore loading state for count - background operation
+                        // Ignore loading state for count
                     }
                 }
             }
         }
     }
 
-    // ===== PULL-TO-REFRESH =====
+    // ===== 🔄 PULL-TO-REFRESH =====
     fun refreshPosts() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -155,8 +154,7 @@ class HomeViewModel @Inject constructor(
                 // Refresh auth status
                 checkAuthStatus()
 
-                // Cache-first repository will handle the refresh automatically
-                // No need to manually call anything - just trigger the flows
+                // Repository will handle cache + fresh API automatically
                 loadPosts()
                 loadTotalPostsCount()
 
@@ -165,6 +163,68 @@ class HomeViewModel @Inject constructor(
                     isRefreshing = false,
                     error = "Gagal merefresh data: ${e.localizedMessage}"
                 )
+            }
+        }
+    }
+
+    fun forceRefreshPosts() {
+        // Just trigger the load - repository handles the caching strategy
+        loadPosts()
+        loadTotalPostsCount()
+    }
+
+    // ===== 💓 SIMPLIFIED LIKE SYSTEM =====
+    fun togglePostLike(postId: String, onConfirmDislike: () -> Unit) {
+        val currentPosts = _uiState.value.posts
+        val postIndex = currentPosts.indexOfFirst { it.id == postId }
+        if (postIndex == -1) return
+
+        val currentPost = currentPosts[postIndex]
+
+        // Confirmation for dislike
+        if (currentPost.isLiked) {
+            onConfirmDislike()
+            return
+        }
+
+        performLike(postId)
+    }
+
+    fun performDislike(postId: String) {
+        performLike(postId)
+    }
+
+    private fun performLike(postId: String) {
+        viewModelScope.launch {
+            // Show loading state
+            _uiState.value = _uiState.value.copy(
+                likingPostIds = _uiState.value.likingPostIds + postId
+            )
+
+            toggleLikeUseCase(postId).collect { resource ->
+                when (resource) {
+                    is Resource.Success -> {
+                        // ✅ SUCCESS: Hide loading, then auto-refresh from API
+                        _uiState.value = _uiState.value.copy(
+                            likingPostIds = _uiState.value.likingPostIds - postId
+                        )
+
+                        // 🔄 AUTO REFRESH: Get fresh data to sync like counts
+                        delay(300) // Small delay for better UX
+                        loadPosts() // This will get fresh data from repository
+                    }
+
+                    is Resource.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            likingPostIds = _uiState.value.likingPostIds - postId,
+                            error = resource.message
+                        )
+                    }
+
+                    is Resource.Loading -> {
+                        // Already handled by likingPostIds
+                    }
+                }
             }
         }
     }
@@ -181,78 +241,9 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    fun forceRefreshPosts() {
-        // Force refresh will trigger cache refresh in repository
-        // Repository will emit cached data first, then fresh data
-        loadPosts()
-        loadTotalPostsCount()
-    }
-
     // ===== ERROR HANDLING =====
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
-    }
-
-    // ===== LIKE SYSTEM (Real-time + Cache Update) =====
-    fun togglePostLike(postId: String, onConfirmDislike: () -> Unit) {
-        val currentPosts = _uiState.value.posts
-        val postIndex = currentPosts.indexOfFirst { it.id == postId }
-        if (postIndex == -1) return
-
-        val currentPost = currentPosts[postIndex]
-        val wasLiked = currentPost.isLiked
-
-        // Permanent Like System: Ask confirmation for dislike
-        if (wasLiked) {
-            onConfirmDislike()
-            return
-        }
-
-        performLike(postId)
-    }
-
-    fun performDislike(postId: String) {
-        performLike(postId) // Same API call, server handles toggle
-    }
-
-    private fun performLike(postId: String) {
-        val currentPosts = _uiState.value.posts
-        val postIndex = currentPosts.indexOfFirst { it.id == postId }
-        if (postIndex == -1) return
-
-        viewModelScope.launch {
-            // 🎯 OPTIMISTIC UPDATE: Show loading state immediately
-            _uiState.value = _uiState.value.copy(
-                likingPostIds = _uiState.value.likingPostIds + postId
-            )
-
-            toggleLikeUseCase(postId).collect { resource ->
-                when (resource) {
-                    is Resource.Success -> {
-                        // ✅ SUCCESS: Cache updated automatically by repository
-                        _uiState.value = _uiState.value.copy(
-                            likingPostIds = _uiState.value.likingPostIds - postId
-                        )
-
-                        // 🔄 BACKGROUND REFRESH: Get fresh data from cache
-                        // Repository already updated cache, fresh data will flow automatically
-                        // No manual state updates needed!
-                    }
-
-                    is Resource.Error -> {
-                        // ❌ ERROR: Remove loading state, show error
-                        _uiState.value = _uiState.value.copy(
-                            likingPostIds = _uiState.value.likingPostIds - postId,
-                            error = resource.message
-                        )
-                    }
-
-                    is Resource.Loading -> {
-                        // Loading state already handled by likingPostIds
-                    }
-                }
-            }
-        }
     }
 
     // ===== LIFECYCLE MANAGEMENT =====
@@ -261,36 +252,39 @@ class HomeViewModel @Inject constructor(
         // ViewModel cleanup if needed
     }
 
-    // ===== DEBUG/DEVELOPMENT HELPERS =====
+    // ===== 📊 DEBUG HELPERS =====
     fun debugCacheState() {
         viewModelScope.launch {
             val currentPosts = _uiState.value.posts
             android.util.Log.d("HomeViewModel", """
-                Cache State Debug:
-                - Cached posts: ${currentPosts.size}
+                🏠 Home State Debug:
+                - Posts count: ${currentPosts.size}
                 - Is loading: ${_uiState.value.isLoading}
                 - Is refreshing: ${_uiState.value.isRefreshing}
                 - Error: ${_uiState.value.error}
                 - Total count: ${_uiState.value.totalPostsCount}
+                - Currently liking: ${_uiState.value.likingPostIds}
+                
+                🎯 Strategy: Cache-first static data + API-first dynamic data
+                📱 Likes/Comments always fresh from API
+                ⚡ Static content (title, author) cached for speed
             """.trimIndent())
         }
     }
 
-    // ===== PERFORMANCE OPTIMIZATION =====
-    private fun shouldSkipUpdate(newPosts: List<com.virtualsblog.project.domain.model.Post>): Boolean {
-        val currentPosts = _uiState.value.posts
-
-        // Skip update if posts are identical (performance optimization)
-        if (currentPosts.size == newPosts.size) {
-            val areIdentical = currentPosts.zip(newPosts).all { (current, new) ->
-                current.id == new.id &&
-                        current.likes == new.likes &&
-                        current.isLiked == new.isLiked &&
-                        current.comments == new.comments
-            }
-            return areIdentical
-        }
-
-        return false
-    }
+    /**
+     * 🎯 KEY INSIGHT:
+     *
+     * With the new hybrid strategy:
+     * 1. Static data (title, content, author) = CACHED for speed
+     * 2. Dynamic data (likes, comments, isLiked) = ALWAYS from API for accuracy
+     * 3. Repository handles this automatically
+     * 4. ViewModel just triggers refreshes and handles loading states
+     *
+     * This gives us:
+     * ✅ Fast initial load (cached static data)
+     * ✅ Accurate counts (fresh API dynamic data)
+     * ✅ Simple ViewModel logic
+     * ✅ Automatic cache management
+     */
 }

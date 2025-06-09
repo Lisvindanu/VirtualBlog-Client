@@ -1,10 +1,8 @@
-// PostDetailViewModel.kt - Complete Cache-First + Real-time Implementation
+// PostDetailViewModel.kt - FIXED: API-First Dynamic Data Strategy
 package com.virtualsblog.project.presentation.ui.screen.post.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.virtualsblog.project.domain.model.User
-import com.virtualsblog.project.domain.model.Comment
 import com.virtualsblog.project.domain.repository.AuthRepository
 import com.virtualsblog.project.domain.usecase.blog.GetPostByIdUseCase
 import com.virtualsblog.project.domain.usecase.blog.ToggleLikeUseCase
@@ -16,7 +14,6 @@ import com.virtualsblog.project.util.NavigationState
 import com.virtualsblog.project.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,16 +53,7 @@ class PostDetailViewModel @Inject constructor(
         }
     }
 
-    // ===== USER INFORMATION =====
-    fun getCurrentUserId(): Flow<String?> {
-        return userPreferences.userData.map { it.userId }
-    }
-
-    fun getCurrentUser(): Flow<User?> {
-        return authRepository.getCurrentUser()
-    }
-
-    // ===== HYBRID STRATEGY: POST LOADING (Cache → Network) =====
+    // ===== 🎯 SIMPLIFIED: POST LOADING =====
     fun loadPost(postId: String) {
         if (postId.isBlank()) {
             _uiState.value = _uiState.value.copy(
@@ -86,11 +74,11 @@ class PostDetailViewModel @Inject constructor(
                 postJustDeleted = false
             )
 
-            // 🔄 HYBRID STRATEGY: Quick cache load → Fresh network data
+            // 🚀 REPOSITORY HANDLES EVERYTHING: Cache + Fresh API
             getPostByIdUseCase(postId).collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {
-                        // Only show loading if we don't have cached data
+                        // Only show loading if we don't have data yet
                         if (_uiState.value.post == null) {
                             _uiState.value = _uiState.value.copy(
                                 isLoading = true,
@@ -104,7 +92,7 @@ class PostDetailViewModel @Inject constructor(
                         if (postData != null) {
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
-                                post = postData,
+                                post = postData, // Complete data with fresh likes/comments
                                 comments = postData.actualComments,
                                 error = null
                             )
@@ -126,30 +114,27 @@ class PostDetailViewModel @Inject constructor(
                                 post = null
                             )
                         }
-                        // If we have cached data, keep showing it
                     }
                 }
             }
         }
     }
 
-    // ===== PERMANENT LIKE SYSTEM =====
+    // ===== 💓 SIMPLIFIED LIKE SYSTEM =====
     fun toggleLike(onConfirmDislike: () -> Unit) {
         val currentPost = _uiState.value.post ?: return
-        val wasLiked = currentPost.isLiked
 
-        // PERMANENT LIKE SYSTEM: Ask confirmation for dislike
-        if (wasLiked) {
+        // Confirmation for dislike
+        if (currentPost.isLiked) {
             onConfirmDislike()
             return
         }
 
-        // If not liked, perform like immediately
         performLike()
     }
 
     fun performDislike() {
-        performLike() // Same API call, server handles toggle
+        performLike()
     }
 
     private fun performLike() {
@@ -163,8 +148,9 @@ class PostDetailViewModel @Inject constructor(
                     is Resource.Success -> {
                         _uiState.value = _uiState.value.copy(isLikeLoading = false)
 
-                        // 🔄 SILENT REFRESH: Auto refresh after like
-                        silentRefreshAfterLike(currentPost.id)
+                        // 🔄 AUTO REFRESH: Get fresh data after like
+                        delay(300) // Small delay for better UX
+                        refreshPostData()
                     }
 
                     is Resource.Error -> {
@@ -182,41 +168,7 @@ class PostDetailViewModel @Inject constructor(
         }
     }
 
-    // ===== SILENT REFRESH AFTER LIKE =====
-    private fun silentRefreshAfterLike(postId: String) {
-        viewModelScope.launch {
-            // Small delay for better UX
-            delay(300)
-
-            try {
-                getPostByIdUseCase(postId).collect { resource ->
-                    when (resource) {
-                        is Resource.Success -> {
-                            val postData = resource.data
-                            if (postData != null) {
-                                _uiState.value = _uiState.value.copy(
-                                    post = postData,
-                                    comments = postData.actualComments,
-                                    error = null
-                                )
-                            }
-                        }
-                        is Resource.Error -> {
-                            // Ignore errors for silent refresh
-                        }
-                        is Resource.Loading -> {
-                            // No loading indicator for silent refresh
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                // Ignore errors for silent refresh
-                android.util.Log.w("PostDetailViewModel", "Silent refresh failed", e)
-            }
-        }
-    }
-
-    // ===== REAL-TIME COMMENTS =====
+    // ===== 💬 SIMPLIFIED COMMENTS =====
     fun createComment(content: String) {
         val currentPost = _uiState.value.post ?: return
         val trimmedContent = content.trim()
@@ -241,24 +193,15 @@ class PostDetailViewModel @Inject constructor(
             createCommentUseCase(currentPost.id, trimmedContent).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        val newComment = resource.data!!
-
-                        // 🚀 OPTIMISTIC UPDATE: Add comment immediately
-                        val updatedComments = _uiState.value.comments.toMutableList().apply {
-                            add(0, newComment) // Add to top
-                        }
-
-                        val updatedPost = currentPost.copy(
-                            comments = currentPost.comments + 1
-                        )
-
                         _uiState.value = _uiState.value.copy(
-                            post = updatedPost,
-                            comments = updatedComments,
                             isCommentLoading = false,
                             commentText = "", // Clear input
                             error = null
                         )
+
+                        // 🔄 AUTO REFRESH: Get fresh data with new comment
+                        delay(200)
+                        refreshPostData()
                     }
 
                     is Resource.Error -> {
@@ -277,24 +220,15 @@ class PostDetailViewModel @Inject constructor(
     }
 
     fun deleteComment(commentId: String) {
-        val currentPost = _uiState.value.post ?: return
-        val commentToDelete = _uiState.value.comments.find { it.id == commentId } ?: return
-
         viewModelScope.launch {
             deleteCommentUseCase(commentId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
-                        // 🚀 OPTIMISTIC UPDATE: Remove comment immediately
-                        val updatedComments = _uiState.value.comments.filterNot { it.id == commentId }
-                        val updatedPost = currentPost.copy(
-                            comments = maxOf(0, currentPost.comments - 1)
-                        )
+                        _uiState.value = _uiState.value.copy(error = null)
 
-                        _uiState.value = _uiState.value.copy(
-                            post = updatedPost,
-                            comments = updatedComments,
-                            error = null
-                        )
+                        // 🔄 AUTO REFRESH: Get fresh data after delete
+                        delay(200)
+                        refreshPostData()
                     }
 
                     is Resource.Error -> {
@@ -304,7 +238,7 @@ class PostDetailViewModel @Inject constructor(
                     }
 
                     is Resource.Loading -> {
-                        // Optional: Add loading state for specific comment deletion
+                        // Optional: Add loading state for specific comment
                     }
                 }
             }
@@ -316,7 +250,7 @@ class PostDetailViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(commentText = text)
     }
 
-    // ===== POST DELETION =====
+    // ===== 🗑️ POST DELETION =====
     fun deleteCurrentPost() {
         val postIdToDelete = _uiState.value.post?.id ?: return
 
@@ -333,14 +267,14 @@ class PostDetailViewModel @Inject constructor(
                 actualDeletePostUseCase(postIdToDelete).collect { resource ->
                     when (resource) {
                         is Resource.Success -> {
-                            // 🎯 NAVIGATION TRIGGER: Signal deletion to other screens
+                            // Signal deletion to other screens
                             navigationState.postDeleted(postIdToDelete)
 
                             _uiState.value = _uiState.value.copy(
                                 isDeletingPost = false,
                                 deletePostSuccess = true,
                                 postJustDeleted = true,
-                                post = null, // Clear post data
+                                post = null,
                                 comments = emptyList(),
                                 error = null
                             )
@@ -375,6 +309,48 @@ class PostDetailViewModel @Inject constructor(
         }
     }
 
+    // ===== 🔄 REFRESH HELPERS =====
+    fun refreshPostData() {
+        val postId = _uiState.value.post?.id ?: return
+
+        // Don't show loading for silent refresh
+        viewModelScope.launch {
+            getPostByIdUseCase(postId).collect { resource ->
+                when (resource) {
+                    is Resource.Success -> {
+                        val postData = resource.data
+                        if (postData != null) {
+                            _uiState.value = _uiState.value.copy(
+                                post = postData, // Fresh data with updated counts
+                                comments = postData.actualComments,
+                                error = null
+                            )
+                        }
+                    }
+                    is Resource.Error -> {
+                        // Ignore errors for silent refresh
+                    }
+                    is Resource.Loading -> {
+                        // Don't show loading for silent refresh
+                    }
+                }
+            }
+        }
+    }
+
+    fun forceRefreshPost() {
+        val postId = _uiState.value.post?.id ?: return
+
+        // Clear current data and reload
+        _uiState.value = _uiState.value.copy(
+            post = null,
+            comments = emptyList(),
+            error = null
+        )
+
+        loadPost(postId)
+    }
+
     // ===== ERROR HANDLING =====
     fun clearError() {
         _uiState.value = _uiState.value.copy(
@@ -391,76 +367,54 @@ class PostDetailViewModel @Inject constructor(
         )
     }
 
-    fun acknowledgePostDeletionHandled() {
-        _uiState.value = _uiState.value.copy(postJustDeleted = false)
-    }
-
-    // ===== VALIDATION HELPERS =====
-    private fun isValidComment(comment: String): Boolean {
-        val trimmed = comment.trim()
-        return trimmed.isNotBlank() && trimmed.length >= 3
-    }
-
-    private fun canDeleteComment(comment: Comment): Boolean {
-        val currentUserId = _uiState.value.currentUserId
-        return currentUserId != null && currentUserId == comment.authorId
-    }
-
-    private fun canDeletePost(): Boolean {
-        val currentUserId = _uiState.value.currentUserId
-        val post = _uiState.value.post
-        return currentUserId != null && post != null && currentUserId == post.authorId
-    }
-
-    // ===== PERFORMANCE OPTIMIZATION =====
-    private fun shouldUpdateComments(newComments: List<Comment>): Boolean {
-        val currentComments = _uiState.value.comments
-
-        if (currentComments.size != newComments.size) return true
-
-        return !currentComments.zip(newComments).all { (current, new) ->
-            current.id == new.id && current.content == new.content
-        }
-    }
-
     // ===== LIFECYCLE MANAGEMENT =====
     override fun onCleared() {
         super.onCleared()
-        // Cleanup if needed
+        // ViewModel cleanup if needed
     }
 
-    // ===== DEBUG HELPERS =====
+    // ===== 📊 DEBUG HELPERS =====
     fun debugPostState() {
         val state = _uiState.value
         android.util.Log.d("PostDetailViewModel", """
-            Post Detail State:
+            📖 Post Detail State Debug:
             - Post ID: ${state.post?.id}
             - Post Title: ${state.post?.title}
-            - Comments: ${state.comments.size}
+            - Likes: ${state.post?.likes} (isLiked: ${state.post?.isLiked})
+            - Comments: ${state.comments.size} (count from post: ${state.post?.comments})
             - Is Loading: ${state.isLoading}
             - Is Like Loading: ${state.isLikeLoading}
             - Is Comment Loading: ${state.isCommentLoading}
             - Error: ${state.error}
             - Current User: ${state.currentUserId}
+            
+            🎯 Strategy: Repository handles cache + fresh API
+            💓 Likes/Comments always from API for real-time accuracy
+            ⚡ Static content cached, dynamic content fresh
         """.trimIndent())
     }
 
-    // ===== REFRESH HELPERS =====
-    fun refreshPostData() {
-        val postId = _uiState.value.post?.id ?: return
-        loadPost(postId)
-    }
-
-    fun forceRefreshPost() {
-        val postId = _uiState.value.post?.id ?: return
-
-        // Clear current data and reload
-        _uiState.value = _uiState.value.copy(
-            post = null,
-            comments = emptyList(),
-            error = null
-        )
-
-        loadPost(postId)
-    }
+    /**
+     * 🎯 KEY CHANGES SUMMARY:
+     *
+     * BEFORE (Complex):
+     * ❌ Manual optimistic updates in ViewModel
+     * ❌ Manual cache management
+     * ❌ Complex state synchronization
+     * ❌ Like/comment counts stored in local DB
+     *
+     * AFTER (Simple):
+     * ✅ Repository handles everything automatically
+     * ✅ Like/comment counts always from API
+     * ✅ Auto-refresh after actions for fresh data
+     * ✅ ViewModel just triggers actions & handles UI state
+     * ✅ No manual cache manipulation
+     *
+     * BENEFITS:
+     * 🚀 Faster initial load (cached static data)
+     * 📊 Accurate counts (fresh API dynamic data)
+     * 🐛 Fewer bugs (less complex state management)
+     * 🔄 Automatic sync between screens
+     * 💾 Better cache strategy (static vs dynamic separation)
+     */
 }
