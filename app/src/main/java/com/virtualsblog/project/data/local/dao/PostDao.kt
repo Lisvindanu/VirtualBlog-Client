@@ -55,11 +55,6 @@ interface PostDao {
 
     // ===== QUICK UPDATES (for real-time actions) =====
 
-    @Query("UPDATE posts SET likes = :likes, isLiked = :isLiked WHERE id = :postId")
-    suspend fun updateLikeStatus(postId: String, likes: Int, isLiked: Boolean)
-
-    @Query("UPDATE posts SET comments = :commentCount WHERE id = :postId")
-    suspend fun updateCommentCount(postId: String, commentCount: Int)
 
     @Query("UPDATE posts SET isStale = :isStale WHERE id = :postId")
     suspend fun markPostStale(postId: String, isStale: Boolean = true)

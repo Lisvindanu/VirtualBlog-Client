@@ -68,9 +68,6 @@ object PostMapper {
             categoryId = response.categoryId,
             createdAt = response.createdAt,
             updatedAt = response.updatedAt,
-            likes = response.count?.Like ?: 0,
-            comments = response.count?.Comment ?: 0,
-            isLiked = response.liked,
             image = response.image,
             slug = response.slug,
             lastUpdated = lastUpdated,
@@ -91,9 +88,6 @@ object PostMapper {
             categoryId = response.categoryId,
             createdAt = response.createdAt,
             updatedAt = response.updatedAt,
-            likes = response.count?.Like ?: 0,
-            comments = response.count?.Comment ?: 0,
-            isLiked = response.liked,
             image = response.image,
             slug = response.slug,
             lastUpdated = lastUpdated,
@@ -115,12 +109,13 @@ object PostMapper {
             categoryId = entity.categoryId,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
-            likes = entity.likes,
-            comments = entity.comments,
-            isLiked = entity.isLiked,
+            // Beri nilai default, karena data ini akan diisi dari network
+            likes = 0,
+            comments = 0,
+            isLiked = false,
             image = entity.image,
             slug = entity.slug,
-            actualComments = emptyList() // Comments loaded separately
+            actualComments = emptyList()
         )
     }
 

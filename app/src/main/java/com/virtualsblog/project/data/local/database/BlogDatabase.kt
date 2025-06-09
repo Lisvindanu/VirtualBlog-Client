@@ -15,7 +15,7 @@ import com.virtualsblog.project.data.local.entities.*
         CommentEntity::class,
         CacheMetadataEntity::class
     ],
-    version = 2, // Incremented for new entities
+    version = 3, // Versi database dinaikkan menjadi 3
     exportSchema = false
 )
 abstract class BlogDatabase : RoomDatabase() {
@@ -37,8 +37,12 @@ abstract class BlogDatabase : RoomDatabase() {
                     BlogDatabase::class.java,
                     "blog_database"
                 )
-                    .addMigrations(BlogDatabaseMigrations.MIGRATION_1_2) // Add migration
-                    .fallbackToDestructiveMigration() // For development
+                    // Daftarkan semua migrasi di sini
+                    .addMigrations(
+                        BlogDatabaseMigrations.MIGRATION_1_2,
+                        BlogDatabaseMigrations.MIGRATION_2_3 // <-- Migrasi baru ditambahkan
+                    )
+                    .fallbackToDestructiveMigration() // Untuk development
                     .build()
 
                 INSTANCE = instance

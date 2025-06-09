@@ -468,14 +468,11 @@ class BlogRepositoryImpl @Inject constructor(
                     else -> response.body()!!.data != null
                 }
 
-                // Quick update cache
-                val cachedPost = postDao.getPostById(postId)
-                cachedPost?.let { post ->
-                    val newLikeCount = if (isLiked) post.likes + 1 else maxOf(0, post.likes - 1)
-                    postDao.updateLikeStatus(postId, newLikeCount, isLiked)
-                }
+                // Note: The PostDao no longer has methods to update like status directly.
+                // This logic is removed because the local entity doesn't store this information.
+                // The UI will rely on a fresh fetch or optimistic updates in the ViewModel.
 
-                emit(Resource.Success(Pair(isLiked, -1))) // -1 means UI should calculate
+                emit(Resource.Success(Pair(isLiked, -1))) // -1 indicates the count should be fetched or is unknown
 
             } else {
                 emit(handleHttpError(response.code(), response.errorBody()?.string()))
@@ -510,9 +507,8 @@ class BlogRepositoryImpl @Inject constructor(
                 val commentEntity = CommentMapper.mapResponseToEntity(response.body()!!.data)
                 commentDao.insertComment(commentEntity)
 
-                // Update post comment count
-                val currentCount = commentDao.getCommentCountForPost(postId)
-                postDao.updateCommentCount(postId, currentCount)
+                // Note: The PostDao no longer has a method to update comment count.
+                // This logic is removed. The UI will get the count from the network.
 
                 emit(Resource.Success(newComment))
 
@@ -544,9 +540,8 @@ class BlogRepositoryImpl @Inject constructor(
                 // Remove from cache
                 commentDao.deleteCommentById(commentId)
 
-                // Update post comment count
-                val currentCount = commentDao.getCommentCountForPost(deletedComment.postId)
-                postDao.updateCommentCount(deletedComment.postId, currentCount)
+                // Note: The PostDao no longer has a method to update comment count.
+                // This logic is removed.
 
                 emit(Resource.Success(deletedComment))
 
