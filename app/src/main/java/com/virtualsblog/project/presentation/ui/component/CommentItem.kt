@@ -25,7 +25,7 @@ fun CommentItem(
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -38,7 +38,7 @@ fun CommentItem(
             imageUrl = comment.authorImage,
             size = 40.dp,
             showBorder = true,
-            borderColor = Color(0xFFE0E0E0),
+            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), // Use theme color
             borderWidth = 1.dp,
             onClick = onAvatarClick ?: { }
         )
@@ -47,7 +47,8 @@ fun CommentItem(
         Column(modifier = Modifier.weight(1f)) {
             // Comment Bubble with integrated menu
             Surface(
-                color = Color(0xFFF8F9FA),
+                // CHANGE: Use surfaceVariant for the background to adapt to the theme.
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(16.dp),
                 shadowElevation = 1.dp
             ) {
@@ -69,19 +70,21 @@ fun CommentItem(
                                 text = comment.authorName,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF212121)
+                                // CHANGE: Use onSurfaceVariant for better contrast in both themes.
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             // Username (bottom)
                             if (comment.authorUsername.isNotEmpty()) {
                                 Text(
                                     text = "@${comment.authorUsername}",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = Color(0xFF757575),
+                                    // CHANGE: Use a more subtle theme color.
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     fontWeight = FontWeight.Medium
                                 )
                             }
                         }
-                        
+
                         // Right side: Timestamp and Menu
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -89,24 +92,27 @@ fun CommentItem(
                         ) {
                             // Timestamp
                             Surface(
-                                color = Color(0xFF1976D2).copy(alpha = 0.1f),
+                                // CHANGE: Use a theme-based color for the timestamp background.
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(
                                     text = DateUtil.getRelativeTime(comment.createdAt),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF1976D2),
+                                    // CHANGE: Use primary theme color for the text.
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Medium,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
-                            
+
                             // Menu for owner (inside bubble)
                             if (currentUserId == comment.authorId && onDeleteClick != null) {
                                 Box {
                                     Surface(
                                         onClick = { showMenu = true },
-                                        color = Color(0xFFE0E0E0).copy(alpha = 0.5f),
+                                        // CHANGE: Use a theme-based color for the menu button.
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                                         shape = RoundedCornerShape(6.dp),
                                         modifier = Modifier.size(28.dp)
                                     ) {
@@ -118,16 +124,18 @@ fun CommentItem(
                                                 imageVector = Icons.Default.MoreVert,
                                                 contentDescription = "Menu Komentar",
                                                 modifier = Modifier.size(14.dp),
-                                                tint = Color(0xFF757575)
+                                                // CHANGE: Use a contrasting theme color for the icon.
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
-                                    
+
                                     DropdownMenu(
                                         expanded = showMenu,
                                         onDismissRequest = { showMenu = false },
                                         modifier = Modifier.background(
-                                            color = Color.White,
+                                            // CHANGE: Use surface color for the dropdown background.
+                                            color = MaterialTheme.colorScheme.surface,
                                             shape = RoundedCornerShape(12.dp)
                                         ),
                                         shadowElevation = 8.dp
@@ -141,14 +149,16 @@ fun CommentItem(
                                                     Icon(
                                                         imageVector = Icons.Default.Delete,
                                                         contentDescription = null,
-                                                        tint = Color(0xFFD32F2F),
+                                                        // CHANGE: Use error color from the theme.
+                                                        tint = MaterialTheme.colorScheme.error,
                                                         modifier = Modifier.size(18.dp)
                                                     )
                                                     Text(
                                                         "Hapus Komentar",
                                                         style = MaterialTheme.typography.bodyMedium,
                                                         fontWeight = FontWeight.Medium,
-                                                        color = Color(0xFFD32F2F)
+                                                        // CHANGE: Use error color from the theme.
+                                                        color = MaterialTheme.colorScheme.error
                                                     )
                                                 }
                                             },
@@ -162,14 +172,15 @@ fun CommentItem(
                             }
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(12.dp))
-                    
+
                     // Comment content
                     Text(
                         text = comment.content,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF424242),
+                        // CHANGE: Use primary text color from the theme.
+                        color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.4
                     )
                 }

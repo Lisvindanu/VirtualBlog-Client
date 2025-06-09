@@ -25,27 +25,35 @@ class PostListViewModel @Inject constructor(
 
     fun loadPosts() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
+            // 🚀 Cache-First: Show cached posts instantly, refresh in background
             getPostsUseCase().collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {
-                        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+                        // Only show loading spinner if no cached data
+                        if (_uiState.value.posts.isEmpty()) {
+                            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+                        }
                     }
                     is Resource.Success -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            isRefreshing = false, // Stop refreshing
+                            isRefreshing = false,
                             posts = resource.data ?: emptyList(),
                             error = null
                         )
                     }
                     is Resource.Error -> {
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            isRefreshing = false, // Stop refreshing
-                            error = resource.message ?: "Gagal memuat postingan"
-                        )
+                        // Only show error if no cached data available
+                        if (_uiState.value.posts.isEmpty()) {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                isRefreshing = false,
+                                error = resource.message ?: "Gagal memuat postingan"
+                            )
+                        } else {
+                            // Keep showing cached data
+                            _uiState.value = _uiState.value.copy(isRefreshing = false)
+                        }
                     }
                 }
             }
@@ -55,7 +63,7 @@ class PostListViewModel @Inject constructor(
     fun refreshPosts() {
         // Set refreshing state and reload posts
         _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
-        loadPosts()
+        loadPosts() // Cache-first repository will handle the refresh
     }
 
     fun clearError() {
