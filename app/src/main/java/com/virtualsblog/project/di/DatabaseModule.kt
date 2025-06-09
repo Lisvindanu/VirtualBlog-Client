@@ -1,8 +1,10 @@
+
+// DatabaseModule.kt - Updated with all DAOs
 package com.virtualsblog.project.di
 
 import android.content.Context
 import androidx.room.Room
-import com.virtualsblog.project.data.local.dao.UserDao
+import com.virtualsblog.project.data.local.dao.*
 import com.virtualsblog.project.data.local.database.BlogDatabase
 import com.virtualsblog.project.data.local.database.BlogDatabaseMigrations
 import dagger.Module
@@ -24,14 +26,10 @@ object DatabaseModule {
             BlogDatabase::class.java,
             "blog_database"
         )
-            // Untuk production, gunakan migration instead of fallbackToDestructiveMigration
             .addMigrations(
-                BlogDatabaseMigrations.MIGRATION_1_2,
-                BlogDatabaseMigrations.MIGRATION_2_3,
-                BlogDatabaseMigrations.MIGRATION_3_4
+                BlogDatabaseMigrations.MIGRATION_1_2
             )
-            // Hanya gunakan ini untuk development/testing
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration() // For development
             .build()
     }
 
@@ -41,8 +39,6 @@ object DatabaseModule {
         return database.userDao()
     }
 
-    // Uncomment ketika Post, Category, Comment entities sudah ready
-    /*
     @Provides
     @Singleton
     fun providePostDao(database: BlogDatabase): PostDao {
@@ -51,8 +47,8 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideCategoryDao(database: BlogDatabase): CategoryDao {
-        return database.categoryDao()
+    fun provideCacheMetadataDao(database: BlogDatabase): CacheMetadataDao {
+        return database.cacheMetadataDao()
     }
 
     @Provides
@@ -60,5 +56,11 @@ object DatabaseModule {
     fun provideCommentDao(database: BlogDatabase): CommentDao {
         return database.commentDao()
     }
-    */
+
+    @Provides
+    @Singleton
+    fun provideCategoryDao(database: BlogDatabase): CategoryDao {
+        return database.categoryDao()
+    }
+
 }

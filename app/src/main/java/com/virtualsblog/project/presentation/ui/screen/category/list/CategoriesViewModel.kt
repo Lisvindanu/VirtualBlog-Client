@@ -25,7 +25,7 @@ class CategoriesViewModel @Inject constructor(
 
     fun loadCategories() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            // 🚀 Categories are perfect for aggressive caching (rarely change)
             getCategoriesUseCase().collect { result ->
                 when (result) {
                     is Resource.Success -> {
@@ -36,13 +36,19 @@ class CategoriesViewModel @Inject constructor(
                         )
                     }
                     is Resource.Error -> {
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = result.message ?: "Gagal memuat kategori."
-                        )
+                        // Only show error if no cached data
+                        if (_uiState.value.categories.isEmpty()) {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                error = result.message ?: "Gagal memuat kategori."
+                            )
+                        }
                     }
                     is Resource.Loading -> {
-                        _uiState.value = _uiState.value.copy(isLoading = true)
+                        // Only show loading if no cached data
+                        if (_uiState.value.categories.isEmpty()) {
+                            _uiState.value = _uiState.value.copy(isLoading = true)
+                        }
                     }
                 }
             }
