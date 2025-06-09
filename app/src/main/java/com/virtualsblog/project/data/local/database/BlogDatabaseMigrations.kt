@@ -1,3 +1,4 @@
+// BlogDatabaseMigrations.kt - Updated for v2
 package com.virtualsblog.project.data.local.database
 
 import androidx.room.migration.Migration
@@ -5,10 +6,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 object BlogDatabaseMigrations {
 
-    // Migration dari versi 1 ke 2 (untuk masa depan ketika menambah tabel baru)
+    // Migration from v1 (only users) to v2 (full cache system)
     val MIGRATION_1_2 = object : Migration(1, 2) {
         override fun migrate(database: SupportSQLiteDatabase) {
-            // Contoh: Menambah tabel posts
+            // Create posts table
             database.execSQL("""
                 CREATE TABLE IF NOT EXISTS `posts` (
                     `id` TEXT NOT NULL,
@@ -16,60 +17,67 @@ object BlogDatabaseMigrations {
                     `content` TEXT NOT NULL,
                     `author` TEXT NOT NULL,
                     `authorId` TEXT NOT NULL,
+                    `authorUsername` TEXT NOT NULL,
+                    `authorImage` TEXT,
                     `category` TEXT NOT NULL,
+                    `categoryId` TEXT NOT NULL,
+                    `createdAt` TEXT NOT NULL,
+                    `updatedAt` TEXT NOT NULL,
                     `likes` INTEGER NOT NULL DEFAULT 0,
                     `comments` INTEGER NOT NULL DEFAULT 0,
                     `isLiked` INTEGER NOT NULL DEFAULT 0,
-                    `imageUrl` TEXT,
-                    `excerpt` TEXT NOT NULL DEFAULT '',
-                    `readTime` INTEGER NOT NULL DEFAULT 0,
-                    `isPublished` INTEGER NOT NULL DEFAULT 1,
-                    `viewCount` INTEGER NOT NULL DEFAULT 0,
-                    `createdAt` TEXT NOT NULL,
-                    `updatedAt` TEXT NOT NULL,
+                    `image` TEXT,
+                    `slug` TEXT NOT NULL,
+                    `lastUpdated` INTEGER NOT NULL DEFAULT 0,
+                    `isStale` INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY(`id`)
                 )
             """.trimIndent())
-        }
-    }
 
-    // Migration dari versi 2 ke 3 (untuk masa depan ketika menambah tabel categories)
-    val MIGRATION_2_3 = object : Migration(2, 3) {
-        override fun migrate(database: SupportSQLiteDatabase) {
-            // Contoh: Menambah tabel categories
+            // Create categories table
             database.execSQL("""
                 CREATE TABLE IF NOT EXISTS `categories` (
                     `id` TEXT NOT NULL,
                     `name` TEXT NOT NULL,
-                    `slug` TEXT NOT NULL,
-                    `description` TEXT,
                     `createdAt` TEXT NOT NULL,
                     `updatedAt` TEXT NOT NULL,
+                    `lastUpdated` INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY(`id`)
                 )
             """.trimIndent())
-        }
-    }
 
-    // Migration dari versi 3 ke 4 (untuk masa depan ketika menambah tabel comments)
-    val MIGRATION_3_4 = object : Migration(3, 4) {
-        override fun migrate(database: SupportSQLiteDatabase) {
-            // Contoh: Menambah tabel comments
+            // Create comments table
             database.execSQL("""
                 CREATE TABLE IF NOT EXISTS `comments` (
                     `id` TEXT NOT NULL,
-                    `postId` TEXT NOT NULL,
+                    `content` TEXT NOT NULL,
                     `authorId` TEXT NOT NULL,
                     `authorName` TEXT NOT NULL,
-                    `content` TEXT NOT NULL,
-                    `likes` INTEGER NOT NULL DEFAULT 0,
-                    `isLiked` INTEGER NOT NULL DEFAULT 0,
-                    `isEdited` INTEGER NOT NULL DEFAULT 0,
+                    `authorUsername` TEXT NOT NULL,
+                    `authorImage` TEXT,
+                    `postId` TEXT NOT NULL,
                     `createdAt` TEXT NOT NULL,
                     `updatedAt` TEXT NOT NULL,
+                    `lastUpdated` INTEGER NOT NULL DEFAULT 0,
+                    `isPendingSync` INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY(`id`),
-                    FOREIGN KEY(`postId`) REFERENCES `posts`(`id`) ON DELETE CASCADE,
-                    FOREIGN KEY(`authorId`) REFERENCES `users`(`id`) ON DELETE CASCADE
+                    FOREIGN KEY(`postId`) REFERENCES `posts`(`id`) ON DELETE CASCADE
+                )
+            """.trimIndent())
+
+            // Create index for comments
+            database.execSQL("""
+                CREATE INDEX IF NOT EXISTS `index_comments_postId` ON `comments` (`postId`)
+            """.trimIndent())
+
+            // Create cache metadata table
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS `cache_metadata` (
+                    `key` TEXT NOT NULL,
+                    `lastRefresh` INTEGER NOT NULL,
+                    `expiresAt` INTEGER NOT NULL,
+                    `isRefreshing` INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(`key`)
                 )
             """.trimIndent())
         }

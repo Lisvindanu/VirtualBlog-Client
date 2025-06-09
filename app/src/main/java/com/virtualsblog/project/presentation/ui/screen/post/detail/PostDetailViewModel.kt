@@ -1,4 +1,4 @@
-// PostDetailViewModel.kt - Fixed Delete Navigation
+// PostDetailViewModel.kt - Complete Cache-First + Real-time Implementation
 package com.virtualsblog.project.presentation.ui.screen.post.detail
 
 import androidx.lifecycle.ViewModel
@@ -41,12 +41,22 @@ class PostDetailViewModel @Inject constructor(
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
 
     init {
+        initializePostDetail()
+    }
+
+    // ===== INITIALIZATION =====
+    private fun initializePostDetail() {
         viewModelScope.launch {
-            val userId = userPreferences.userData.map { it.userId }.first()
-            _uiState.value = _uiState.value.copy(currentUserId = userId)
+            try {
+                val userId = userPreferences.userData.map { it.userId }.first()
+                _uiState.value = _uiState.value.copy(currentUserId = userId)
+            } catch (e: Exception) {
+                android.util.Log.w("PostDetailViewModel", "Failed to get current user ID", e)
+            }
         }
     }
 
+    // ===== USER INFORMATION =====
     fun getCurrentUserId(): Flow<String?> {
         return userPreferences.userData.map { it.userId }
     }
@@ -55,7 +65,16 @@ class PostDetailViewModel @Inject constructor(
         return authRepository.getCurrentUser()
     }
 
+    // ===== HYBRID STRATEGY: POST LOADING (Cache → Network) =====
     fun loadPost(postId: String) {
+        if (postId.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                error = "ID postingan tidak valid"
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
@@ -67,44 +86,65 @@ class PostDetailViewModel @Inject constructor(
                 postJustDeleted = false
             )
 
+            // 🔄 HYBRID STRATEGY: Quick cache load → Fresh network data
             getPostByIdUseCase(postId).collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {
-                        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+                        // Only show loading if we don't have cached data
+                        if (_uiState.value.post == null) {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = true,
+                                error = null
+                            )
+                        }
                     }
+
                     is Resource.Success -> {
                         val postData = resource.data
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            post = postData,
-                            comments = postData?.actualComments ?: emptyList(),
-                            error = null
-                        )
+                        if (postData != null) {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                post = postData,
+                                comments = postData.actualComments,
+                                error = null
+                            )
+                        } else {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                error = "Data postingan tidak ditemukan",
+                                post = null
+                            )
+                        }
                     }
+
                     is Resource.Error -> {
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = resource.message ?: "Gagal memuat detail postingan",
-                            post = null
-                        )
+                        // Only show error if no cached data
+                        if (_uiState.value.post == null) {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                error = resource.message ?: "Gagal memuat detail postingan",
+                                post = null
+                            )
+                        }
+                        // If we have cached data, keep showing it
                     }
                 }
             }
         }
     }
 
-    // NEW: Permanent Like System for Post Detail
+    // ===== PERMANENT LIKE SYSTEM =====
     fun toggleLike(onConfirmDislike: () -> Unit) {
         val currentPost = _uiState.value.post ?: return
         val wasLiked = currentPost.isLiked
 
-        // PERMANENT LIKE SYSTEM: Jika sudah liked, minta konfirmasi untuk dislike
+        // PERMANENT LIKE SYSTEM: Ask confirmation for dislike
         if (wasLiked) {
             onConfirmDislike()
             return
         }
 
-        // Jika belum liked, langsung like
+        // If not liked, perform like immediately
         performLike()
     }
 
@@ -123,15 +163,17 @@ class PostDetailViewModel @Inject constructor(
                     is Resource.Success -> {
                         _uiState.value = _uiState.value.copy(isLikeLoading = false)
 
-                        // SUCCESS: Auto refresh untuk avoid bugs
+                        // 🔄 SILENT REFRESH: Auto refresh after like
                         silentRefreshAfterLike(currentPost.id)
                     }
+
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
                             isLikeLoading = false,
                             error = resource.message
                         )
                     }
+
                     is Resource.Loading -> {
                         _uiState.value = _uiState.value.copy(isLikeLoading = true)
                     }
@@ -140,10 +182,10 @@ class PostDetailViewModel @Inject constructor(
         }
     }
 
-    // SILENT REFRESH: Reload post data setelah like tanpa loading indicator
+    // ===== SILENT REFRESH AFTER LIKE =====
     private fun silentRefreshAfterLike(postId: String) {
         viewModelScope.launch {
-            // Small delay untuk user experience
+            // Small delay for better UX
             delay(300)
 
             try {
@@ -151,53 +193,81 @@ class PostDetailViewModel @Inject constructor(
                     when (resource) {
                         is Resource.Success -> {
                             val postData = resource.data
-                            _uiState.value = _uiState.value.copy(
-                                post = postData,
-                                comments = postData?.actualComments ?: emptyList(),
-                                error = null
-                            )
+                            if (postData != null) {
+                                _uiState.value = _uiState.value.copy(
+                                    post = postData,
+                                    comments = postData.actualComments,
+                                    error = null
+                                )
+                            }
                         }
                         is Resource.Error -> {
-                            // Ignore error untuk silent refresh
+                            // Ignore errors for silent refresh
                         }
                         is Resource.Loading -> {
-                            // No loading indicator untuk silent refresh
+                            // No loading indicator for silent refresh
                         }
                     }
                 }
             } catch (e: Exception) {
                 // Ignore errors for silent refresh
+                android.util.Log.w("PostDetailViewModel", "Silent refresh failed", e)
             }
         }
     }
 
+    // ===== REAL-TIME COMMENTS =====
     fun createComment(content: String) {
         val currentPost = _uiState.value.post ?: return
+        val trimmedContent = content.trim()
+
+        if (trimmedContent.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                error = "Komentar tidak boleh kosong"
+            )
+            return
+        }
+
+        if (trimmedContent.length < 3) {
+            _uiState.value = _uiState.value.copy(
+                error = "Komentar minimal 3 karakter"
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isCommentLoading = true)
-            createCommentUseCase(currentPost.id, content).collect { resource ->
+
+            createCommentUseCase(currentPost.id, trimmedContent).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
                         val newComment = resource.data!!
+
+                        // 🚀 OPTIMISTIC UPDATE: Add comment immediately
                         val updatedComments = _uiState.value.comments.toMutableList().apply {
-                            add(0, newComment)
+                            add(0, newComment) // Add to top
                         }
+
                         val updatedPost = currentPost.copy(
                             comments = currentPost.comments + 1
                         )
+
                         _uiState.value = _uiState.value.copy(
                             post = updatedPost,
                             comments = updatedComments,
                             isCommentLoading = false,
-                            commentText = ""
+                            commentText = "", // Clear input
+                            error = null
                         )
                     }
+
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
                             isCommentLoading = false,
-                            error = resource.message
+                            error = resource.message ?: "Gagal menambahkan komentar"
                         )
                     }
+
                     is Resource.Loading -> {
                         _uiState.value = _uiState.value.copy(isCommentLoading = true)
                     }
@@ -208,48 +278,54 @@ class PostDetailViewModel @Inject constructor(
 
     fun deleteComment(commentId: String) {
         val currentPost = _uiState.value.post ?: return
+        val commentToDelete = _uiState.value.comments.find { it.id == commentId } ?: return
+
         viewModelScope.launch {
             deleteCommentUseCase(commentId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
+                        // 🚀 OPTIMISTIC UPDATE: Remove comment immediately
                         val updatedComments = _uiState.value.comments.filterNot { it.id == commentId }
                         val updatedPost = currentPost.copy(
                             comments = maxOf(0, currentPost.comments - 1)
                         )
+
                         _uiState.value = _uiState.value.copy(
                             post = updatedPost,
-                            comments = updatedComments
+                            comments = updatedComments,
+                            error = null
                         )
                     }
+
                     is Resource.Error -> {
                         _uiState.value = _uiState.value.copy(
-                            error = resource.message
+                            error = resource.message ?: "Gagal menghapus komentar"
                         )
                     }
+
                     is Resource.Loading -> {
-                        // Optional: loading state for specific comment deletion
+                        // Optional: Add loading state for specific comment deletion
                     }
                 }
             }
         }
     }
 
+    // ===== COMMENT TEXT MANAGEMENT =====
     fun updateCommentText(text: String) {
         _uiState.value = _uiState.value.copy(commentText = text)
     }
 
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null, deletePostError = null)
-    }
-
+    // ===== POST DELETION =====
     fun deleteCurrentPost() {
         val postIdToDelete = _uiState.value.post?.id ?: return
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isDeletingPost = true,
                 deletePostError = null,
                 deletePostSuccess = false,
-                postJustDeleted = false, // <<< DITAMBAHKAN: Reset flag ini saat memulai delete
+                postJustDeleted = false,
                 error = null
             )
 
@@ -257,29 +333,33 @@ class PostDetailViewModel @Inject constructor(
                 actualDeletePostUseCase(postIdToDelete).collect { resource ->
                     when (resource) {
                         is Resource.Success -> {
+                            // 🎯 NAVIGATION TRIGGER: Signal deletion to other screens
                             navigationState.postDeleted(postIdToDelete)
+
                             _uiState.value = _uiState.value.copy(
                                 isDeletingPost = false,
                                 deletePostSuccess = true,
-                                postJustDeleted = true, // <<< DIUBAH: Set flag ini menandakan post baru saja dihapus
-                                post = null, // Kosongkan post
+                                postJustDeleted = true,
+                                post = null, // Clear post data
                                 comments = emptyList(),
                                 error = null
                             )
                         }
+
                         is Resource.Error -> {
                             _uiState.value = _uiState.value.copy(
                                 isDeletingPost = false,
                                 deletePostError = resource.message ?: "Gagal menghapus postingan.",
                                 deletePostSuccess = false,
-                                postJustDeleted = false // <<< DITAMBAHKAN: Pastikan false jika error
+                                postJustDeleted = false
                             )
                         }
+
                         is Resource.Loading -> {
                             _uiState.value = _uiState.value.copy(
                                 isDeletingPost = true,
                                 deletePostError = null,
-                                postJustDeleted = false // <<< DITAMBAHKAN: Pastikan false saat loading
+                                postJustDeleted = false
                             )
                         }
                     }
@@ -289,22 +369,98 @@ class PostDetailViewModel @Inject constructor(
                     isDeletingPost = false,
                     deletePostError = "Terjadi kesalahan tidak terduga: ${e.localizedMessage}",
                     deletePostSuccess = false,
-                    postJustDeleted = false // <<< DITAMBAHKAN: Pastikan false jika exception
+                    postJustDeleted = false
                 )
             }
         }
     }
 
-    fun resetDeleteSuccessFlag() {
+    // ===== ERROR HANDLING =====
+    fun clearError() {
         _uiState.value = _uiState.value.copy(
-            deletePostSuccess = false,
-            postJustDeleted = false // <<< DITAMBAHKAN: Reset juga flag postJustDeleted
+            error = null,
+            deletePostError = null
         )
     }
 
-    // Fungsi ini mungkin tidak lagi diperlukan jika navigasi terjadi sebelum screen di-dispose
-    // Namun, bisa berguna jika ada logika lain yang perlu di-reset setelah navigasi dari screen ini.
+    // ===== STATE MANAGEMENT =====
+    fun resetDeleteSuccessFlag() {
+        _uiState.value = _uiState.value.copy(
+            deletePostSuccess = false,
+            postJustDeleted = false
+        )
+    }
+
     fun acknowledgePostDeletionHandled() {
         _uiState.value = _uiState.value.copy(postJustDeleted = false)
+    }
+
+    // ===== VALIDATION HELPERS =====
+    private fun isValidComment(comment: String): Boolean {
+        val trimmed = comment.trim()
+        return trimmed.isNotBlank() && trimmed.length >= 3
+    }
+
+    private fun canDeleteComment(comment: Comment): Boolean {
+        val currentUserId = _uiState.value.currentUserId
+        return currentUserId != null && currentUserId == comment.authorId
+    }
+
+    private fun canDeletePost(): Boolean {
+        val currentUserId = _uiState.value.currentUserId
+        val post = _uiState.value.post
+        return currentUserId != null && post != null && currentUserId == post.authorId
+    }
+
+    // ===== PERFORMANCE OPTIMIZATION =====
+    private fun shouldUpdateComments(newComments: List<Comment>): Boolean {
+        val currentComments = _uiState.value.comments
+
+        if (currentComments.size != newComments.size) return true
+
+        return !currentComments.zip(newComments).all { (current, new) ->
+            current.id == new.id && current.content == new.content
+        }
+    }
+
+    // ===== LIFECYCLE MANAGEMENT =====
+    override fun onCleared() {
+        super.onCleared()
+        // Cleanup if needed
+    }
+
+    // ===== DEBUG HELPERS =====
+    fun debugPostState() {
+        val state = _uiState.value
+        android.util.Log.d("PostDetailViewModel", """
+            Post Detail State:
+            - Post ID: ${state.post?.id}
+            - Post Title: ${state.post?.title}
+            - Comments: ${state.comments.size}
+            - Is Loading: ${state.isLoading}
+            - Is Like Loading: ${state.isLikeLoading}
+            - Is Comment Loading: ${state.isCommentLoading}
+            - Error: ${state.error}
+            - Current User: ${state.currentUserId}
+        """.trimIndent())
+    }
+
+    // ===== REFRESH HELPERS =====
+    fun refreshPostData() {
+        val postId = _uiState.value.post?.id ?: return
+        loadPost(postId)
+    }
+
+    fun forceRefreshPost() {
+        val postId = _uiState.value.post?.id ?: return
+
+        // Clear current data and reload
+        _uiState.value = _uiState.value.copy(
+            post = null,
+            comments = emptyList(),
+            error = null
+        )
+
+        loadPost(postId)
     }
 }
