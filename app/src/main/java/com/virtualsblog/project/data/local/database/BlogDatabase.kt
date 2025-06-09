@@ -42,7 +42,7 @@ abstract class BlogDatabase : RoomDatabase() {
                         BlogDatabaseMigrations.MIGRATION_1_2,
                         BlogDatabaseMigrations.MIGRATION_2_3 // <-- Migrasi baru ditambahkan
                     )
-                    .fallbackToDestructiveMigration() // Untuk development
+                    .fallbackToDestructiveMigration(false) // Untuk development
                     .build()
 
                 INSTANCE = instance

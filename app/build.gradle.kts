@@ -11,6 +11,11 @@ android {
     namespace = "com.virtualsblog.project"
     compileSdk = 35 // Required by androidx.compose.ui:ui-test-junit4-android:1.8.2
 
+    buildFeatures {
+        compose = true
+        buildConfig = true // Aktifkan BuildConfig
+    }
+
     defaultConfig {
         applicationId = "com.virtualsblog.project"
         minSdk = 24
@@ -18,31 +23,21 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Ensure this CustomTestRunner exists or use the default AndroidJUnitRunner
-        // e.g., testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // If CustomTestRunner is for Hilt, it should be "com.virtualsblog.project.HiltTestRunner"
-        // and you'd need to create that HiltTestRunner class.
-//        testInstrumentationRunner = "com.virtualsblog.project.CustomTestRunner"
-//        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         testInstrumentationRunner = "com.virtualsblog.project.CustomTestRunner"
-        // vectorDrawables {
-        //    useSupportLibrary = true
-        // }
+        buildConfigField("String", "API_KEY", "\"${System.getenv("API_KEY") ?: project.findProperty("API_KEY")}\"")
+
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false // Consider enabling for release builds (isMinifyEnabled = true)
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
-        // You might want a debug build type as well, though it's often implicit.
-        // debug {
-        //     applicationIdSuffix = ".debug" // Example
-        //     isMinifyEnabled = false
-        // }
+
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

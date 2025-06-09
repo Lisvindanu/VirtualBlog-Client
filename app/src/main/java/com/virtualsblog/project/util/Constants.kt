@@ -1,9 +1,9 @@
 package com.virtualsblog.project.util
-
+import com.virtualsblog.project.BuildConfig
 object Constants {
     // Konfigurasi API
     const val BASE_URL = "https://be-prakmob.kodingin.id/api/v1/" // [cite: 22]
-    const val API_KEY = "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW" // [cite: 22]
+    const val API_KEY = BuildConfig.API_KEY
 
     // API Endpoints
     const val POSTS_ENDPOINT = "posts" // [cite: 57]
