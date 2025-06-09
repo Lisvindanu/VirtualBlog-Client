@@ -1,4 +1,4 @@
-// BlogRepositoryImpl.kt - Cache-First Implementation
+// BlogRepositoryImpl.kt - Cache-First Implementation (Fixed)
 package com.virtualsblog.project.data.repository
 
 import com.google.gson.Gson
@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken
 import com.virtualsblog.project.data.local.CacheConstants
 import com.virtualsblog.project.data.local.dao.*
 import com.virtualsblog.project.data.local.entities.CacheMetadataEntity
+import com.virtualsblog.project.data.local.entities.PostEntity
 import com.virtualsblog.project.data.mapper.*
 import com.virtualsblog.project.data.remote.api.BlogApi
 import com.virtualsblog.project.data.remote.dto.request.CreateCommentRequest
@@ -85,7 +86,7 @@ class BlogRepositoryImpl @Inject constructor(
                     postResponse.comments?.let { comments ->
                         val commentEntities = comments.map { commentResponse ->
                             CommentMapper.mapResponseToEntity(
-                                CommentMapper.convertEmbeddedToDetail(commentResponse),
+                                convertEmbeddedToDetail(commentResponse),
                                 currentTime
                             )
                         }
@@ -130,9 +131,11 @@ class BlogRepositoryImpl @Inject constructor(
     override suspend fun getPostsForHome(): Flow<Resource<List<Post>>> = flow {
         emit(Resource.Loading())
 
+        var cachedPosts = emptyList<PostEntity>()
+
         try {
             // 1. Emit cached data first
-            val cachedPosts = postDao.getAllPostsSync() // Get all, then limit
+            cachedPosts = postDao.getAllPostsSync() // Get all, then limit
             if (cachedPosts.isNotEmpty()) {
                 val homePosts = cachedPosts
                     .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
@@ -168,9 +171,11 @@ class BlogRepositoryImpl @Inject constructor(
     override suspend fun getCategories(): Flow<Resource<List<Category>>> = flow {
         emit(Resource.Loading())
 
+        var hasCachedCategories = false
+
         try {
             // 1. Emit cached categories first
-            val hasCachedCategories = categoryDao.hasAnyCachedCategories()
+            hasCachedCategories = categoryDao.hasAnyCachedCategories()
             if (hasCachedCategories) {
                 val cachedCategories = categoryDao.getAllCategoriesSync()
                 val domainCategories = CategoryMapper.mapEntitiesToDomainList(cachedCategories)
@@ -224,9 +229,11 @@ class BlogRepositoryImpl @Inject constructor(
     override suspend fun getPostById(postId: String): Flow<Resource<Post>> = flow {
         emit(Resource.Loading())
 
+        var cachedPost: PostEntity? = null
+
         try {
             // 1. Quick cache check
-            val cachedPost = postDao.getPostById(postId)
+            cachedPost = postDao.getPostById(postId)
             val cachedComments = commentDao.getCommentsForPostSync(postId)
 
             if (cachedPost != null) {
@@ -258,7 +265,7 @@ class BlogRepositoryImpl @Inject constructor(
                 val comments = postDetailResponse.comments ?: emptyList()
                 val commentEntities = comments.map { commentResponse ->
                     CommentMapper.mapResponseToEntity(
-                        CommentMapper.convertEmbeddedToDetail(commentResponse),
+                        convertEmbeddedToDetail(commentResponse),
                         currentTime
                     )
                 }
@@ -285,9 +292,10 @@ class BlogRepositoryImpl @Inject constructor(
 
         try {
             // 1. Emit cached posts first
-            postDao.getPostsByCategoryFlow(categoryId).collect { cachedEntities ->
-                if (cachedEntities.isNotEmpty()) {
-                    val domainPosts = PostMapper.mapEntitiesToDomainList(cachedEntities)
+            val cachedEntities = postDao.getPostsByCategoryFlow(categoryId)
+            cachedEntities.collect { entities ->
+                if (entities.isNotEmpty()) {
+                    val domainPosts = PostMapper.mapEntitiesToDomainList(entities)
                         .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
                     emit(Resource.Success(domainPosts))
                 }
@@ -312,9 +320,10 @@ class BlogRepositoryImpl @Inject constructor(
 
         try {
             // 1. Emit cached posts first
-            postDao.getPostsByAuthorFlow(authorId).collect { cachedEntities ->
-                if (cachedEntities.isNotEmpty()) {
-                    val domainPosts = PostMapper.mapEntitiesToDomainList(cachedEntities)
+            val cachedEntities = postDao.getPostsByAuthorFlow(authorId)
+            cachedEntities.collect { entities ->
+                if (entities.isNotEmpty()) {
+                    val domainPosts = PostMapper.mapEntitiesToDomainList(entities)
                         .sortedByDescending { DateUtil.getTimestamp(it.createdAt) }
                     emit(Resource.Success(domainPosts))
                 }
@@ -680,16 +689,66 @@ class BlogRepositoryImpl @Inject constructor(
     }
 
     private suspend fun refreshAllPostsCache() {
-        // Implementation for refreshing all posts cache
-        // Similar to getAllPosts but focused on cache update
+        try {
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) return
+
+            val response = blogApi.getAllPosts("${Constants.BEARER_PREFIX}$token")
+            if (response.isSuccessful && response.body()?.success == true) {
+                val apiPosts = response.body()!!.data
+                val currentTime = System.currentTimeMillis()
+
+                val postEntities = PostMapper.mapResponseListToEntities(apiPosts, currentTime)
+                postDao.insertPosts(postEntities)
+
+                setCacheMetadata(
+                    CacheConstants.CACHE_KEY_ALL_POSTS,
+                    currentTime + CacheConstants.CACHE_DURATION_POSTS
+                )
+            }
+        } catch (e: Exception) {
+            // Ignore refresh errors
+        }
     }
 
     private suspend fun refreshCategoryPosts(categoryId: String, cacheKey: String) {
-        // Implementation for refreshing category posts
+        try {
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) return
+
+            val response = blogApi.getPostsByCategoryId(categoryId, "${Constants.BEARER_PREFIX}$token")
+            if (response.isSuccessful && response.body()?.success == true) {
+                val apiPosts = response.body()!!.data
+                val currentTime = System.currentTimeMillis()
+
+                val postEntities = PostMapper.mapResponseListToEntities(apiPosts, currentTime)
+                postDao.insertPosts(postEntities)
+
+                setCacheMetadata(cacheKey, currentTime + CacheConstants.CACHE_DURATION_POSTS)
+            }
+        } catch (e: Exception) {
+            // Ignore refresh errors
+        }
     }
 
     private suspend fun refreshAuthorPosts(authorId: String, cacheKey: String) {
-        // Implementation for refreshing author posts
+        try {
+            val token = authRepository.getAuthToken()
+            if (token.isNullOrEmpty()) return
+
+            val response = blogApi.getPostsByAuthorId(authorId, "${Constants.BEARER_PREFIX}$token")
+            if (response.isSuccessful && response.body()?.success == true) {
+                val apiPosts = response.body()!!.data
+                val currentTime = System.currentTimeMillis()
+
+                val postEntities = PostMapper.mapResponseListToEntities(apiPosts, currentTime)
+                postDao.insertPosts(postEntities)
+
+                setCacheMetadata(cacheKey, currentTime + CacheConstants.CACHE_DURATION_POSTS)
+            }
+        } catch (e: Exception) {
+            // Ignore refresh errors
+        }
     }
 
     private suspend fun invalidatePostCaches() {
@@ -699,8 +758,24 @@ class BlogRepositoryImpl @Inject constructor(
     }
 
     private fun <T> handleHttpError(code: Int, errorBody: String?): Resource<T> {
-        // Same as original implementation
-        return Resource.Error("HTTP Error: $code")
+        return when (code) {
+            401 -> Resource.Error(Constants.ERROR_UNAUTHORIZED)
+            400 -> {
+                if (!errorBody.isNullOrEmpty()) {
+                    try {
+                        val errorType = object : TypeToken<ApiResponse<Any>>() {}.type
+                        val errorResponse: ApiResponse<Any> = gson.fromJson(errorBody, errorType)
+                        return Resource.Error(errorResponse.message ?: "Permintaan tidak valid.")
+                    } catch (e: Exception) {
+                        return Resource.Error("Permintaan tidak valid.")
+                    }
+                }
+                Resource.Error("Permintaan tidak valid.")
+            }
+            404 -> Resource.Error("Data tidak ditemukan")
+            500 -> Resource.Error("Terjadi kesalahan pada server")
+            else -> Resource.Error("Terjadi kesalahan: HTTP $code")
+        }
     }
 
     private fun <T> handleNetworkError(exception: Exception): Resource<T> {
@@ -712,25 +787,23 @@ class BlogRepositoryImpl @Inject constructor(
     }
 }
 
-// Extension functions for helper conversions
-private object CommentMapper {
-    fun convertEmbeddedToDetail(embedded: CommentResponse): CommentDetailResponse {
-        return CommentDetailResponse(
-            id = embedded.id,
-            content = embedded.content,
-            userId = embedded.authorId,
-            postId = embedded.postId,
-            user = CommentUserResponse(
-                id = embedded.author?.id ?: "",
-                username = embedded.author?.username ?: "",
-                fullname = embedded.author?.fullname ?: "",
-                email = embedded.author?.email ?: "",
-                image = embedded.author?.image,
-                createdAt = "",
-                updatedAt = ""
-            ),
-            createdAt = embedded.createdAt,
-            updatedAt = embedded.updatedAt
-        )
-    }
+// ===== HELPER FUNCTION: Convert Embedded Comment to Detail =====
+private fun convertEmbeddedToDetail(embedded: CommentResponse): CommentDetailResponse {
+    return CommentDetailResponse(
+        id = embedded.id,
+        content = embedded.content,
+        userId = embedded.authorId,
+        postId = embedded.postId,
+        user = CommentUserResponse(
+            id = embedded.author?.id ?: "",
+            username = embedded.author?.username ?: "",
+            fullname = embedded.author?.fullname ?: "",
+            email = "",
+            image = embedded.author?.image,
+            createdAt = "",
+            updatedAt = ""
+        ),
+        createdAt = embedded.createdAt,
+        updatedAt = embedded.updatedAt
+    )
 }
