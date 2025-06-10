@@ -21,6 +21,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.virtualsblog.project.presentation.MainViewModel
 import com.virtualsblog.project.presentation.ui.screen.auth.changepassword.ChangePasswordScreen
+import com.virtualsblog.project.presentation.ui.screen.auth.editprofile.EditProfileScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.forgotpassword.ForgotPasswordScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.login.LoginScreen
 import com.virtualsblog.project.presentation.ui.screen.auth.profile.ProfileScreen
@@ -50,7 +51,7 @@ fun BlogNavGraph(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
-    // Check if current screen should show bottom navigation
+    // Cek apakah layar saat ini harus menampilkan navigasi bawah
     val showBottomNav = when {
         currentRoute == BlogDestinations.SPLASH_ROUTE -> false
         currentRoute == BlogDestinations.LOGIN_ROUTE -> false
@@ -60,6 +61,7 @@ fun BlogNavGraph(
         currentRoute?.startsWith(BlogDestinations.RESET_PASSWORD_ROUTE) == true -> false
         currentRoute == BlogDestinations.TERMS_AND_CONDITIONS_ROUTE -> false
         currentRoute == BlogDestinations.CHANGE_PASSWORD_ROUTE -> false
+        currentRoute == "edit_profile" -> false // Jangan tampilkan di layar edit profil
         else -> true
     }
 
@@ -139,7 +141,7 @@ private fun BottomNavigationBar(
                 onClick = onSearchClick
             )
 
-            // Create Post (Center button like IG)
+            // Create Post (Tombol tengah)
             Box(
                 modifier = Modifier
                     .size(42.dp)
@@ -160,7 +162,7 @@ private fun BottomNavigationBar(
                 }
             }
 
-            // Categories (using grid icon like IG activity)
+            // Categories
             BottomNavItem(
                 icon = if (currentRoute == BlogDestinations.CATEGORIES_ROUTE) Icons.Filled.GridView else Icons.Outlined.GridView,
                 isSelected = currentRoute == BlogDestinations.CATEGORIES_ROUTE,
@@ -357,6 +359,17 @@ private fun BlogNavHost(
                 },
                 onNavigateToChangePassword = {
                     navController.navigate(BlogDestinations.CHANGE_PASSWORD_ROUTE)
+                },
+                onNavigateToEditProfile = {
+                    navController.navigate("edit_profile")
+                }
+            )
+        }
+
+        composable("edit_profile") {
+            EditProfileScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
