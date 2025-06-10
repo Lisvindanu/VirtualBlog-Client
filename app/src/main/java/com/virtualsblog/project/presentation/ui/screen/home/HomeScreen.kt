@@ -234,30 +234,31 @@ private fun CleanTopAppBar(
     onSearchClick: () -> Unit,
     onCategoriesClick: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = BlogTheme.Colors.surface,
-        shadowElevation = 2.dp
+    // Simple header dengan background dan shadow hanya di bawah text
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
     ) {
-        // Menggunakan Row dengan wrapContentHeight untuk ukuran natural
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
-                .wrapContentHeight() // Biarkan tinggi menyesuaikan konten
-                .padding(horizontal = 20.dp, vertical = 4.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "VirtualsBlog",
-                style = BlogTheme.Text.headlineMedium.copy(
-                    fontSize = 24.sp,
-                    letterSpacing = 0.sp
-                ),
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = BlogTheme.Colors.primary
+                color = MaterialTheme.colorScheme.primary // Warna ungu/primary
             )
         }
+
+        // Divider tipis sebagai shadow
+        HorizontalDivider(
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
+        )
     }
 }
 
