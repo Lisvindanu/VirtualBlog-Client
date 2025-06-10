@@ -47,8 +47,18 @@ android {
 
         val apiKey = localProperties.getProperty("API_KEY") ?:
         System.getenv("API_KEY") ?:
-        "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW"
+        "Api_Key_Backend (bisa di request ke developer)"
 
+        val baseUrl = localProperties.getProperty("BASE_URL") ?:
+        System.getenv("BASE_URL") ?:
+        "https://be-prakmob.kodingin.id/api/v1/"
+
+        val appName = localProperties.getProperty("APP_NAME") ?:
+        System.getenv("APP_NAME") ?:
+        "VirtualsBlog"
+
+        buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
+        buildConfigField("String", "APP_NAME", "\"$appName\"")
         buildConfigField("String", "API_KEY", "\"$apiKey\"")
     }
 
@@ -66,8 +76,18 @@ android {
 
             val apiKey = localProperties.getProperty("API_KEY") ?:
             System.getenv("API_KEY") ?:
-            "NpeW7lQ2SlZUCC9mI4G7E26NMRtoK8mW"
+            "Api_Key_Backend (bisa di request ke developer)"
 
+            val baseUrl = localProperties.getProperty("BASE_URL") ?:
+            System.getenv("BASE_URL") ?:
+            "https://be-prakmob.kodingin.id/api/v1/"
+
+            val appName = localProperties.getProperty("APP_NAME") ?:
+            System.getenv("APP_NAME") ?:
+            "VirtualsBlog"
+
+            buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
+            buildConfigField("String", "APP_NAME", "\"$appName\"")
             buildConfigField("String", "API_KEY", "\"$apiKey\"")
         }
 
