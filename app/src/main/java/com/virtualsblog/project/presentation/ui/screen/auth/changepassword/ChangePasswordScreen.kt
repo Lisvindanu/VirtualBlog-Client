@@ -74,7 +74,7 @@ fun ChangePasswordScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Background)
+            .background(color = MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -87,8 +87,8 @@ fun ChangePasswordScreen(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Primary,
-                                PrimaryVariant.copy(alpha = 0.9f)
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.primaryContainer
                             ),
                             startY = 0f,
                             endY = 300f
@@ -100,7 +100,7 @@ fun ChangePasswordScreen(
                         Text(
                             text = "Ubah Kata Sandi",
                             fontWeight = FontWeight.Bold,
-                            color = OnPrimary,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontSize = 22.sp
                         )
                     },
@@ -109,7 +109,7 @@ fun ChangePasswordScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Kembali",
-                                tint = OnPrimary
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     },
@@ -135,9 +135,9 @@ fun ChangePasswordScreen(
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    Primary.copy(alpha = 0.7f),
-                                    Primary.copy(alpha = 0.4f),
-                                    Primary.copy(alpha = 0.1f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                 ),
                                 radius = 300f
                             ),
@@ -149,7 +149,7 @@ fun ChangePasswordScreen(
                         imageVector = Icons.Default.Key,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp), // Reduced from 60dp to 48dp
-                        tint = Primary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -159,7 +159,7 @@ fun ChangePasswordScreen(
                     text = "Ubah Kata Sandi",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 24.sp
                 )
 
@@ -168,19 +168,19 @@ fun ChangePasswordScreen(
                 Text(
                     text = "Masukkan kata sandi lama Anda dan buat kata sandi baru yang aman.",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
                     fontSize = 16.sp
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 // MOVED: Info Keamanan dengan gaya yang konsisten (moved above the password card)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Primary.copy(alpha = 0.05f)
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
@@ -194,7 +194,7 @@ fun ChangePasswordScreen(
                             Icon(
                                 imageVector = Icons.Default.Security,
                                 contentDescription = null,
-                                tint = Primary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -202,14 +202,14 @@ fun ChangePasswordScreen(
                                 text = "Tips Kata Sandi Aman",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Primary
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "• Gunakan minimal 8 karakter\n• Kombinasikan huruf besar, kecil, dan angka\n• Hindari menggunakan informasi pribadi\n• Jangan gunakan kata sandi yang sama di tempat lain",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                             lineHeight = 20.sp
                         )
                     }
@@ -222,7 +222,7 @@ fun ChangePasswordScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Surface
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
@@ -234,11 +234,11 @@ fun ChangePasswordScreen(
                         OutlinedTextField(
                             value = oldPassword,
                             onValueChange = { oldPassword = it },
-                            label = { 
+                            label = {
                                 Text(
                                     "Kata Sandi Lama",
-                                    color = Primary.copy(alpha = 0.8f)
-                                ) 
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                )
                             },
                             singleLine = true,
                             visualTransformation = if (oldPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -254,7 +254,7 @@ fun ChangePasswordScreen(
                                     Icon(
                                         imageVector = if (oldPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                         contentDescription = if (oldPasswordVisible) "Sembunyikan kata sandi" else "Tampilkan kata sandi",
-                                        tint = Primary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             },
@@ -264,18 +264,18 @@ fun ChangePasswordScreen(
                                 .padding(bottom = 0.dp), // Removed bottom padding
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Primary,
-                                unfocusedBorderColor = Primary.copy(alpha = 0.5f),
-                                focusedLabelColor = Primary,
-                                cursorColor = Primary,
-                                focusedContainerColor = Primary.copy(alpha = 0.05f),
-                                unfocusedContainerColor = SurfaceVariant.copy(alpha = 0.5f)
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                cursorColor = MaterialTheme.colorScheme.primary,
+                                focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             ),
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = Primary
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             },
                             supportingText = {
@@ -287,11 +287,11 @@ fun ChangePasswordScreen(
                         OutlinedTextField(
                             value = newPassword,
                             onValueChange = { newPassword = it },
-                            label = { 
+                            label = {
                                 Text(
                                     "Kata Sandi Baru",
-                                    color = Primary.copy(alpha = 0.8f)
-                                ) 
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                )
                             },
                             singleLine = true,
                             visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -307,7 +307,7 @@ fun ChangePasswordScreen(
                                     Icon(
                                         imageVector = if (newPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                         contentDescription = if (newPasswordVisible) "Sembunyikan kata sandi" else "Tampilkan kata sandi",
-                                        tint = Primary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             },
@@ -316,7 +316,7 @@ fun ChangePasswordScreen(
                                 if (newPassword.isNotEmpty() && !isNewPasswordValid) {
                                     Text(
                                         text = "Kata sandi minimal 6 karakter",
-                                        color = Error,
+                                        color = MaterialTheme.colorScheme.error,
                                         fontSize = 10.sp // Reduced from 12.sp
                                     )
                                 }
@@ -327,20 +327,20 @@ fun ChangePasswordScreen(
                                 .padding(bottom = 0.dp), // Removed bottom padding
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Primary,
-                                unfocusedBorderColor = Primary.copy(alpha = 0.5f),
-                                focusedLabelColor = Primary,
-                                cursorColor = Primary,
-                                focusedContainerColor = Primary.copy(alpha = 0.05f),
-                                unfocusedContainerColor = SurfaceVariant.copy(alpha = 0.5f),
-                                errorBorderColor = Error,
-                                errorCursorColor = Error
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                cursorColor = MaterialTheme.colorScheme.primary,
+                                focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                errorBorderColor = MaterialTheme.colorScheme.error,
+                                errorCursorColor = MaterialTheme.colorScheme.error
                             ),
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = Primary
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         )
@@ -349,11 +349,11 @@ fun ChangePasswordScreen(
                         OutlinedTextField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
-                            label = { 
+                            label = {
                                 Text(
                                     "Konfirmasi Kata Sandi",
-                                    color = Primary.copy(alpha = 0.8f)
-                                ) 
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                )
                             },
                             singleLine = true,
                             visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -374,7 +374,7 @@ fun ChangePasswordScreen(
                                     Icon(
                                         imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                         contentDescription = if (confirmPasswordVisible) "Sembunyikan kata sandi" else "Tampilkan kata sandi",
-                                        tint = Primary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             },
@@ -383,7 +383,7 @@ fun ChangePasswordScreen(
                                 if (confirmPassword.isNotEmpty() && !isPasswordMatch) {
                                     Text(
                                         text = "Kata sandi tidak sama",
-                                        color = Error,
+                                        color = MaterialTheme.colorScheme.error,
                                         fontSize = 10.sp // Reduced from 12.sp
                                     )
                                 }
@@ -392,20 +392,20 @@ fun ChangePasswordScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Primary,
-                                unfocusedBorderColor = Primary.copy(alpha = 0.5f),
-                                focusedLabelColor = Primary,
-                                cursorColor = Primary,
-                                focusedContainerColor = Primary.copy(alpha = 0.05f),
-                                unfocusedContainerColor = SurfaceVariant.copy(alpha = 0.5f),
-                                errorBorderColor = Error,
-                                errorCursorColor = Error
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                cursorColor = MaterialTheme.colorScheme.primary,
+                                focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                errorBorderColor = MaterialTheme.colorScheme.error,
+                                errorCursorColor = MaterialTheme.colorScheme.error
                             ),
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = Primary
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         )
@@ -424,8 +424,8 @@ fun ChangePasswordScreen(
                         .height(54.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Primary,
-                        contentColor = OnPrimary
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     enabled = !uiState.isLoading && isFormValid,
                     elevation = ButtonDefaults.buttonElevation(
@@ -436,12 +436,12 @@ fun ChangePasswordScreen(
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = OnPrimary,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             strokeWidth = 2.5.dp
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            "Menyimpan...", 
+                            "Menyimpan...",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp
                         )
@@ -472,7 +472,7 @@ fun ChangePasswordScreen(
                             .fillMaxWidth()
                             .padding(top = 20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Error.copy(alpha = 0.15f)
+                            containerColor = MaterialTheme.colorScheme.errorContainer
                         ),
                         shape = RoundedCornerShape(12.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -484,14 +484,14 @@ fun ChangePasswordScreen(
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = Error,
+                                tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = uiState.error ?: "",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Error,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.weight(1f),
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 15.sp
@@ -511,7 +511,7 @@ fun ChangePasswordScreen(
                             .fillMaxWidth()
                             .padding(top = 20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Success.copy(alpha = 0.15f)
+                            containerColor = MaterialTheme.extendedColors.success.copy(alpha = 0.15f)
                         ),
                         shape = RoundedCornerShape(12.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -523,14 +523,14 @@ fun ChangePasswordScreen(
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = null,
-                                tint = Success,
+                                tint = MaterialTheme.extendedColors.success,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = "Kata sandi berhasil diubah!",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Success,
+                                color = MaterialTheme.extendedColors.success,
                                 modifier = Modifier.weight(1f),
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 15.sp
