@@ -85,7 +85,7 @@ fun EditProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Background)
+            .background(color = MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -97,8 +97,8 @@ fun EditProfileScreen(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Primary,
-                                PrimaryVariant.copy(alpha = 0.9f)
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.primaryContainer
                             ),
                             startY = 0f,
                             endY = 300f
@@ -110,7 +110,7 @@ fun EditProfileScreen(
                         Text(
                             text = "Edit Profil",
                             fontWeight = FontWeight.Bold,
-                            color = OnPrimary,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontSize = 22.sp
                         )
                     },
@@ -119,7 +119,7 @@ fun EditProfileScreen(
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Kembali",
-                                tint = OnPrimary
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     },
@@ -139,7 +139,7 @@ fun EditProfileScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         CircularProgressIndicator(
-                            color = Primary,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(48.dp),
                             strokeWidth = 3.dp
                         )
@@ -147,7 +147,7 @@ fun EditProfileScreen(
                         Text(
                             text = "Memuat data profil...",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -168,9 +168,9 @@ fun EditProfileScreen(
                             .background(
                                 brush = Brush.radialGradient(
                                     colors = listOf(
-                                        Primary.copy(alpha = 0.7f),
-                                        Primary.copy(alpha = 0.4f),
-                                        Primary.copy(alpha = 0.1f)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                     ),
                                     radius = 300f
                                 ),
@@ -182,7 +182,7 @@ fun EditProfileScreen(
                             imageVector = Icons.Default.Edit,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
-                            tint = Primary
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
 
@@ -192,7 +192,7 @@ fun EditProfileScreen(
                         text = "Edit Profil",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 24.sp
                     )
 
@@ -201,19 +201,60 @@ fun EditProfileScreen(
                     Text(
                         text = "Perbarui informasi profil Anda di bawah ini.",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
                         fontSize = 16.sp
                     )
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Info Card dengan tips
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Tips Profil",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "• Gunakan nama lengkap yang mudah dikenali\n• Username hanya boleh huruf, angka, dan garis bawah\n• Email yang valid akan membantu keamanan akun\n• Perubahan akan langsung tersimpan setelah dikonfirmasi",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     // Card untuk form input
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Surface
+                            containerColor = MaterialTheme.colorScheme.surface
                         ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
@@ -228,14 +269,14 @@ fun EditProfileScreen(
                                 label = {
                                     Text(
                                         "Nama Lengkap",
-                                        color = Primary.copy(alpha = 0.8f)
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                                     )
                                 },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Person,
                                         contentDescription = null,
-                                        tint = Primary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -252,21 +293,21 @@ fun EditProfileScreen(
                                     if (fullname.isNotEmpty() && !isFullnameValid) {
                                         Text(
                                             text = "Nama lengkap minimal 3 karakter",
-                                            color = Error,
+                                            color = MaterialTheme.colorScheme.error,
                                             fontSize = 12.sp
                                         )
                                     }
                                 },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Primary,
-                                    unfocusedBorderColor = Primary.copy(alpha = 0.5f),
-                                    focusedLabelColor = Primary,
-                                    cursorColor = Primary,
-                                    focusedContainerColor = Primary.copy(alpha = 0.05f),
-                                    unfocusedContainerColor = SurfaceVariant.copy(alpha = 0.5f),
-                                    errorBorderColor = Error,
-                                    errorCursorColor = Error
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    errorBorderColor = MaterialTheme.colorScheme.error,
+                                    errorCursorColor = MaterialTheme.colorScheme.error
                                 )
                             )
 
@@ -277,14 +318,14 @@ fun EditProfileScreen(
                                 label = {
                                     Text(
                                         "Username",
-                                        color = Primary.copy(alpha = 0.8f)
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                                     )
                                 },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.AlternateEmail,
                                         contentDescription = null,
-                                        tint = Primary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -302,21 +343,21 @@ fun EditProfileScreen(
                                         Text(
                                             text = if (username.length < 6) "Username minimal 6 karakter"
                                             else "Hanya boleh huruf, angka, dan garis bawah",
-                                            color = Error,
+                                            color = MaterialTheme.colorScheme.error,
                                             fontSize = 12.sp
                                         )
                                     }
                                 },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Primary,
-                                    unfocusedBorderColor = Primary.copy(alpha = 0.5f),
-                                    focusedLabelColor = Primary,
-                                    cursorColor = Primary,
-                                    focusedContainerColor = Primary.copy(alpha = 0.05f),
-                                    unfocusedContainerColor = SurfaceVariant.copy(alpha = 0.5f),
-                                    errorBorderColor = Error,
-                                    errorCursorColor = Error
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    errorBorderColor = MaterialTheme.colorScheme.error,
+                                    errorCursorColor = MaterialTheme.colorScheme.error
                                 )
                             )
 
@@ -327,14 +368,14 @@ fun EditProfileScreen(
                                 label = {
                                     Text(
                                         "Email",
-                                        color = Primary.copy(alpha = 0.8f)
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                                     )
                                 },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Email,
                                         contentDescription = null,
-                                        tint = Primary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -356,21 +397,21 @@ fun EditProfileScreen(
                                     if (email.isNotEmpty() && !isEmailValid) {
                                         Text(
                                             text = "Format email tidak valid",
-                                            color = Error,
+                                            color = MaterialTheme.colorScheme.error,
                                             fontSize = 12.sp
                                         )
                                     }
                                 },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Primary,
-                                    unfocusedBorderColor = Primary.copy(alpha = 0.5f),
-                                    focusedLabelColor = Primary,
-                                    cursorColor = Primary,
-                                    focusedContainerColor = Primary.copy(alpha = 0.05f),
-                                    unfocusedContainerColor = SurfaceVariant.copy(alpha = 0.5f),
-                                    errorBorderColor = Error,
-                                    errorCursorColor = Error
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    errorBorderColor = MaterialTheme.colorScheme.error,
+                                    errorCursorColor = MaterialTheme.colorScheme.error
                                 )
                             )
                         }
@@ -390,8 +431,8 @@ fun EditProfileScreen(
                             .height(54.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Primary,
-                            contentColor = OnPrimary
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         enabled = !uiState.isLoading && isFormValid,
                         elevation = ButtonDefaults.buttonElevation(
@@ -402,7 +443,7 @@ fun EditProfileScreen(
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
-                                color = OnPrimary,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 strokeWidth = 2.5.dp
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -437,7 +478,7 @@ fun EditProfileScreen(
                                 .fillMaxWidth()
                                 .padding(top = 20.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Error.copy(alpha = 0.15f)
+                                containerColor = MaterialTheme.colorScheme.errorContainer
                             ),
                             shape = RoundedCornerShape(12.dp),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -449,14 +490,14 @@ fun EditProfileScreen(
                                 Icon(
                                     imageVector = Icons.Default.ErrorOutline,
                                     contentDescription = null,
-                                    tint = Error,
+                                    tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     text = uiState.error ?: "",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Error,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
                                     modifier = Modifier.weight(1f),
                                     fontWeight = FontWeight.Medium,
                                     fontSize = 15.sp
@@ -466,45 +507,6 @@ fun EditProfileScreen(
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
-
-                    // Info Card dengan tips
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Primary.copy(alpha = 0.05f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = Primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Tips Profil",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Primary
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "• Gunakan nama lengkap yang mudah dikenali\n• Username hanya boleh huruf, angka, dan garis bawah\n• Email yang valid akan membantu keamanan akun\n• Perubahan akan langsung tersimpan setelah dikonfirmasi",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                lineHeight = 20.sp
-                            )
-                        }
-                    }
 
                     Spacer(modifier = Modifier.height(80.dp))
                 }
@@ -521,13 +523,13 @@ fun EditProfileScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f)),
+                    .background(MaterialTheme.colorScheme.scrim),
                 contentAlignment = Alignment.Center
             ) {
                 Card(
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Surface
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
@@ -549,7 +551,7 @@ fun EditProfileScreen(
                             modifier = Modifier
                                 .size(80.dp)
                                 .background(
-                                    color = Success.copy(alpha = 0.1f),
+                                    color = MaterialTheme.extendedColors.success.copy(alpha = 0.1f),
                                     shape = RoundedCornerShape(40.dp)
                                 )
                                 .clip(RoundedCornerShape(40.dp)),
@@ -564,7 +566,7 @@ fun EditProfileScreen(
                                         scaleX = scale
                                         scaleY = scale
                                     },
-                                tint = Success
+                                tint = MaterialTheme.extendedColors.success
                             )
                         }
 
@@ -574,7 +576,7 @@ fun EditProfileScreen(
                             text = "Profil Berhasil Diperbarui!",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
                         )
 
@@ -583,7 +585,7 @@ fun EditProfileScreen(
                         Text(
                             text = "Perubahan telah disimpan ke akun Anda",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center
                         )
 
@@ -595,8 +597,8 @@ fun EditProfileScreen(
                                 .width(100.dp)
                                 .height(4.dp)
                                 .clip(RoundedCornerShape(2.dp)),
-                            color = Primary,
-                            trackColor = Primary.copy(alpha = 0.2f)
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                         )
                     }
                 }
