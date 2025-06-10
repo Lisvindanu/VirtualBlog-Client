@@ -239,13 +239,14 @@ private fun CleanTopAppBar(
         color = BlogTheme.Colors.surface,
         shadowElevation = 2.dp
     ) {
-        Box(
+        // Menggunakan Row dengan wrapContentHeight untuk ukuran natural
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 1.dp)
-                .padding(bottom = 20.dp),
-            contentAlignment = Alignment.CenterStart
+                .wrapContentHeight() // Biarkan tinggi menyesuaikan konten
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "VirtualsBlog",

@@ -32,6 +32,7 @@ fun ProfileScreen(
     onNavigateBack: () -> Unit,
     onNavigateToLogin: () -> Unit,
     onNavigateToChangePassword: () -> Unit,
+    onNavigateToEditProfile: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -52,7 +53,6 @@ fun ProfileScreen(
             onDismiss = { fullScreenImageUrl = null }
         )
     }
-
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
@@ -100,14 +100,14 @@ fun ProfileScreen(
         )
     }
 
-    // Clean layout without top bar
+    // Layout utama tanpa TopAppBar kustom
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
-        // Simple header with settings icon
+        // Header sederhana dengan ikon logout
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -148,7 +148,7 @@ fun ProfileScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Profile Picture Section
+                // Bagian Foto Profil
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -226,7 +226,7 @@ fun ProfileScreen(
                     }
                 }
 
-                // Profile Info Section
+                // Bagian Informasi Akun
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -237,12 +237,24 @@ fun ProfileScreen(
                     Column(
                         modifier = Modifier.padding(20.dp)
                     ) {
-                        Text(
-                            text = "Informasi Akun",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Informasi Akun",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            IconButton(onClick = onNavigateToEditProfile) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Profil"
+                                )
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -266,7 +278,7 @@ fun ProfileScreen(
                     }
                 }
 
-                // Settings Section
+                // Bagian Pengaturan
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -308,7 +320,7 @@ fun ProfileScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(80.dp)) // Space for bottom nav
+                Spacer(modifier = Modifier.height(80.dp)) // Memberi ruang untuk navigasi bawah
             }
         }
     }
